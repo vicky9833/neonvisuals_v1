@@ -39,3 +39,11 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# product images (stored in Supabase Storage, never committed)
+product-images/
+
+.env.local
+product-images/
+node_modules/
+.next/
