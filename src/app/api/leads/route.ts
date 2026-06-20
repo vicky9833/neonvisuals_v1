@@ -1,26 +1,121 @@
-import { NextResponse, type NextRequest } from "next/server";
-import { leadSchema } from "@/lib/utils/validators";
+import { NextResponse } from "next/server";
+import { z } from "zod";
+import { requireApiRole, apiAuthErrorResponse } from "@/lib/api-auth";
+import {
+  createLead,
+  listLeads,
+  type LeadPriority,
+  type LeadSource,
+  type LeadStatus,
+} from "@/lib/engines/lead";
 
-/** Lists leads (admin) — persistence wired in a later task. */
-export async function GET() {
-  return NextResponse.json({ data: [] });
+export const runtime = "nodejs";
+
+const createSchema = z.object({
+  contactName: z.string().min(1),
+  contactEmail: z.string().email().optional().or(z.literal("")),
+  contactPhone: z.string().optional(),
+  contactDesignation: z.string().optional(),
+  companyName: z.string().min(1),
+  companyIndustry: z.string().optional(),
+  companySize: z.string().optional(),
+  companyCity: z.string().optional(),
+  companyWebsite: z.string().optional(),
+  status: z
+    .enum([
+      "new",
+      "contacted",
+      "qualified",
+      "proposal_sent",
+      "negotiation",
+      "won",
+      "lost",
+      "dormant",
+    ])
+    .optional(),
+  priority: z.enum(["hot", "warm", "medium", "cold"]).optional(),
+  source: z
+    .enum([
+      "whatsapp",
+      "website",
+      "gift_builder",
+      "linkedin",
+      "referral",
+      "event",
+      "cold_outreach",
+      "google",
+      "instagram",
+      "other",
+    ])
+    .optional(),
+  sourceDetail: z.string().optional(),
+  estimatedOrderValue: z.number().nonnegative().optional(),
+  estimatedKitCount: z.number().int().nonnegative().optional(),
+  interestedCollections: z.array(z.string()).optional(),
+  interestedOccasions: z.array(z.string()).optional(),
+  assignedTo: z.string().uuid().optional(),
+  nextFollowUpDate: z.string().optional(),
+  nextFollowUpNote: z.string().optional(),
+  tags: z.array(z.string()).optional(),
+  notes: z.string().optional(),
+});
+
+export async function POST(request: Request) {
+  try {
+    await requireApiRole(["super_admin"]);
+    const body = await request.json();
+    const parsed = createSchema.safeParse(body);
+    if (!parsed.success) {
+      return NextResponse.json(
+        { error: "invalid_input", message: parsed.error.message },
+        { status: 400 },
+      );
+    }
+    const lead = await createLead({
+      ...parsed.data,
+      contactEmail:
+        parsed.data.contactEmail === "" ? undefined : parsed.data.contactEmail,
+    });
+    return NextResponse.json({ data: lead }, { status: 201 });
+  } catch (err) {
+    const authResponse = apiAuthErrorResponse(err);
+    if (authResponse) return authResponse;
+    const message = err instanceof Error ? err.message : "Unknown error";
+    return NextResponse.json({ error: "create_failed", message }, { status: 500 });
+  }
 }
 
-/** Accepts a new lead / quote request. */
-export async function POST(request: NextRequest) {
-  const body = await request.json().catch(() => null);
-  const parsed = leadSchema.safeParse(body);
-
-  if (!parsed.success) {
-    return NextResponse.json(
-      {
-        error: "validation_error",
-        message: parsed.error.issues[0]?.message ?? "Invalid input",
-      },
-      { status: 400 },
-    );
+export async function GET(request: Request) {
+  try {
+    await requireApiRole(["super_admin"]);
+    const { searchParams } = new URL(request.url);
+    const statusParam = searchParams.get("status");
+    const result = await listLeads({
+      status: statusParam
+        ? (statusParam.includes(",")
+            ? (statusParam.split(",") as LeadStatus[])
+            : (statusParam as LeadStatus))
+        : undefined,
+      priority: (searchParams.get("priority") as LeadPriority) ?? undefined,
+      source: (searchParams.get("source") as LeadSource) ?? undefined,
+      assignedTo: searchParams.get("assignedTo") ?? undefined,
+      search: searchParams.get("search") ?? undefined,
+      tags: searchParams.get("tags")
+        ? searchParams.get("tags")!.split(",")
+        : undefined,
+      hasFollowUpBefore: searchParams.get("hasFollowUpBefore") ?? undefined,
+      sortBy: (searchParams.get("sortBy") as never) ?? undefined,
+      sortOrder: (searchParams.get("sortOrder") as "asc" | "desc") ?? undefined,
+      page: searchParams.get("page") ? Number(searchParams.get("page")) : undefined,
+      pageSize: searchParams.get("pageSize")
+        ? Number(searchParams.get("pageSize"))
+        : undefined,
+    });
+    return NextResponse.json({ data: result });
+  } catch (err) {
+    const authResponse = apiAuthErrorResponse(err);
+    if (authResponse) return authResponse;
+    const message = err instanceof Error ? err.message : "Unknown error";
+    return NextResponse.json({ error: "list_failed", message }, { status: 500 });
   }
-
-  // TODO: persist lead and notify the team via Resend.
-  return NextResponse.json({ data: { received: true } });
 }

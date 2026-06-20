@@ -56,7 +56,7 @@ no RLS changes — and prices stay out of the public static layer.
     - **Property 2: Every static bucket entry is well-formed** — every `code` is a valid `BucketCode`, `slug` unique across the array, required string fields non-empty
     - **Validates: Requirements 2.1, 2.2**
 
-- [~] 3. Checkpoint - migrations and static data
+- [ ] 3. Checkpoint - migrations and static data
   - Ensure all tests pass, ask the user if questions arise.
 
 - [x] 4. Homepage time-saver section
@@ -100,7 +100,7 @@ no RLS changes — and prices stay out of the public static layer.
     - **Property 6: The public static layer exposes no prices** — no price-bearing field carries a rendered monetary value on the public `BUCKETS`/`PRODUCTS` surface
     - **Validates: Requirements 5.1, 5.2, 5.3, 5.4, 5.5, 7.3**
 
-- [~] 6. Checkpoint - UI and copy
+- [ ] 6. Checkpoint - UI and copy
   - Ensure all tests pass, ask the user if questions arise.
 
 - [x] 7. Validate the full change set

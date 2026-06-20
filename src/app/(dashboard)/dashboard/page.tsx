@@ -4,15 +4,19 @@ import {
   CalendarPlus,
   FileText,
   Gift,
+  Package,
   Palette,
+  Receipt,
   UserPlus,
   Users,
 } from "lucide-react";
 import { getProfile } from "@/lib/auth";
 import {
   getActiveQuotesCount,
+  getActiveOrdersCount,
   getEmployeeCount,
   getGiftsSentCount,
+  getOutstandingAmount,
   getRecentActivity,
   type OccasionItem,
 } from "@/lib/dashboard/queries";
@@ -21,6 +25,10 @@ import {
   getEventsForMonth,
   getUpcomingEvents,
 } from "@/lib/engines/occasions";
+import {
+  sendOccasionReminderEmail,
+  wasEmailSentRecently,
+} from "@/lib/services/email";
 import { SetPageTitle } from "@/components/dashboard/DashboardProvider";
 import { MetricCard } from "@/components/dashboard/MetricCard";
 import { QuickActionCard } from "@/components/dashboard/QuickActionCard";
@@ -62,6 +70,8 @@ export default async function DashboardOverviewPage() {
     giftsSent,
     upcoming,
     activeQuotes,
+    activeOrders,
+    outstanding,
     recent,
     monthlyEvents,
   ] = await Promise.all([
@@ -69,6 +79,8 @@ export default async function DashboardOverviewPage() {
     getGiftsSentCount(companyId),
     getUpcomingEvents(companyId, 30),
     getActiveQuotesCount(companyId),
+    getActiveOrdersCount(companyId),
+    getOutstandingAmount(companyId),
     getRecentActivity(companyId, 8),
     getEventsForMonth(companyId, month, year),
   ]);
@@ -80,6 +92,28 @@ export default async function DashboardOverviewPage() {
     } catch {
       // non-blocking
     }
+  }
+
+  // Weekly occasion-reminder email (throttled via email_log).
+  const contactEmail = profile?.company?.primary_contact_email ?? null;
+  const within7 = upcoming.filter((e) => {
+    const days = (new Date(e.date).getTime() - Date.now()) / 86_400_000;
+    return days >= 0 && days <= 7;
+  });
+  if (contactEmail && within7.length > 0) {
+    void (async () => {
+      if (await wasEmailSentRecently(contactEmail, "occasion_reminder", 168)) return;
+      await sendOccasionReminderEmail({
+        to: contactEmail,
+        clientName: firstName,
+        occasions: within7.map((e) => ({
+          title: e.title,
+          date: e.date,
+          type: e.type,
+          employeeName: e.employeeName ?? undefined,
+        })),
+      });
+    })().catch((err) => console.error("[Email] Occasion reminder failed:", err));
   }
 
   const monthlyOccasions: OccasionItem[] = monthlyEvents.map((e) => ({
@@ -106,7 +140,7 @@ export default async function DashboardOverviewPage() {
       </header>
 
       {/* Metrics */}
-      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-5">
         <MetricCard
           label="Team Members"
           value={employeeCount}
@@ -135,6 +169,15 @@ export default async function DashboardOverviewPage() {
           emptyLabel="Set up occasions"
         />
         <MetricCard
+          label="Active Orders"
+          value={activeOrders}
+          icon={Package}
+          subtitle="In production or transit"
+          accent="navy"
+          emptyHref="/dashboard/orders"
+          emptyLabel="View orders"
+        />
+        <MetricCard
           label="Active Quotes"
           value={activeQuotes}
           icon={FileText}
@@ -143,6 +186,17 @@ export default async function DashboardOverviewPage() {
           emptyHref="/get-quote"
           emptyLabel="Request a quote"
         />
+        {outstanding > 0 && (
+          <MetricCard
+            label="Outstanding (₹)"
+            value={Math.round(outstanding)}
+            icon={Receipt}
+            subtitle="Across unpaid invoices"
+            accent="gold"
+            emptyHref="/dashboard/billing"
+            emptyLabel="View billing"
+          />
+        )}
       </div>
 
       {/* Quick actions */}

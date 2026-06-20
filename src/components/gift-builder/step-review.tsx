@@ -38,6 +38,32 @@ export function StepReview({
     /\S+@\S+\.\S+/.test(state.contactEmail) &&
     state.contactPhone.trim().length >= 6;
 
+  /** Fire-and-forget lead capture — never blocks the WhatsApp/email handoff. */
+  function captureLead() {
+    try {
+      const payload = {
+        name: state.contactName.trim(),
+        email: state.contactEmail.trim(),
+        phone: state.contactPhone.trim(),
+        company: state.contactCompany.trim(),
+        occasion: state.occasion ?? undefined,
+        products: state.selectedProducts.map((p) => ({
+          sku: p.sku,
+          name: p.name,
+        })),
+        source: "gift_builder",
+      };
+      void fetch("/api/leads/capture", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+        keepalive: true,
+      }).catch(() => {});
+    } catch {
+      // ignore — capture is best-effort
+    }
+  }
+
   const setField = (field: KitStringField, value: string) =>
     dispatch({ type: "SET_FIELD", field, value });
 
@@ -152,6 +178,7 @@ export function StepReview({
             href={buildWhatsAppUrl(state)}
             target="_blank"
             rel="noopener noreferrer"
+            onClick={captureLead}
             className="flex w-full items-center justify-center gap-2 rounded-xl bg-navy py-4 text-lg font-semibold text-white transition-all hover:scale-[1.01] hover:bg-navy/90"
           >
             <MessageCircle className="size-5" /> Send Enquiry via WhatsApp
@@ -169,6 +196,7 @@ export function StepReview({
           {valid ? (
             <a
               href={buildEmailUrl(state)}
+              onClick={captureLead}
               className="flex items-center justify-center gap-2 rounded-xl border border-navy py-3 text-sm font-semibold text-navy transition-colors hover:bg-secondary"
             >
               <Mail className="size-4" /> Send via Email

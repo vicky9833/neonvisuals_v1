@@ -1,5 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import { getRecentPosts } from "@/lib/engines/blog";
+import { BlogCard } from "@/components/blog/BlogCard";
 import {
   ArrowRight,
   Award,
@@ -242,7 +244,16 @@ const jsonLd = [
   },
 ];
 
-export default function HomePage() {
+export const revalidate = 300;
+
+export default async function HomePage() {
+  let recentPosts: Awaited<ReturnType<typeof getRecentPosts>> = [];
+  try {
+    recentPosts = await getRecentPosts(3);
+  } catch {
+    recentPosts = [];
+  }
+
   return (
     <>
       <script
@@ -732,21 +743,35 @@ export default function HomePage() {
             </div>
           </Reveal>
           <div className="mt-14 grid grid-cols-1 gap-8 md:grid-cols-3">
-            {JOURNAL.map((post, i) => (
-              <Reveal key={post.slug} delay={(i % 3) * 80}>
-                <Link href={`/blog/${post.slug}`} className="group block">
-                  <div className="overflow-hidden rounded-xl bg-[#EDE9E3]">
-                    <div className="aspect-16/10 w-full transition-all duration-300 group-hover:scale-[1.03] group-hover:brightness-105" />
-                  </div>
-                  <span className="mt-4 block text-[11px] font-semibold uppercase tracking-widest text-gold">
-                    {post.category}
-                  </span>
-                  <h3 className="mt-2 text-lg font-bold text-[#1A1A1A] transition-colors group-hover:text-gold">
-                    {post.title}
-                  </h3>
-                </Link>
-              </Reveal>
-            ))}
+            {recentPosts.length > 0
+              ? recentPosts.map((post, i) => (
+                  <Reveal key={post.id} delay={(i % 3) * 80}>
+                    <BlogCard post={post} />
+                  </Reveal>
+                ))
+              : JOURNAL.map((post, i) => (
+                  <Reveal key={post.slug} delay={(i % 3) * 80}>
+                    <Link href={`/blog/${post.slug}`} className="group block">
+                      <div className="overflow-hidden rounded-xl bg-[#EDE9E3]">
+                        <div className="aspect-16/10 w-full transition-all duration-300 group-hover:scale-[1.03] group-hover:brightness-105" />
+                      </div>
+                      <span className="mt-4 block text-[11px] font-semibold uppercase tracking-widest text-gold">
+                        {post.category}
+                      </span>
+                      <h3 className="mt-2 text-lg font-bold text-[#1A1A1A] transition-colors group-hover:text-gold">
+                        {post.title}
+                      </h3>
+                    </Link>
+                  </Reveal>
+                ))}
+          </div>
+          <div className="mt-10 text-center">
+            <Link
+              href="/blog"
+              className="inline-flex items-center gap-1.5 text-sm font-semibold text-gold hover:underline"
+            >
+              Read the Journal <ArrowRight className="size-4" />
+            </Link>
           </div>
         </div>
       </section>

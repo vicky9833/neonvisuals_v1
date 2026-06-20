@@ -1,14 +1,23 @@
 import type { Metadata } from "next";
 import { PageHeader } from "@/components/shared/page-header";
-import { EmptyState } from "@/components/shared/empty-state";
+import { ClientTable } from "@/components/admin/ClientTable";
+import { listAdminClients } from "@/lib/admin/clients";
+import { formatCurrency } from "@/lib/utils/format";
 
-export const metadata: Metadata = { title: "Clients" };
+export const metadata: Metadata = { title: "Client Companies" };
 
-export default function AdminClientsPage() {
+export const dynamic = "force-dynamic";
+
+export default async function AdminClientsPage() {
+  const { clients, stats } = await listAdminClients();
+
   return (
     <div className="space-y-8">
-      <PageHeader title="Clients" description="Organizations and their accounts." />
-      <EmptyState title="No clients yet" />
+      <PageHeader
+        title="Client Companies"
+        description={`${stats.totalCompanies} companies · ${stats.totalEmployees} employees · ${formatCurrency(stats.totalRevenue)} total revenue`}
+      />
+      <ClientTable clients={clients} />
     </div>
   );
 }

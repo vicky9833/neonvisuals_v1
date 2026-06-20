@@ -1,44 +1,42 @@
-import Link from "next/link";
-import { Logo } from "@/components/brand/logo";
+import { redirect } from "next/navigation";
+import { getProfile } from "@/lib/auth";
+import { AdminProvider } from "@/components/admin/AdminProvider";
+import { AdminSidebar } from "@/components/admin/AdminSidebar";
+import { AdminMobileSidebar } from "@/components/admin/AdminMobileSidebar";
+import { AdminTopbar } from "@/components/admin/AdminTopbar";
 
-const NAV = [
-  { label: "Overview", href: "/admin" },
-  { label: "Leads", href: "/admin/leads" },
-  { label: "Orders", href: "/admin/orders" },
-  { label: "Products", href: "/admin/products" },
-  { label: "Clients", href: "/admin/clients" },
-  { label: "Blog", href: "/admin/blog" },
-  { label: "Analytics", href: "/admin/analytics" },
-];
+export const metadata = {
+  robots: { index: false, follow: false },
+};
 
-export default function AdminLayout({
+/**
+ * Admin shell. proxy.ts already restricts /admin/* to super_admin; this layout
+ * fetches the profile once and shares it with the sidebar/topbar via context.
+ * Provides ONLY chrome — individual pages render their own PageHeader.
+ */
+export default async function AdminLayout({
   children,
 }: {
   children: React.ReactNode;
 }) {
+  const profileWithCompany = await getProfile();
+  if (!profileWithCompany) redirect("/login");
+  if (profileWithCompany.role !== "super_admin") redirect("/dashboard");
+
+  const { company: _company, ...profile } = profileWithCompany;
+
   return (
-    <div className="flex min-h-screen">
-      <aside className="hidden w-60 shrink-0 border-r border-sidebar-border bg-sidebar text-sidebar-foreground md:block">
-        <div className="flex h-16 items-center border-b border-sidebar-border px-6">
-          <Logo className="text-sidebar-foreground" />
-        </div>
-        <nav className="flex flex-col gap-1 p-4">
-          {NAV.map((item) => (
-            <Link
-              key={item.href}
-              href={item.href}
-              className="rounded-button px-3 py-2 text-sm font-medium text-sidebar-foreground/80 transition-colors hover:bg-sidebar-accent hover:text-sidebar-foreground"
-            >
-              {item.label}
-            </Link>
-          ))}
-        </nav>
-      </aside>
-      <div className="flex-1 bg-background">
-        <div className="mx-auto max-w-6xl px-4 py-10 sm:px-6 lg:px-8">
-          {children}
+    <AdminProvider profile={profile}>
+      <div className="min-h-screen bg-background">
+        <AdminSidebar />
+        <AdminMobileSidebar />
+        <div className="flex min-h-screen flex-col lg:pl-64">
+          <AdminTopbar />
+          <main className="flex-1 px-4 py-6 sm:px-6 lg:px-8">
+            <div className="mx-auto w-full max-w-6xl">{children}</div>
+          </main>
         </div>
       </div>
-    </div>
+    </AdminProvider>
   );
 }

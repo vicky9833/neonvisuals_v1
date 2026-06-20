@@ -2,6 +2,7 @@
 
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { sendWelcomeEmail } from "@/lib/services/email";
 import type { OnboardingData, OnboardingResult } from "@/lib/auth-types";
 
 function slugify(name: string): string {
@@ -82,6 +83,16 @@ export async function createCompanyAndCompleteOnboarding(
 
   if (profileError) {
     return { ok: false, error: profileError.message };
+  }
+
+  // Fire-and-forget branded welcome email.
+  const welcomeTo = profile?.email ?? user.email ?? null;
+  if (welcomeTo) {
+    void sendWelcomeEmail({
+      to: welcomeTo,
+      name: profile?.full_name ?? "there",
+      companyName: company.name,
+    }).catch((err) => console.error("[Email] Welcome failed:", err));
   }
 
   return { ok: true, companyName: company.name };

@@ -13,8 +13,20 @@ export const metadata: Metadata = buildMetadata({
 });
 
 export default function ContactPage() {
+  const jsonLd = {
+    "@context": "https://schema.org",
+    "@type": "ContactPage",
+    name: "Contact Neon Visuals",
+    url: "https://neonvisuals.in/contact",
+    description:
+      "Contact the Neon Visuals team for corporate gifting enquiries. Call or WhatsApp 9019409590.",
+  };
   return (
     <div className="mx-auto max-w-3xl px-4 py-16 sm:px-6 lg:px-8">
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
+      />
       <PageHeader
         title="Let's talk"
         description="Tell us what you're celebrating and we'll help you make it memorable."

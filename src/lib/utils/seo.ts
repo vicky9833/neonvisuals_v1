@@ -69,3 +69,58 @@ export function faqJsonLd(faqs: { question: string; answer: string }[]) {
     })),
   };
 }
+
+/** Article (BlogPosting) JSON-LD for blog post pages. */
+export function articleJsonLd(args: {
+  title: string;
+  description: string;
+  slug: string;
+  image?: string;
+  datePublished?: string | null;
+  dateModified?: string | null;
+  authorName?: string;
+  keywords?: string[];
+}) {
+  return {
+    "@context": "https://schema.org",
+    "@type": "BlogPosting",
+    headline: args.title,
+    description: args.description,
+    image: args.image ? [args.image] : undefined,
+    datePublished: args.datePublished ?? undefined,
+    dateModified: args.dateModified ?? args.datePublished ?? undefined,
+    keywords: args.keywords?.join(", "),
+    mainEntityOfPage: {
+      "@type": "WebPage",
+      "@id": `${SITE_URL}/blog/${args.slug}`,
+    },
+    author: {
+      "@type": "Organization",
+      name: args.authorName ?? "Neon Visuals",
+    },
+    publisher: {
+      "@type": "Organization",
+      name: "Neon Visuals",
+      url: SITE_URL,
+    },
+  };
+}
+
+/** Blog (collection) JSON-LD for the listing page. */
+export function blogJsonLd(
+  posts: { title: string; slug: string; excerpt: string; datePublished?: string | null }[],
+) {
+  return {
+    "@context": "https://schema.org",
+    "@type": "Blog",
+    name: "The Neon Visuals Journal",
+    url: `${SITE_URL}/blog`,
+    blogPost: posts.map((p) => ({
+      "@type": "BlogPosting",
+      headline: p.title,
+      description: p.excerpt,
+      url: `${SITE_URL}/blog/${p.slug}`,
+      datePublished: p.datePublished ?? undefined,
+    })),
+  };
+}

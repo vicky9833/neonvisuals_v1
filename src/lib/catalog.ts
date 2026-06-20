@@ -42,6 +42,10 @@ export function getProductBySlug(slug: string): Product | undefined {
   return PRODUCTS.find((p) => p.slug === slug);
 }
 
+export function getProductBySku(sku: string): Product | undefined {
+  return PRODUCTS.find((p) => p.sku === sku);
+}
+
 /** Products in a collection, preserving the data-file order (sort_order). */
 export function getProductsByCode(code: BucketCode): Product[] {
   return PRODUCTS.filter((p) => p.bucket === code);

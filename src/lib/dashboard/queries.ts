@@ -124,13 +124,34 @@ export async function getActiveQuotesCount(companyId: string): Promise<number> {
   }
 }
 
+/** Active orders = confirmed through shipped (in-flight production/delivery). */
+export async function getActiveOrdersCount(companyId: string): Promise<number> {
+  try {
+    const supabase = await createClient();
+    const { count } = await supabase
+      .from("orders")
+      .select("id", { count: "exact", head: true })
+      .eq("company_id", companyId)
+      .in("status", [
+        "confirmed",
+        "in_production",
+        "quality_check",
+        "packed",
+        "shipped",
+      ]);
+    return count ?? 0;
+  } catch {
+    return 0;
+  }
+}
+
 export async function getRecentActivity(
   companyId: string,
   limit: number,
 ): Promise<ActivityItem[]> {
   try {
     const supabase = await createClient();
-    const [quotesRes, giftsRes] = await Promise.all([
+    const [quotesRes, giftsRes, ordersRes] = await Promise.all([
       supabase
         .from("quotes")
         .select("id, quote_number, status, created_at")
@@ -142,6 +163,12 @@ export async function getRecentActivity(
         .select("id, product_name, occasion_type, created_at, employees(full_name)")
         .eq("company_id", companyId)
         .eq("is_archived", false)
+        .order("created_at", { ascending: false })
+        .limit(limit),
+      supabase
+        .from("order_status_history")
+        .select("id, to_status, created_at, orders!inner(order_number, company_id)")
+        .eq("orders.company_id", companyId)
         .order("created_at", { ascending: false })
         .limit(limit),
     ]);
@@ -167,7 +194,31 @@ export async function getRecentActivity(
       };
     });
 
-    return [...quoteItems, ...giftItems]
+    const orderStatusLabel: Record<string, string> = {
+      draft: "created",
+      confirmed: "confirmed",
+      in_production: "moved into production",
+      quality_check: "in quality check",
+      packed: "packed",
+      shipped: "shipped",
+      delivered: "delivered",
+      completed: "completed",
+      cancelled: "cancelled",
+    };
+    const orderItems: ActivityItem[] = (ordersRes.data ?? []).map((o) => {
+      const order = (o as { orders?: { order_number?: string } }).orders;
+      const to = o.to_status as string;
+      return {
+        id: `order-${o.id}`,
+        icon: "order" as const,
+        description: `Order ${order?.order_number ?? ""} ${
+          orderStatusLabel[to] ?? to
+        }`.trim(),
+        timestamp: o.created_at as string,
+      };
+    });
+
+    return [...quoteItems, ...giftItems, ...orderItems]
       .sort((a, b) => b.timestamp.localeCompare(a.timestamp))
       .slice(0, limit);
   } catch {
@@ -221,5 +272,25 @@ export async function getMonthlyOccasions(
     return items.sort((a, b) => a.date.localeCompare(b.date));
   } catch {
     return [];
+  }
+}
+
+/** Total unpaid invoice amount (amount_due − amount_paid) for the company. */
+export async function getOutstandingAmount(companyId: string): Promise<number> {
+  try {
+    const supabase = await createClient();
+    const { data } = await supabase
+      .from("invoices")
+      .select("amount_due, amount_paid, status")
+      .eq("company_id", companyId)
+      .neq("status", "cancelled")
+      .neq("status", "paid");
+    return (data ?? []).reduce(
+      (sum, r) =>
+        sum + (Number(r.amount_due ?? 0) - Number(r.amount_paid ?? 0)),
+      0,
+    );
+  } catch {
+    return 0;
   }
 }

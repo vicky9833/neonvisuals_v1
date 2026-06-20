@@ -12,6 +12,7 @@ import {
   MessageCircle,
   Package,
   Palette,
+  Receipt,
   Settings,
   Users,
   type LucideIcon,
@@ -38,6 +39,7 @@ const MAIN_NAV: NavItem[] = [
   { label: "Occasions", icon: Calendar, href: "/dashboard/occasions", roles: ALL },
   { label: "My Quotes", icon: FileText, href: "/dashboard/quotes", roles: ALL },
   { label: "Orders", icon: Package, href: "/dashboard/orders", roles: ALL },
+  { label: "Billing", icon: Receipt, href: "/dashboard/billing", roles: ALL },
 ];
 
 const QUICK_ACTIONS: NavItem[] = [

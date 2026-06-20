@@ -1,9 +1,10 @@
 import { NextResponse } from "next/server";
 import { getQuote, updateQuoteStatus } from "@/lib/engines/quote";
+import { generateQuotePDF } from "@/lib/engines/pdf";
+import { sendQuoteEmail } from "@/lib/services/email";
 import { WHATSAPP_NUMBER, SUPPORT_EMAIL } from "@/lib/utils/constants";
 import { requireApiRole, apiAuthErrorResponse } from "@/lib/api-auth";
 
-// Email send via Resend comes in Prompt 20.
 export const runtime = "nodejs";
 
 type Ctx = { params: Promise<{ id: string }> };
@@ -16,6 +17,28 @@ export async function POST(_request: Request, { params }: Ctx) {
     if (!quote) return NextResponse.json({ error: "not_found", message: "Quote not found" }, { status: 404 });
 
     await updateQuoteStatus(id, "sent");
+
+    // Fire-and-forget branded email with the quote PDF attached.
+    if (quote.client_email) {
+      (async () => {
+        let pdfBuffer: Buffer | undefined;
+        try {
+          pdfBuffer = await generateQuotePDF(quote);
+        } catch {
+          pdfBuffer = undefined;
+        }
+        await sendQuoteEmail({
+          to: quote.client_email,
+          clientName: quote.client_name,
+          quoteNumber: quote.quote_number,
+          occasion: quote.occasion,
+          kitCount: quote.kit_count,
+          itemCount: quote.products.length,
+          validUntil: quote.valid_until ?? `${quote.validity_days} days`,
+          pdfBuffer,
+        });
+      })().catch((err) => console.error("[Email] Quote send failed:", err));
+    }
 
     const summary = `Hi ${quote.client_name}, here is your Neon Visuals quote ${quote.quote_number} for the ${quote.occasion} experience kit (${quote.kit_count} kits). Per-kit investment: Rs. ${Math.round(quote.per_kit_investment).toLocaleString("en-IN")}. Total: Rs. ${Math.round(quote.final_total).toLocaleString("en-IN")}.`;
     const whatsappUrl = `https://wa.me/${WHATSAPP_NUMBER}?text=${encodeURIComponent(summary)}`;

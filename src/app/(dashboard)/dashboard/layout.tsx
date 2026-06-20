@@ -5,6 +5,10 @@ import { Sidebar } from "@/components/dashboard/Sidebar";
 import { MobileSidebar } from "@/components/dashboard/MobileSidebar";
 import { Topbar } from "@/components/dashboard/Topbar";
 
+export const metadata = {
+  robots: { index: false, follow: false },
+};
+
 /**
  * Dashboard shell. Middleware (proxy.ts) already guarantees an authenticated,
  * onboarded user — this layout fetches the profile + company once and shares

@@ -1,14 +1,106 @@
 import { NextResponse } from "next/server";
+import { z } from "zod";
+import {
+  requireApiAuth,
+  requireApiRole,
+  apiAuthErrorResponse,
+} from "@/lib/api-auth";
+import {
+  createOrder,
+  listOrders,
+  toClientOrder,
+  type OrderStatus,
+} from "@/lib/engines/order";
 
-/** Lists orders for the active organization (wired in a later task). */
-export async function GET() {
-  return NextResponse.json({ data: [] });
+export const runtime = "nodejs";
+
+const productSchema = z.object({
+  sku: z.string().min(1),
+  quantity: z.number().int().positive(),
+  personalisationType: z.string().optional(),
+  engravingTextTemplate: z.string().optional(),
+  notes: z.string().optional(),
+});
+
+const createSchema = z.object({
+  companyId: z.string().uuid(),
+  quoteId: z.string().uuid().optional(),
+  occasionType: z.string().optional(),
+  occasionLabel: z.string().optional(),
+  products: z.array(productSchema).min(1),
+  packagingTier: z.enum(["essential", "standard", "premium", "flagship"]),
+  personalisationLevel: z.enum(["name_only", "name_occasion", "full_personal"]),
+  kitCount: z.number().int().positive(),
+  isRush: z.boolean().optional(),
+  rushDays: z.number().int().optional(),
+  discountPercent: z.number().min(0).max(100).optional(),
+  deliveryAddress: z.string().optional(),
+  deliveryCity: z.string().optional(),
+  deliveryPincode: z.string().optional(),
+  expectedDeliveryDate: z.string().optional(),
+  internalNotes: z.string().optional(),
+  clientNotes: z.string().optional(),
+  specialInstructions: z.string().optional(),
+});
+
+// POST — create an order (super_admin only).
+export async function POST(request: Request) {
+  try {
+    const profile = await requireApiRole(["super_admin"]);
+    const body = await request.json();
+    const parsed = createSchema.safeParse(body);
+    if (!parsed.success) {
+      return NextResponse.json(
+        { error: "invalid_input", message: parsed.error.message },
+        { status: 400 },
+      );
+    }
+    const order = await createOrder(parsed.data, profile.id);
+    return NextResponse.json({ data: order }, { status: 201 });
+  } catch (err) {
+    const authResponse = apiAuthErrorResponse(err);
+    if (authResponse) return authResponse;
+    const message = err instanceof Error ? err.message : "Unknown error";
+    return NextResponse.json({ error: "create_failed", message }, { status: 500 });
+  }
 }
 
-/** Creates an order (not implemented yet). */
-export async function POST() {
-  return NextResponse.json(
-    { error: "not_implemented", message: "Order creation is coming soon." },
-    { status: 501 },
-  );
+// GET — list orders. Admin: all (full data). Client: own company only, no pricing.
+export async function GET(request: Request) {
+  try {
+    const profile = await requireApiAuth();
+    const { searchParams } = new URL(request.url);
+    const isAdmin = profile.role === "super_admin";
+
+    if (!isAdmin && !profile.company_id) {
+      return NextResponse.json({ data: { orders: [], total: 0 } });
+    }
+
+    const from = searchParams.get("from");
+    const to = searchParams.get("to");
+    const result = await listOrders({
+      companyId: isAdmin
+        ? (searchParams.get("companyId") ?? undefined)
+        : profile.company_id!,
+      status: (searchParams.get("status") as OrderStatus) ?? undefined,
+      search: searchParams.get("search") ?? undefined,
+      dateRange: from && to ? { start: from, end: to } : undefined,
+      page: searchParams.get("page") ? Number(searchParams.get("page")) : undefined,
+      pageSize: searchParams.get("pageSize")
+        ? Number(searchParams.get("pageSize"))
+        : undefined,
+    });
+
+    if (isAdmin) {
+      return NextResponse.json({ data: result });
+    }
+    return NextResponse.json({
+      data: { orders: result.orders.map(toClientOrder), total: result.total },
+    });
+  } catch (err) {
+    const authResponse = apiAuthErrorResponse(err);
+    if (authResponse) return authResponse;
+    const message = err instanceof Error ? err.message : "Unknown error";
+    return NextResponse.json({ error: "list_failed", message }, { status: 500 });
+  }
 }

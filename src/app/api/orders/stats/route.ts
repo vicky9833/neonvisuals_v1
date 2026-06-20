@@ -1,0 +1,41 @@
+import { NextResponse } from "next/server";
+import { requireApiAuth, apiAuthErrorResponse } from "@/lib/api-auth";
+import { getOrderStats } from "@/lib/engines/order";
+
+export const runtime = "nodejs";
+
+// GET — order stats. Admin: full (with revenue). Client: counts only.
+export async function GET() {
+  try {
+    const profile = await requireApiAuth();
+    const isAdmin = profile.role === "super_admin";
+
+    if (!isAdmin && !profile.company_id) {
+      return NextResponse.json({
+        data: { total: 0, byStatus: {}, thisMonth: 0, lastMonth: 0 },
+      });
+    }
+
+    const stats = await getOrderStats(
+      isAdmin ? undefined : profile.company_id!,
+    );
+
+    if (isAdmin) {
+      return NextResponse.json({ data: stats });
+    }
+    // Client: strip revenue fields.
+    return NextResponse.json({
+      data: {
+        total: stats.total,
+        byStatus: stats.byStatus,
+        thisMonth: stats.thisMonth,
+        lastMonth: stats.lastMonth,
+      },
+    });
+  } catch (err) {
+    const authResponse = apiAuthErrorResponse(err);
+    if (authResponse) return authResponse;
+    const message = err instanceof Error ? err.message : "Unknown error";
+    return NextResponse.json({ error: "stats_failed", message }, { status: 500 });
+  }
+}

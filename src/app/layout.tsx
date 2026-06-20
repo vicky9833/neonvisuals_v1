@@ -1,4 +1,4 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { Plus_Jakarta_Sans, Space_Grotesk } from "next/font/google";
 import "./globals.css";
 import { Toaster } from "@/components/ui/sonner";
@@ -19,52 +19,84 @@ const spaceGrotesk = Space_Grotesk({
   display: "swap",
 });
 
+const SITE_URL = "https://neonvisuals.in";
+
 export const metadata: Metadata = {
-  metadataBase: new URL("https://neonvisuals.in"),
+  metadataBase: new URL(SITE_URL),
   title: {
     default:
-      "Neon Visuals — Where Creativity Sparks | Premium Corporate Gifting",
+      "Neon Visuals — Where Creativity Sparks | Premium Corporate Gifting Bangalore",
     template: "%s | Neon Visuals",
   },
   description:
-    "Premium personalised corporate gifting and employee experience platform. Name-first personalisation, handcrafted packaging, and memorable unboxing experiences. Trusted by 50+ Bangalore startups.",
+    "Premium personalised corporate gifts for Bangalore startups. Every gift carries the recipient's name. Onboarding kits, milestone awards, festive gifts, client appreciation — 120+ products across 11 collections. Enquire now.",
   keywords: [
-    "corporate gifting",
-    "employee experience platform",
-    "personalised gifts",
-    "onboarding kits",
+    "corporate gifting bangalore",
+    "personalised corporate gifts",
+    "employee onboarding kit",
+    "corporate gifts india",
+    "premium corporate gifts",
+    "diwali corporate gifts",
     "work anniversary gifts",
-    "corporate gifting Bangalore",
-    "Diwali corporate gifts",
+    "neon visuals",
+    "employee recognition gifts",
+    "custom corporate gifts bangalore",
   ],
-  authors: [{ name: "Neon Visuals" }],
+  authors: [{ name: "Neon Visuals", url: SITE_URL }],
   creator: "Neon Visuals",
+  publisher: "Neon Visuals",
+  formatDetection: {
+    email: false,
+    address: false,
+    telephone: false,
+  },
+  alternates: {
+    canonical: "/",
+  },
   openGraph: {
     type: "website",
     locale: "en_IN",
+    url: SITE_URL,
     siteName: "Neon Visuals",
     title:
       "Neon Visuals — Where Creativity Sparks | Premium Corporate Gifting",
     description:
-      "Premium personalised corporate gifting and employee experience platform. Name-first personalisation, handcrafted packaging, and memorable unboxing experiences.",
-    url: "https://neonvisuals.in",
+      "Premium personalised corporate gifts for Bangalore startups. 120+ products, 11 collections. Every gift carries the recipient's name.",
   },
   twitter: {
     card: "summary_large_image",
-    title:
-      "Neon Visuals — Where Creativity Sparks | Premium Corporate Gifting",
+    title: "Neon Visuals — Premium Corporate Gifting Bangalore",
     description:
-      "Premium personalised corporate gifting and employee experience platform.",
+      "Personalised corporate gifts that stay on desks for years. 120+ products across 11 collections.",
   },
+  robots: {
+    index: true,
+    follow: true,
+    googleBot: {
+      index: true,
+      follow: true,
+      "max-video-preview": -1,
+      "max-image-preview": "large",
+      "max-snippet": -1,
+    },
+  },
+};
+
+export const viewport: Viewport = {
+  width: "device-width",
+  initialScale: 1,
+  themeColor: "#1A1A2E",
 };
 
 const organizationJsonLd = {
   "@context": "https://schema.org",
   "@type": "Organization",
   name: COMPANY_NAME,
-  url: "https://neonvisuals.in",
-  logo: "https://neonvisuals.in/logo.png",
-  description: `${COMPANY_NAME} — ${TAGLINE}. Premium personalised corporate gifting and employee experience platform.`,
+  alternateName: `${COMPANY_NAME} — ${TAGLINE}`,
+  url: SITE_URL,
+  logo: `${SITE_URL}/logo.png`,
+  description:
+    "Premium personalised corporate gifting studio based in Bangalore, India.",
   address: {
     "@type": "PostalAddress",
     addressLocality: "Bangalore",
@@ -73,11 +105,55 @@ const organizationJsonLd = {
   },
   contactPoint: {
     "@type": "ContactPoint",
-    contactType: "customer service",
-    telephone: "+919019409590",
+    telephone: "+91-9019409590",
+    contactType: "sales",
     email: SUPPORT_EMAIL,
-    areaServed: "IN",
-    availableLanguage: ["en"],
+    availableLanguage: ["English", "Hindi", "Kannada"],
+  },
+  sameAs: [
+    "https://www.instagram.com/neonvisuals",
+    "https://www.linkedin.com/company/neonvisuals",
+  ],
+};
+
+const localBusinessJsonLd = {
+  "@context": "https://schema.org",
+  "@type": "LocalBusiness",
+  name: COMPANY_NAME,
+  description:
+    "Premium corporate gifting studio specialising in personalised employee experience gifts.",
+  url: SITE_URL,
+  telephone: "+91-9019409590",
+  email: SUPPORT_EMAIL,
+  address: {
+    "@type": "PostalAddress",
+    addressLocality: "Bangalore",
+    addressRegion: "Karnataka",
+    postalCode: "560001",
+    addressCountry: "IN",
+  },
+  geo: {
+    "@type": "GeoCoordinates",
+    latitude: "12.9716",
+    longitude: "77.5946",
+  },
+  priceRange: "₹₹₹",
+  openingHours: "Mo-Sa 09:00-18:00",
+  areaServed: { "@type": "City", name: "Bangalore" },
+};
+
+const websiteJsonLd = {
+  "@context": "https://schema.org",
+  "@type": "WebSite",
+  name: COMPANY_NAME,
+  url: SITE_URL,
+  potentialAction: {
+    "@type": "SearchAction",
+    target: {
+      "@type": "EntryPoint",
+      urlTemplate: `${SITE_URL}/products?q={search_term_string}`,
+    },
+    "query-input": "required name=search_term_string",
   },
 };
 
@@ -95,7 +171,11 @@ export default function RootLayout({
         <script
           type="application/ld+json"
           dangerouslySetInnerHTML={{
-            __html: JSON.stringify(organizationJsonLd),
+            __html: JSON.stringify([
+              organizationJsonLd,
+              localBusinessJsonLd,
+              websiteJsonLd,
+            ]),
           }}
         />
         <TooltipProvider>{children}</TooltipProvider>
