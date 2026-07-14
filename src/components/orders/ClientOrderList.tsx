@@ -11,7 +11,7 @@ interface ClientOrderListProps {
   initialOrders: ClientOrder[];
 }
 
-/** Client dashboard order list — read-only, no pricing. */
+/** Client dashboard order list - read-only, no pricing. */
 export function ClientOrderList({ initialOrders }: ClientOrderListProps) {
   const [orders, setOrders] = useState<ClientOrder[]>(initialOrders);
   const [loading, setLoading] = useState(initialOrders.length === 0);

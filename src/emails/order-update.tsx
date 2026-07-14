@@ -20,7 +20,7 @@ export function OrderUpdateEmail({
         Order <strong>{reference}</strong> is now{" "}
         <strong>{status.replace(/_/g, " ")}</strong>.
       </p>
-      <p>— The Neon Visuals team</p>
+      <p>- The Neon Visuals team</p>
     </div>
   );
 }

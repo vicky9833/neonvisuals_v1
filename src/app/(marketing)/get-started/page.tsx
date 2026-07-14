@@ -5,7 +5,7 @@ import { buildMetadata } from "@/lib/utils/seo";
 export const metadata: Metadata = buildMetadata({
   title: "Get Started",
   description:
-    "Begin your Neon Visuals journey — pick an occasion, build a kit, and request a quote.",
+    "Begin your Neon Visuals journey - pick an occasion, build a kit, and request a quote.",
   path: "/get-started",
 });
 

@@ -7,7 +7,7 @@ import { CollectionGrid } from "@/components/collections/collection-grid";
 const SITE_URL = "https://neonvisuals.in";
 
 export const metadata: Metadata = buildMetadata({
-  title: "Corporate Gift Collections — 11 Curated Categories | Neon Visuals",
+  title: "Corporate Gift Collections - 11 Curated Categories | Neon Visuals",
   description:
     "Explore our 11 corporate gifting collections: Onboarding, Milestone, CEO Recognition, Festive, Client Appreciation, Experience Kits, Tech-Forward, Sustainability, Events, College, and Visiting Cards.",
   path: "/collections",
@@ -43,7 +43,7 @@ export default function CollectionsPage() {
         dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
       />
 
-      {/* HERO — compact */}
+      {/* HERO - compact */}
       <section className="bg-linear-to-br from-navy to-[#2a2a4a]">
         <div className="mx-auto max-w-[1200px] px-6 py-16 text-center">
           <span className="inline-flex items-center gap-2 rounded-full border border-white/15 bg-white/5 px-4 py-1.5 text-[13px] font-medium text-cream">
@@ -53,7 +53,7 @@ export default function CollectionsPage() {
             Every Moment Deserves Its Own Collection
           </h1>
           <p className="mx-auto mt-5 max-w-2xl text-lg leading-[1.7] text-[#9CA3AF]">
-            From Day 1 onboarding to 20-year milestones — we&apos;ve designed a
+            From Day 1 onboarding to 20-year milestones - we&apos;ve designed a
             collection for every moment that matters in your team&apos;s journey.
           </p>
         </div>

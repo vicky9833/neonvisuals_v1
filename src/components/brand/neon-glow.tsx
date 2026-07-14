@@ -8,7 +8,7 @@ interface NeonGlowProps {
 }
 
 /**
- * Wraps content in a subtle gold glow — used sparingly for hero accents
+ * Wraps content in a subtle gold glow - used sparingly for hero accents
  * and featured elements.
  */
 export function NeonGlow({ children, className, animated = false }: NeonGlowProps) {

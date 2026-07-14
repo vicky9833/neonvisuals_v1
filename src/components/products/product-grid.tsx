@@ -1,5 +1,5 @@
 /**
- * ProductGrid — responsive grid (1/2/3/4 cols) with staggered scroll-reveal.
+ * ProductGrid - responsive grid (1/2/3/4 cols) with staggered scroll-reveal.
  * Server-rendered; uses the Reveal client island per card for entrance.
  */
 import type { Product } from "@/lib/types/product";

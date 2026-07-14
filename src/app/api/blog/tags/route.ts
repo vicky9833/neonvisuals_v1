@@ -8,7 +8,10 @@ export async function GET() {
     const tags = await getPopularTags();
     return NextResponse.json({ data: tags });
   } catch (err) {
-    const message = err instanceof Error ? err.message : "Unknown error";
-    return NextResponse.json({ error: "tags_failed", message }, { status: 500 });
+    console.error("[blog/tags]", err);
+    return NextResponse.json(
+      { error: "tags_failed", message: "Failed to load tags." },
+      { status: 500 },
+    );
   }
 }

@@ -68,10 +68,10 @@ export function ClientTable({ clients }: { clients: AdminClientRow[] }) {
                 >
                   <TableCell className="font-medium text-navy">{c.name}</TableCell>
                   <TableCell className="hidden md:table-cell text-sm text-[#6B7280]">
-                    {c.industry ?? "—"}
+                    {c.industry ?? "-"}
                   </TableCell>
                   <TableCell className="hidden lg:table-cell text-sm text-[#6B7280]">
-                    {c.employee_count ?? "—"}
+                    {c.employee_count ?? "-"}
                   </TableCell>
                   <TableCell className="font-numbers text-right text-sm">{c.employees}</TableCell>
                   <TableCell className="font-numbers text-right text-sm">{c.orders}</TableCell>

@@ -38,22 +38,22 @@ import { DepartmentFilter } from "@/components/employees/DepartmentFilter";
 const PAGE_SIZE = 25;
 
 function fmtJoining(value?: string | null): string {
-  if (!value) return "—";
+  if (!value) return "-";
   try {
     const d = parseISO(value);
     const years = differenceInYears(new Date(), d);
     return `${format(d, "MMM yyyy")}${years > 0 ? ` · ${years}y` : ""}`;
   } catch {
-    return "—";
+    return "-";
   }
 }
 
 function fmtBirthday(value?: string | null): string {
-  if (!value) return "—";
+  if (!value) return "-";
   try {
     return format(parseISO(value), "MMM d");
   } catch {
-    return "—";
+    return "-";
   }
 }
 
@@ -261,7 +261,7 @@ export function EmployeeList() {
                       </div>
                     </td>
                     <td className="px-4 py-3">
-                      <p className="text-[#333333]">{emp.department ?? "—"}</p>
+                      <p className="text-[#333333]">{emp.department ?? "-"}</p>
                       <p className="text-xs text-[#9CA3AF]">
                         {emp.designation ?? ""}
                       </p>
@@ -305,7 +305,7 @@ export function EmployeeList() {
                   <p className="font-medium text-navy">{emp.name}</p>
                   <p className="truncate text-xs text-[#9CA3AF]">{emp.email}</p>
                   <p className="mt-1 text-xs text-[#6B7280]">
-                    {emp.department ?? "—"} · Joined {fmtJoining(emp.joining_date)}
+                    {emp.department ?? "-"} · Joined {fmtJoining(emp.joining_date)}
                   </p>
                 </div>
                 <StatusBadge active={emp.is_active} />

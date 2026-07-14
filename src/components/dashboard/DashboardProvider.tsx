@@ -60,7 +60,7 @@ export function DashboardProvider({
   );
 }
 
-/** Renders nothing — sets the topbar title for the current page. */
+/** Renders nothing - sets the topbar title for the current page. */
 export function SetPageTitle({ title }: { title: string }) {
   const { setPageTitle } = useDashboard();
   useEffect(() => {

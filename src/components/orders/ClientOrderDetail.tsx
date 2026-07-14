@@ -13,7 +13,7 @@ interface ClientOrderDetailProps {
 
 /**
  * Client-facing order detail. Shows products, recipients, status, and tracking
- * — NEVER any pricing or internal/payment information.
+ * - NEVER any pricing or internal/payment information.
  */
 export function ClientOrderDetail({ order }: ClientOrderDetailProps) {
   const meta = ORDER_STATUS_META[order.status as OrderStatus];

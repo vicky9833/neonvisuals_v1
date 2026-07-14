@@ -14,7 +14,12 @@ export interface Employee {
   phone?: string | null;
   department?: string | null;
   designation?: string | null;
-  date_of_birth?: string | null; // ISO date
+  /** Day/month of birth only — the birth YEAR is never stored (privacy, migration 018). */
+  dob_day?: number | null;
+  dob_month?: number | null;
+  /** @deprecated Write-only shim: the form may submit a full ISO date; the data
+   *  layer discards the year and persists dob_day/dob_month. Never populated on read. */
+  date_of_birth?: string | null;
   joining_date?: string | null; // ISO date
   manager_name?: string | null;
   manager_email?: string | null;
@@ -40,7 +45,11 @@ export interface EmployeeFormData {
   phone?: string;
   department?: string;
   designation?: string;
+  /** Full ISO date accepted from the single-employee form; year discarded on write. */
   date_of_birth?: string;
+  /** Preferred birthday inputs (no year). */
+  dob_day?: number;
+  dob_month?: number;
   joining_date?: string;
   manager_name?: string;
   manager_email?: string;
@@ -61,6 +70,8 @@ export interface CSVRow {
   department?: string;
   designation?: string;
   date_of_birth?: string;
+  dob_day?: string;
+  dob_month?: string;
   joining_date?: string;
   manager_name?: string;
   manager_email?: string;

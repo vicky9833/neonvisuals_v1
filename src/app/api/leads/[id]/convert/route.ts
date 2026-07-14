@@ -31,7 +31,10 @@ export async function POST(
   } catch (err) {
     const authResponse = apiAuthErrorResponse(err);
     if (authResponse) return authResponse;
-    const message = err instanceof Error ? err.message : "Unknown error";
-    return NextResponse.json({ error: "convert_failed", message }, { status: 500 });
+    console.error("[leads/[id]/convert]", err);
+    return NextResponse.json(
+      { error: "server_error", message: "Could not convert the lead. Please try again." },
+      { status: 500 },
+    );
   }
 }

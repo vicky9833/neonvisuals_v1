@@ -1,5 +1,5 @@
 /**
- * Occasion data — powers the occasion-first SEO landing pages.
+ * Occasion data - powers the occasion-first SEO landing pages.
  * `priceRange` describes the occasion's typical investment band (not a
  * product price) and is safe to show publicly.
  */
@@ -40,9 +40,9 @@ export const OCCASIONS: Occasion[] = [
     heroStat:
       "9 out of 10 employees say their onboarding gift changed their first impression of the company.",
     whyItMatters:
-      "The first 48 hours shape how a new joiner feels about your company more than the next 48 weeks. A generic welcome email gets deleted. A personalised copper bottle with their name engraved — that sits on their desk for three years. That is the difference between onboarding and welcoming.",
+      "The first 48 hours shape how a new joiner feels about your company more than the next 48 weeks. A generic welcome email gets deleted. A personalised copper bottle with their name engraved - that sits on their desk for three years. That is the difference between onboarding and welcoming.",
     seoTitle:
-      "Employee Onboarding Kits | Personalised Welcome Gifts — Neon Visuals",
+      "Employee Onboarding Kits | Personalised Welcome Gifts - Neon Visuals",
     seoDescription:
       "Premium personalised onboarding kits for new employees. Name-engraved gifts, welcome hoodies, desk name plates. Trusted by 50+ Bangalore startups.",
     seoKeywords: [
@@ -66,13 +66,13 @@ export const OCCASIONS: Occasion[] = [
     title: "Work Anniversary Gifts",
     headline: "Celebrate Milestones That Matter",
     description:
-      "From 1-year to 20-year milestones — gifts that honour tenure with the weight it deserves.",
+      "From 1-year to 20-year milestones - gifts that honour tenure with the weight it deserves.",
     heroStat:
       "Companies that recognise work anniversaries see 31% lower voluntary turnover.",
     whyItMatters:
-      "A work anniversary is not a date on a calendar. It is a decision renewed — the choice to stay, to contribute, to belong. When a company acknowledges that decision with something personal, it signals that the years were noticed. A crystal trophy with a name etched into it says more than any email ever could.",
+      "A work anniversary is not a date on a calendar. It is a decision renewed - the choice to stay, to contribute, to belong. When a company acknowledges that decision with something personal, it signals that the years were noticed. A crystal trophy with a name etched into it says more than any email ever could.",
     seoTitle:
-      "Work Anniversary Gifts for Employees | Milestone Recognition — Neon Visuals",
+      "Work Anniversary Gifts for Employees | Milestone Recognition - Neon Visuals",
     seoDescription:
       "Premium work anniversary gifts for 1-year, 3-year, 5-year, and 10-year milestones. Personalised trophies, desk pieces, and recognition awards.",
     seoKeywords: [
@@ -85,7 +85,7 @@ export const OCCASIONS: Occasion[] = [
     priceRange: { min: 499, max: 7999 },
     icon: "Award",
     faq: [
-      { q: "Do you handle different gifts for different tenures?", a: "Yes. We recommend different tiers — a desk piece for Year 1, a crystal trophy for Year 5, a premium experience kit for Year 10." },
+      { q: "Do you handle different gifts for different tenures?", a: "Yes. We recommend different tiers - a desk piece for Year 1, a crystal trophy for Year 5, a premium experience kit for Year 10." },
       { q: "Can our CEO add a personal message?", a: "Every gift includes a personalised narrative card. We even offer handwritten-style messages from leadership." },
       { q: "How do you track anniversaries?", a: "Upload your employee list and our system automatically computes every upcoming anniversary and reminds you 30 days in advance." },
     ],
@@ -99,11 +99,11 @@ export const OCCASIONS: Occasion[] = [
     heroStat:
       "76% of employees say a personalised Diwali gift makes them feel more valued than a generic box.",
     whyItMatters:
-      "Every Diwali, companies order thousands of identical boxes from a catalogue and call it gifting. Your team knows the difference between a box chosen for them and a box ordered for everyone. One spark of personalisation — their name on the package, a note from their manager — transforms a corporate obligation into a genuine moment.",
+      "Every Diwali, companies order thousands of identical boxes from a catalogue and call it gifting. Your team knows the difference between a box chosen for them and a box ordered for everyone. One spark of personalisation - their name on the package, a note from their manager - transforms a corporate obligation into a genuine moment.",
     seoTitle:
-      "Diwali Corporate Gifts | Personalised Festival Gifting — Neon Visuals",
+      "Diwali Corporate Gifts | Personalised Festival Gifting - Neon Visuals",
     seoDescription:
-      "Premium personalised Diwali gifts for employees and clients. Not generic experience kits — individually named, thoughtfully packaged festival gifting.",
+      "Premium personalised Diwali gifts for employees and clients. Not generic experience kits - individually named, thoughtfully packaged festival gifting.",
     seoKeywords: [
       "diwali corporate gifts",
       "diwali gifts for employees",
@@ -128,11 +128,11 @@ export const OCCASIONS: Occasion[] = [
     heroStat:
       "Recognition from a CEO is rated 3x more impactful than recognition from a direct manager.",
     whyItMatters:
-      "When a CEO takes the time to recognise an individual — with their name on a wax-sealed letter, a crystal piece for their desk — it changes how that person sees the company. Not a mass email. Not a Slack message. A physical object that says: the person at the top noticed you.",
+      "When a CEO takes the time to recognise an individual - with their name on a wax-sealed letter, a crystal piece for their desk - it changes how that person sees the company. Not a mass email. Not a Slack message. A physical object that says: the person at the top noticed you.",
     seoTitle:
-      "CEO Recognition Gifts | Leadership Awards for Employees — Neon Visuals",
+      "CEO Recognition Gifts | Leadership Awards for Employees - Neon Visuals",
     seoDescription:
-      "Premium CEO recognition gifts — wax-sealed letters, crystal awards, and personalised leadership gifts for star performers.",
+      "Premium CEO recognition gifts - wax-sealed letters, crystal awards, and personalised leadership gifts for star performers.",
     seoKeywords: [
       "ceo recognition gifts",
       "leadership awards employees",
@@ -151,9 +151,9 @@ export const OCCASIONS: Occasion[] = [
       "Strengthen business relationships with gifts that reflect your brand values and leave a lasting impression.",
     heroStat: "Companies that gift clients see 40% higher retention rates.",
     whyItMatters:
-      "A client is not a contract. A client is a relationship. When you send something with their name — not your logo — you signal that the relationship matters more than the transaction.",
+      "A client is not a contract. A client is a relationship. When you send something with their name - not your logo - you signal that the relationship matters more than the transaction.",
     seoTitle:
-      "Client Appreciation Gifts | Corporate Relationship Gifting — Neon Visuals",
+      "Client Appreciation Gifts | Corporate Relationship Gifting - Neon Visuals",
     seoDescription:
       "Premium client appreciation gifts that strengthen business relationships. Personalised, branded, and memorable.",
     seoKeywords: [
@@ -175,7 +175,7 @@ export const OCCASIONS: Occasion[] = [
     heroStat: "",
     whyItMatters:
       "The best recognition happens in the moment, not three months later at a town hall.",
-    seoTitle: "Spot Award Gifts | Employee MVP Recognition — Neon Visuals",
+    seoTitle: "Spot Award Gifts | Employee MVP Recognition - Neon Visuals",
     seoDescription:
       "Instant employee recognition gifts for spot awards, quarterly MVPs, and team achievements. Premium, personalised.",
     seoKeywords: [
@@ -198,7 +198,7 @@ export const OCCASIONS: Occasion[] = [
     whyItMatters:
       "How you say goodbye says as much about your company as how you say hello.",
     seoTitle:
-      "Farewell & Retirement Gifts | Employee Departure Gifts — Neon Visuals",
+      "Farewell & Retirement Gifts | Employee Departure Gifts - Neon Visuals",
     seoDescription:
       "Premium farewell and retirement gifts for departing employees. Personalised keepsakes that honour years of contribution.",
     seoKeywords: [
@@ -216,14 +216,14 @@ export const OCCASIONS: Occasion[] = [
     title: "Sustainable & Eco-Friendly Gifts",
     headline: "Conscious Gifting Choices",
     description:
-      "Eco-conscious corporate gifts made from sustainable materials — bamboo, recycled, organic, and plantable.",
+      "Eco-conscious corporate gifts made from sustainable materials - bamboo, recycled, organic, and plantable.",
     heroStat: "",
     whyItMatters:
       "Your gifting choices reflect your company values. Eco-conscious gifts tell your team and clients that you think about the future, not just the moment.",
     seoTitle:
-      "Eco-Friendly Corporate Gifts | Sustainable Gifting — Neon Visuals",
+      "Eco-Friendly Corporate Gifts | Sustainable Gifting - Neon Visuals",
     seoDescription:
-      "Sustainable corporate gifts — bamboo products, seed paper, organic candles, recycled packaging. Eco-conscious gifting for modern companies.",
+      "Sustainable corporate gifts - bamboo products, seed paper, organic candles, recycled packaging. Eco-conscious gifting for modern companies.",
     seoKeywords: [
       "eco friendly corporate gifts",
       "sustainable corporate gifting",
@@ -239,12 +239,12 @@ export const OCCASIONS: Occasion[] = [
     title: "Festive & Seasonal Gifts",
     headline: "Every Festival, Personalised",
     description:
-      "Holi, Christmas, Pongal, Onam, Eid — festival gifting with individual personalisation at scale.",
+      "Holi, Christmas, Pongal, Onam, Eid - festival gifting with individual personalisation at scale.",
     heroStat: "",
     whyItMatters:
       "Festivals are the one time every company gifts. The question is whether your team remembers yours or everyone's.",
     seoTitle:
-      "Festival Corporate Gifts | Seasonal Employee Gifting — Neon Visuals",
+      "Festival Corporate Gifts | Seasonal Employee Gifting - Neon Visuals",
     seoDescription:
       "Corporate festival gifts for Holi, Christmas, Pongal, and all Indian festivals. Personalised at scale.",
     seoKeywords: [
@@ -262,11 +262,11 @@ export const OCCASIONS: Occasion[] = [
     title: "Experience Kits",
     headline: "Complete Themed Gift Experiences",
     description:
-      "Curated multi-item kits that tell a story — from Day 1 Welcome Kits to Leadership Recognition Boxes.",
+      "Curated multi-item kits that tell a story - from Day 1 Welcome Kits to Leadership Recognition Boxes.",
     heroStat: "",
     whyItMatters:
       "A single item is a gift. A curated kit is an experience. The difference is in the story each piece tells together.",
-    seoTitle: "Corporate Experience Kits | Curated Gift Boxes — Neon Visuals",
+    seoTitle: "Corporate Experience Kits | Curated Gift Boxes - Neon Visuals",
     seoDescription:
       "Curated multi-item corporate gift kits for onboarding, recognition, and festivals. Complete themed experiences.",
     seoKeywords: [

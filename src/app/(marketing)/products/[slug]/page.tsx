@@ -7,10 +7,10 @@ import {
   PRODUCTS,
   getProductBySlug,
   getBucketByCode,
-  getRelatedProducts,
   getRelatedBuckets,
   waProduct,
 } from "@/lib/catalog";
+import type { Product } from "@/lib/types/product";
 import { Reveal } from "@/components/marketing/reveal";
 import { Breadcrumb } from "@/components/shared/breadcrumb";
 import { ProductGallery } from "@/components/products/product-gallery";
@@ -18,6 +18,7 @@ import { ProductGrid } from "@/components/products/product-grid";
 import { CollectionGrid } from "@/components/collections/collection-grid";
 import { EnquiryCTA } from "@/components/shared/enquiry-cta";
 import { StickyMobileCTA } from "@/components/shared/sticky-mobile-cta";
+import { ErrorBoundary } from "@/components/shared/error-boundary";
 
 const SITE_URL = "https://neonvisuals.in";
 
@@ -33,7 +34,7 @@ export async function generateMetadata({ params }: Params): Promise<Metadata> {
   if (!product) return buildMetadata({ title: "Product", description: "" });
   const desc = `${product.tagline ? `${product.tagline}. ` : ""}${product.description.slice(0, 120)}. Enquire for pricing and customisation.`;
   return buildMetadata({
-    title: `${product.name} — Personalised Corporate Gift | Neon Visuals`,
+    title: `${product.name} - Personalised Corporate Gift | Neon Visuals`,
     description: desc,
     path: `/products/${product.slug}`,
     image: product.imageUrl,
@@ -42,7 +43,7 @@ export async function generateMetadata({ params }: Params): Promise<Metadata> {
 
 const PERSONALISATION: Record<string, string> = {
   laser_engrave: "🔥 Laser Engraved",
-  print: "🖨️ Custom Print",
+  print: "�-�️ Custom Print",
   emboss: "🪶 Embossed",
   deboss: "🪧 Debossed",
   sublimation: "🌈 Sublimation Print",
@@ -52,14 +53,76 @@ const PERSONALISATION: Record<string, string> = {
 };
 
 const PACKAGING: Record<string, string> = {
-  budget: "Budget Packaging — Clean branded sleeve, tissue wrap.",
-  standard: "Standard Packaging — Rigid box with branded inner.",
-  premium: "Premium Packaging — Rigid box, magnetic flap, foil stamping, branded inner lid.",
-  flagship: "Flagship Packaging — Fabric-wrapped keepsake box, wax seal, narrative card.",
+  budget: "Budget Packaging - Clean branded sleeve, tissue wrap.",
+  standard: "Standard Packaging - Rigid box with branded inner.",
+  premium: "Premium Packaging - Rigid box, magnetic flap, foil stamping, branded inner lid.",
+  flagship: "Flagship Packaging - Fabric-wrapped keepsake box, wax seal, narrative card.",
 };
 
 function prettify(token: string): string {
   return token.replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase());
+}
+
+/**
+ * Deterministic Fisher-Yates shuffle seeded by a string (the product SKU).
+ * Uses an xmur3 hash to derive a 32-bit state, then a mulberry32 PRNG. Output
+ * is stable per seed (safe for static generation) but varies across products,
+ * so the "You May Also Like" grid isn't identical on every page.
+ */
+function seededShuffle<T>(items: readonly T[], seed: string): T[] {
+  let h = 1779033703 ^ seed.length;
+  for (let i = 0; i < seed.length; i += 1) {
+    h = Math.imul(h ^ seed.charCodeAt(i), 3432918353);
+    h = (h << 13) | (h >>> 19);
+  }
+  const rand = (): number => {
+    h = Math.imul(h ^ (h >>> 16), 2246822507);
+    h = Math.imul(h ^ (h >>> 13), 3266489909);
+    h ^= h >>> 16;
+    return (h >>> 0) / 4294967296;
+  };
+  const arr = [...items];
+  for (let i = arr.length - 1; i > 0; i -= 1) {
+    const j = Math.floor(rand() * (i + 1));
+    const tmp = arr[i]!;
+    arr[i] = arr[j]!;
+    arr[j] = tmp;
+  }
+  return arr;
+}
+
+/**
+ * Build up to `count` "You May Also Like" products locally (no catalog.ts
+ * changes): prefer the same collection, then fill from the same category.
+ * Selection is deduped by SKU and shuffled deterministically per SKU.
+ */
+function selectRelatedProducts(product: Product, count = 4): Product[] {
+  const picked: Product[] = [];
+  const seen = new Set<string>([product.sku]);
+
+  const sameCollection = PRODUCTS.filter(
+    (p) => p.bucket === product.bucket && p.sku !== product.sku,
+  );
+  for (const p of seededShuffle(sameCollection, product.sku)) {
+    if (picked.length >= count) break;
+    if (!seen.has(p.sku)) {
+      seen.add(p.sku);
+      picked.push(p);
+    }
+  }
+
+  if (picked.length < count && product.category !== undefined) {
+    const sameCategory = PRODUCTS.filter(
+      (p) => p.category === product.category && !seen.has(p.sku),
+    );
+    for (const p of seededShuffle(sameCategory, product.sku)) {
+      if (picked.length >= count) break;
+      seen.add(p.sku);
+      picked.push(p);
+    }
+  }
+
+  return picked;
 }
 
 export default async function ProductDetailPage({ params }: Params) {
@@ -70,7 +133,7 @@ export default async function ProductDetailPage({ params }: Params) {
   const collection = getBucketByCode(product.bucket);
   const collectionName = collection?.name ?? "Neon Visuals";
   const wa = waProduct(product, collectionName);
-  const related = getRelatedProducts(product, 4);
+  const related = selectRelatedProducts(product, 4);
   const relatedCollections = getRelatedBuckets(product.bucket, 3);
 
   const deskTest = (product.tags ?? []).includes("desk-test");
@@ -112,6 +175,7 @@ export default async function ProductDetailPage({ params }: Params) {
         dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
       />
 
+      <ErrorBoundary>
       <div className="mx-auto max-w-[1200px] px-6 py-10 pb-28 md:pb-10">
         <Breadcrumb
           items={[
@@ -123,14 +187,16 @@ export default async function ProductDetailPage({ params }: Params) {
         />
 
         <div className="mt-8 grid gap-10 lg:grid-cols-[55fr_45fr]">
-          {/* LEFT — gallery */}
-          <ProductGallery
-            name={product.name}
-            imageUrl={product.imageUrl}
-            galleryImages={product.galleryImages}
-          />
+          {/* LEFT - gallery */}
+          <ErrorBoundary>
+            <ProductGallery
+              name={product.name}
+              imageUrl={product.imageUrl}
+              galleryImages={product.galleryImages}
+            />
+          </ErrorBoundary>
 
-          {/* RIGHT — info */}
+          {/* RIGHT - info */}
           <div>
             {collection ? (
               <Link
@@ -237,7 +303,7 @@ export default async function ProductDetailPage({ params }: Params) {
         </div>
 
         {/* HOW PERSONALISATION WORKS */}
-        <section className="mt-20">
+        <section className="mt-16">
           <Reveal>
             <h2 className="text-center text-2xl font-bold text-[#1A1A1A]">
               How Personalisation Works
@@ -245,8 +311,8 @@ export default async function ProductDetailPage({ params }: Params) {
           </Reveal>
           <div className="mt-8 grid gap-6 md:grid-cols-3">
             {[
-              { n: "1", t: "Share your team list", d: "Send us names and the occasion — one WhatsApp message is enough." },
-              { n: "2", t: "We personalise each gift", d: "Names, messages, and packaging — handled by our personalisation artists." },
+              { n: "1", t: "Share your team list", d: "Send us names and the occasion - one WhatsApp message is enough." },
+              { n: "2", t: "We personalise each gift", d: "Names, messages, and packaging - handled by our personalisation artists." },
               { n: "3", t: "Delivered to your doorstep", d: "QC'd, photo-proofed, and delivered with intention." },
             ].map((s, i) => (
               <Reveal key={s.n} delay={i * 80}>
@@ -260,11 +326,12 @@ export default async function ProductDetailPage({ params }: Params) {
           </div>
         </section>
 
-        {/* YOU MIGHT ALSO LIKE */}
+        {/* YOU MAY ALSO LIKE */}
         {related.length > 0 ? (
-          <section className="mt-20">
+          <section className="mt-14">
             <Reveal>
-              <h2 className="mb-8 text-2xl font-bold text-[#1A1A1A]">You Might Also Like</h2>
+              <h2 className="text-2xl font-bold text-[#1A1A1A]">You May Also Like</h2>
+              <p className="mb-8 mt-1 text-sm text-[#666666]">More from this collection.</p>
             </Reveal>
             <ProductGrid products={related} />
           </section>
@@ -272,7 +339,7 @@ export default async function ProductDetailPage({ params }: Params) {
 
         {/* EXPLORE MORE COLLECTIONS */}
         {relatedCollections.length > 0 ? (
-          <section className="mt-20">
+          <section className="mt-14">
             <Reveal>
               <h2 className="mb-8 text-2xl font-bold text-[#1A1A1A]">Explore More Collections</h2>
             </Reveal>
@@ -280,6 +347,7 @@ export default async function ProductDetailPage({ params }: Params) {
           </section>
         ) : null}
       </div>
+      </ErrorBoundary>
 
       {/* CTA BANNER */}
       <section className="bg-linear-to-r from-navy to-[#2a2a4a] py-16">

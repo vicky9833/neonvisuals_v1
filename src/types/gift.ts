@@ -40,9 +40,9 @@ export interface GiftRecord {
   desk_test_checked_date: string | null;
   feedback_notes: string | null;
   linkedin_posted: boolean;
-  /** INTERNAL ONLY — never expose to clients. */
+  /** INTERNAL ONLY - never expose to clients. */
   unit_cost: number | null;
-  /** INTERNAL ONLY — never expose to clients. */
+  /** INTERNAL ONLY - never expose to clients. */
   unit_price: number | null;
   quote_id: string | null;
   order_id: string | null;

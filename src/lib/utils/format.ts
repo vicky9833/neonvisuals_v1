@@ -1,5 +1,5 @@
 /**
- * Formatting helpers — Indian numbering, dates, slugs, and text.
+ * Formatting helpers - Indian numbering, dates, slugs, and text.
  */
 
 /**
@@ -34,7 +34,7 @@ export function formatDateFull(date: string | Date): string {
   }).format(d);
 }
 
-/** "in 3 days" / "2 weeks ago" — relative to now. */
+/** "in 3 days" / "2 weeks ago" - relative to now. */
 export function formatRelativeDate(date: string | Date): string {
   const d = typeof date === "string" ? new Date(date) : date;
   const diffMs = d.getTime() - Date.now();
@@ -89,7 +89,7 @@ export function getInitials(name: string): string {
   ).toUpperCase();
 }
 
-/** "+91 98765 43210" — formats a 10-digit Indian mobile number. */
+/** "+91 98765 43210" - formats a 10-digit Indian mobile number. */
 export function formatPhoneIndia(phone: string): string {
   const digits = phone.replace(/\D/g, "");
   const local = digits.startsWith("91") && digits.length > 10

@@ -1,6 +1,6 @@
 /**
- * Quote PDF generator — @react-pdf/renderer. Server-side only.
- * Brand voice: "Investment" never "Price/Cost". Helvetica (built-in) — uses
+ * Quote PDF generator - @react-pdf/renderer. Server-side only.
+ * Brand voice: "Investment" never "Price/Cost". Helvetica (built-in) - uses
  * "Rs." for amounts since the ₹ glyph is not in the base Helvetica font.
  */
 import {
@@ -78,7 +78,7 @@ function QuoteDocument({ quote }: { quote: Quote }) {
   });
   const validUntil = quote.valid_until
     ? new Date(quote.valid_until).toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" })
-    : "—";
+    : "-";
 
   return (
     <Document title={quote.quote_number} author="Neon Visuals">
@@ -87,7 +87,7 @@ function QuoteDocument({ quote }: { quote: Quote }) {
         <View style={s.headerRow}>
           <View>
             <Text style={s.logo}>NEON VISUALS</Text>
-            <Text style={s.tagline}>Where Creativity Sparks</Text>
+            <Text style={s.tagline}>Crafted with Intention. Remembered with Pride.</Text>
           </View>
           <View style={s.quoteMeta}>
             <Text style={s.bold}>{quote.quote_number}</Text>
@@ -111,7 +111,7 @@ function QuoteDocument({ quote }: { quote: Quote }) {
           </View>
           <View style={s.col}>
             <Text style={s.sectionLabel}>Kit Summary</Text>
-            <Text>Occasion: {quote.occasion || "—"}</Text>
+            <Text>Occasion: {quote.occasion || "-"}</Text>
             <Text>Kit Quantity: {quote.kit_count}</Text>
             <Text>Packaging: {PACKAGING_LABEL[quote.packaging_tier] ?? quote.packaging_tier}</Text>
             <Text>
@@ -186,7 +186,7 @@ function QuoteDocument({ quote }: { quote: Quote }) {
 
         {/* Footer */}
         <View style={s.footer} fixed>
-          <Text>Neon Visuals — Where Creativity Sparks · 9019409590 · contact.neonvisuals@gmail.com · neonvisuals.in</Text>
+          <Text>Neon Visuals - Crafted with Intention. Remembered with Pride. · +91 90194 09590 · contact@neonvisuals.in · neonvisuals.in</Text>
           <Text render={({ pageNumber, totalPages }) => `Page ${pageNumber} of ${totalPages}`} />
         </View>
       </Page>

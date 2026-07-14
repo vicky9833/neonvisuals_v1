@@ -12,7 +12,7 @@ import type { Employee, EmployeeFormData } from "@/types/employee";
  */
 
 const COLS =
-  "id, company_id, name:full_name, email, employee_code, phone, department, designation, date_of_birth, joining_date, manager_name, manager_email, tshirt_size, dietary_preference, hobbies, interests, delivery_address, city, pincode, is_active, notes, avatar_url, created_at, updated_at, created_by";
+  "id, company_id, name:full_name, email, employee_code, phone, department, designation, dob_day, dob_month, joining_date, manager_name, manager_email, tshirt_size, dietary_preference, hobbies, interests, delivery_address, city, pincode, is_active, notes, avatar_url, created_at, updated_at, created_by";
 
 /** Maps form data → DB row, translating name→full_name and "" → null. */
 function toRow(data: Partial<EmployeeFormData>): Record<string, unknown> {
@@ -22,12 +22,34 @@ function toRow(data: Partial<EmployeeFormData>): Record<string, unknown> {
 
   if (data.name !== undefined) row.full_name = data.name.trim();
   if (data.email !== undefined) row.email = data.email.trim().toLowerCase();
+
+  // Birthday: store DAY + MONTH only. The birth YEAR is NEVER persisted
+  // (privacy, migration 018). Accepts either explicit dob_day/dob_month or a
+  // full ISO date (from the single-employee form) whose year we discard.
+  if (data.dob_day !== undefined || data.dob_month !== undefined) {
+    if (data.dob_day !== undefined)
+      row.dob_day = data.dob_day === null ? null : Number(data.dob_day) || null;
+    if (data.dob_month !== undefined)
+      row.dob_month = data.dob_month === null ? null : Number(data.dob_month) || null;
+  } else if (data.date_of_birth !== undefined) {
+    const iso = (data.date_of_birth ?? "").trim();
+    if (iso === "") {
+      row.dob_day = null;
+      row.dob_month = null;
+    } else {
+      const d = new Date(iso);
+      if (!Number.isNaN(d.getTime())) {
+        row.dob_day = d.getDate();
+        row.dob_month = d.getMonth() + 1;
+      }
+    }
+  }
+
   const map: [keyof EmployeeFormData, string][] = [
     ["employee_code", "employee_code"],
     ["phone", "phone"],
     ["department", "department"],
     ["designation", "designation"],
-    ["date_of_birth", "date_of_birth"],
     ["joining_date", "joining_date"],
     ["manager_name", "manager_name"],
     ["manager_email", "manager_email"],
@@ -85,7 +107,12 @@ export async function listEmployees(
     );
   }
 
-  const sortCol = sortBy === "name" ? "full_name" : sortBy;
+  const sortCol =
+    sortBy === "name"
+      ? "full_name"
+      : sortBy === "date_of_birth"
+        ? "dob_month"
+        : sortBy;
   query = query.order(sortCol, { ascending: sortOrder === "asc" });
 
   const from = (page - 1) * pageSize;
@@ -147,7 +174,7 @@ export async function updateEmployee(
   return updated as unknown as Employee;
 }
 
-/** Soft delete — deactivate. */
+/** Soft delete - deactivate. */
 export async function deleteEmployee(id: string): Promise<void> {
   const supabase = await createClient();
   const { error } = await supabase
@@ -274,6 +301,16 @@ function daysUntilNext(dateStr: string): number {
   return Math.round((next.getTime() - today.getTime()) / 86_400_000);
 }
 
+/** Days until the next occurrence of a (month, day) — no year needed. */
+function daysUntilNextDM(month: number, day: number): number {
+  if (!month || !day) return Number.POSITIVE_INFINITY;
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  const next = new Date(today.getFullYear(), month - 1, day);
+  if (next < today) next.setFullYear(today.getFullYear() + 1);
+  return Math.round((next.getTime() - today.getTime()) / 86_400_000);
+}
+
 export async function getUpcomingBirthdays(
   companyId: string,
   days: number,
@@ -284,10 +321,14 @@ export async function getUpcomingBirthdays(
     .select(COLS)
     .eq("company_id", companyId)
     .eq("is_active", true)
-    .not("date_of_birth", "is", null);
+    .not("dob_month", "is", null);
   return ((data ?? []) as unknown as Employee[])
-    .filter((e) => e.date_of_birth && daysUntilNext(e.date_of_birth) <= days)
-    .sort((a, b) => daysUntilNext(a.date_of_birth!) - daysUntilNext(b.date_of_birth!));
+    .filter((e) => e.dob_month && daysUntilNextDM(e.dob_month, e.dob_day ?? 1) <= days)
+    .sort(
+      (a, b) =>
+        daysUntilNextDM(a.dob_month!, a.dob_day ?? 1) -
+        daysUntilNextDM(b.dob_month!, b.dob_day ?? 1),
+    );
 }
 
 export async function getUpcomingAnniversaries(

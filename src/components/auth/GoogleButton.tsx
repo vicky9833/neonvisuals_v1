@@ -7,7 +7,7 @@ import { GOOGLE_OAUTH_ENABLED } from "@/lib/auth-types";
 
 /**
  * Google OAuth button. Renders only when NEXT_PUBLIC_GOOGLE_OAUTH_ENABLED is
- * set (graceful degradation — never an error when Google isn't configured).
+ * set (graceful degradation - never an error when Google isn't configured).
  *
  * Google OAuth: configure in Supabase Dashboard → Authentication → Providers
  * → Google. Redirect URL (prod):

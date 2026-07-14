@@ -20,8 +20,8 @@ export function CollectionAdminCard({ data }: { data: CollectionAdminData }) {
           <dt className="text-[#9CA3AF]">ASP range</dt>
           <dd className="font-numbers text-navy">
             {data.aspMin != null && data.aspMax != null
-              ? `${formatCurrency(data.aspMin)}–${formatCurrency(data.aspMax)}`
-              : "—"}
+              ? `${formatCurrency(data.aspMin)}-${formatCurrency(data.aspMax)}`
+              : "-"}
           </dd>
         </div>
         <div className="flex justify-between">

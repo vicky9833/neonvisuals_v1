@@ -5,6 +5,7 @@ import { AdminOverview } from "@/components/admin/AdminOverview";
 import { getAdminOverview } from "@/lib/admin/overview";
 import { listLeads } from "@/lib/engines/lead";
 import { sendLeadFollowUpEmail, wasEmailSentRecently } from "@/lib/services/email";
+import { ErrorBoundary } from "@/components/shared/error-boundary";
 
 export const metadata: Metadata = { title: "Command Center" };
 
@@ -46,12 +47,14 @@ export default async function AdminOverviewPage() {
   }).format(new Date());
 
   return (
-    <div className="space-y-8">
-      <PageHeader
-        title="Command Center"
-        description={`Welcome back, ${firstName}. Last updated ${updatedAt}.`}
-      />
-      <AdminOverview data={data} />
-    </div>
+    <ErrorBoundary>
+      <div className="space-y-8">
+        <PageHeader
+          title="Command Center"
+          description={`Welcome back, ${firstName}. Last updated ${updatedAt}.`}
+        />
+        <AdminOverview data={data} />
+      </div>
+    </ErrorBoundary>
   );
 }

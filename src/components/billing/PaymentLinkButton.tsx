@@ -65,7 +65,7 @@ export function PaymentLinkButton({
   if (!razorpayConfigured) {
     return (
       <p className="text-xs text-[#9CA3AF]">
-        Razorpay not configured — add API keys to enable payment links.
+        Razorpay not configured - add API keys to enable payment links.
       </p>
     );
   }

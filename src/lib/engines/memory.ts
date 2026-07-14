@@ -8,7 +8,7 @@ import {
 } from "@/types/gift";
 
 /**
- * Memory Engine — the permanent institutional record of every gift sent, plus
+ * Memory Engine - the permanent institutional record of every gift sent, plus
  * the learned per-employee preferences that drive duplicate detection and
  * recommendations. Company-scoped via the RLS client.
  */
@@ -173,7 +173,7 @@ export async function checkDuplicates(
 
   const previous = (data ?? [])[0] as GiftRecord | undefined;
   if (!previous) {
-    return { isDuplicate: false, recommendation: "No prior record — safe to gift." };
+    return { isDuplicate: false, recommendation: "No prior record - safe to gift." };
   }
   const days = Math.round(
     (Date.now() - new Date(previous.gifted_date).getTime()) / 86_400_000,

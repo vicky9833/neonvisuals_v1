@@ -1,5 +1,5 @@
 /**
- * Catalog empty state — shown when search/filters return zero products.
+ * Catalog empty state - shown when search/filters return zero products.
  */
 import { SearchX } from "lucide-react";
 

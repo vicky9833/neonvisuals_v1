@@ -41,8 +41,11 @@ export async function GET() {
   } catch (err) {
     const authResponse = apiAuthErrorResponse(err);
     if (authResponse) return authResponse;
-    const message = err instanceof Error ? err.message : "Unknown error";
-    return NextResponse.json({ error: "company_failed", message }, { status: 500 });
+    console.error("[auth/company]", err);
+    return NextResponse.json(
+      { error: "server_error", message: "Failed to load company details." },
+      { status: 500 },
+    );
   }
 }
 
@@ -68,13 +71,20 @@ export async function PATCH(request: Request) {
       .select("*")
       .single();
     if (error) {
-      return NextResponse.json({ error: "update_failed", message: error.message }, { status: 500 });
+      console.error("[auth/company]", error);
+      return NextResponse.json(
+        { error: "update_failed", message: "Failed to update company details." },
+        { status: 500 },
+      );
     }
     return NextResponse.json({ data });
   } catch (err) {
     const authResponse = apiAuthErrorResponse(err);
     if (authResponse) return authResponse;
-    const message = err instanceof Error ? err.message : "Unknown error";
-    return NextResponse.json({ error: "update_failed", message }, { status: 500 });
+    console.error("[auth/company]", err);
+    return NextResponse.json(
+      { error: "update_failed", message: "Failed to update company details." },
+      { status: 500 },
+    );
   }
 }

@@ -104,7 +104,7 @@ export function DeliveryCard({ order, onSave }: DeliveryCardProps) {
             <dd className="text-navy">
               {order.expected_delivery_date
                 ? formatDate(order.expected_delivery_date)
-                : "—"}
+                : "-"}
             </dd>
           </div>
           {order.actual_delivery_date && (
@@ -117,18 +117,18 @@ export function DeliveryCard({ order, onSave }: DeliveryCardProps) {
           )}
           <div className="flex justify-between">
             <dt className="text-[#6B7280]">Tracking</dt>
-            <dd className="text-navy">{order.tracking_number ?? "—"}</dd>
+            <dd className="text-navy">{order.tracking_number ?? "-"}</dd>
           </div>
           <div className="flex justify-between">
             <dt className="text-[#6B7280]">Courier</dt>
-            <dd className="text-navy">{order.courier_partner ?? "—"}</dd>
+            <dd className="text-navy">{order.courier_partner ?? "-"}</dd>
           </div>
           <div className="border-t border-border pt-2">
             <dt className="text-[#6B7280]">Address</dt>
             <dd className="mt-1 text-navy">
-              {order.delivery_address ?? "—"}
+              {order.delivery_address ?? "-"}
               {order.delivery_city ? `, ${order.delivery_city}` : ""}
-              {order.delivery_pincode ? ` — ${order.delivery_pincode}` : ""}
+              {order.delivery_pincode ? ` - ${order.delivery_pincode}` : ""}
             </dd>
           </div>
         </dl>

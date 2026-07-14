@@ -43,7 +43,7 @@ export function LeadActivityTimeline({
               {a.follow_up_date && (
                 <p className="mt-1 text-xs text-gold">
                   Follow-up set for {a.follow_up_date}
-                  {a.follow_up_note ? ` — ${a.follow_up_note}` : ""}
+                  {a.follow_up_note ? ` - ${a.follow_up_note}` : ""}
                 </p>
               )}
               <p className="mt-1 text-[11px] text-[#9CA3AF]">

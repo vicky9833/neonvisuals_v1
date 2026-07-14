@@ -14,7 +14,7 @@ export function WelcomeEmail({ name }: WelcomeEmailProps) {
         We design premium recognition experiences that make your people feel
         seen. Let&apos;s create something memorable together.
       </p>
-      <p>— The Neon Visuals team</p>
+      <p>- The Neon Visuals team</p>
     </div>
   );
 }

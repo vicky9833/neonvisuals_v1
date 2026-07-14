@@ -27,7 +27,7 @@ interface RecipientUploadProps {
 }
 
 /**
- * Adds recipients to an order — either by selecting from the company's
+ * Adds recipients to an order - either by selecting from the company's
  * employee list or by pasting/uploading a CSV (name, email, department,
  * personalisation_name, personalisation_message).
  */
@@ -170,7 +170,7 @@ export function RecipientUpload({
                           <span className="block text-xs text-[#9CA3AF]">
                             {[e.department, e.email]
                               .filter(Boolean)
-                              .join(" · ") || "—"}
+                              .join(" · ") || "-"}
                           </span>
                         </span>
                       </label>

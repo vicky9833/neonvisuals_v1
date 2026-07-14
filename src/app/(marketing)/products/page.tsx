@@ -6,9 +6,9 @@ import { ProductSearch } from "@/components/search/product-search";
 const SITE_URL = "https://neonvisuals.in";
 
 export const metadata: Metadata = buildMetadata({
-  title: "Premium Corporate Gifts — Personalised for Your Team | Neon Visuals",
+  title: "Premium Corporate Gifts - Personalised for Your Team | Neon Visuals",
   description:
-    "Explore 120+ personalised corporate gifts across 11 collections. From onboarding kits to CEO recognition — every gift carries the recipient's name. Enquire now.",
+    "Explore 120+ personalised corporate gifts across 11 collections. From onboarding kits to CEO recognition - every gift carries the recipient's name. Enquire now.",
   path: "/products",
   image: "/og/catalog.png",
 });
@@ -38,7 +38,7 @@ export default async function ProductsPage({ searchParams }: SearchParams) {
         dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
       />
 
-      {/* HERO — compact */}
+      {/* HERO - compact */}
       <section className="bg-linear-to-br from-navy to-[#2a2a4a]">
         <div className="mx-auto max-w-[1200px] px-6 py-16 text-center">
           <span className="inline-flex items-center gap-2 rounded-full border border-white/15 bg-white/5 px-4 py-1.5 text-[13px] font-medium text-cream">
@@ -48,9 +48,9 @@ export default async function ProductsPage({ searchParams }: SearchParams) {
             Gifts That Stay on Their Desk for Years
           </h1>
           <p className="mx-auto mt-5 max-w-2xl text-lg leading-[1.7] text-[#9CA3AF]">
-            Every product carries the recipient&apos;s name. Every box is
-            assembled by hand. Every moment is designed to make someone feel
-            seen.
+            Browse premium personalized gifts for corporates, colleges, events,
+            startups, and institutions. Every product can be customized with
+            your branding, recipient names, and premium packaging.
           </p>
         </div>
       </section>

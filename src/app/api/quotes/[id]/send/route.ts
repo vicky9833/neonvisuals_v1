@@ -52,7 +52,10 @@ export async function POST(_request: Request, { params }: Ctx) {
   } catch (err) {
     const authResponse = apiAuthErrorResponse(err);
     if (authResponse) return authResponse;
-    const message = err instanceof Error ? err.message : "Unknown error";
-    return NextResponse.json({ error: "send_failed", message }, { status: 500 });
+    console.error("[quotes/[id]/send]", err);
+    return NextResponse.json(
+      { error: "server_error", message: "Could not send the quote. Please try again." },
+      { status: 500 },
+    );
   }
 }

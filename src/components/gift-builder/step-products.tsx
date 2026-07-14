@@ -2,6 +2,7 @@
 
 import { type Dispatch, useMemo, useState } from "react";
 import { Search, X, ShoppingBag } from "lucide-react";
+import { toast } from "sonner";
 import type { Bucket, Product } from "@/lib/types/product";
 import { PRODUCTS, searchProducts } from "@/lib/catalog";
 import {
@@ -50,13 +51,36 @@ export function StepProducts({
   }, [collection, query]);
 
   const inKit = (sku: string) => state.selectedProducts.some((p) => p.sku === sku);
-  const toggle = (product: Product) => dispatch({ type: "TOGGLE_PRODUCT", product });
+  const toggle = (product: Product) => {
+    const wasInKit = inKit(product.sku);
+    dispatch({ type: "TOGGLE_PRODUCT", product });
+    if (!wasInKit) {
+      toast(`✓ ${product.name} added to your kit`, {
+        duration: 2000,
+        action: {
+          label: "View Kit →",
+          onClick: () => {
+            if (
+              typeof window !== "undefined" &&
+              window.matchMedia("(min-width: 1024px)").matches
+            ) {
+              document
+                .getElementById("kit-sidebar")
+                ?.scrollIntoView({ behavior: "smooth" });
+            } else {
+              setDrawerOpen(true);
+            }
+          },
+        },
+      });
+    }
+  };
 
   return (
     <div>
       <h2 className="text-3xl font-bold tracking-tight text-[#1A1A1A]">Select Your Products</h2>
       <p className="mt-2 text-[#666666]">
-        Add products to your kit. We recommend 3–7 items for the perfect experience.
+        Add products to your kit. We recommend 3-7 items for the perfect experience.
       </p>
 
       <div className="mt-8 grid gap-8 lg:grid-cols-[1fr_340px]">
@@ -145,9 +169,12 @@ export function StepProducts({
         </div>
 
         {/* Desktop sidebar */}
-        <aside className="sticky top-24 hidden h-fit rounded-2xl border border-[#EDE9E3] bg-white p-5 shadow-sm lg:block">
+        <aside
+          id="kit-sidebar"
+          className="sticky top-24 hidden h-fit rounded-2xl border border-[#EDE9E3] bg-white p-5 shadow-sm lg:block"
+        >
           <h3 className="text-lg font-bold text-[#1A1A1A]">Your Experience Kit</h3>
-          <p className="mt-1 text-xs text-[#888888]">We recommend 3–7 items for the perfect kit</p>
+          <p className="mt-1 text-xs text-[#888888]">We recommend 3-7 items for the perfect kit</p>
           <div className="mt-4 max-h-[50vh] overflow-y-auto">
             <KitContents
               products={state.selectedProducts}
@@ -177,7 +204,7 @@ export function StepProducts({
           className="fixed inset-x-4 bottom-4 z-40 flex items-center justify-center gap-2 rounded-full bg-navy py-3.5 text-sm font-semibold text-white shadow-lg lg:hidden"
         >
           <ShoppingBag className="size-4" />
-          {state.selectedProducts.length} items selected — Review kit
+          {state.selectedProducts.length} items selected - Review kit
         </button>
       ) : null}
 

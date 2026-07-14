@@ -238,7 +238,7 @@ export function CreateOrderForm({
                     .filter((p) => !lines.some((l) => l.sku === p.sku))
                     .map((p) => (
                       <SelectItem key={p.sku} value={p.sku}>
-                        {p.sku} — {p.name}
+                        {p.sku} - {p.name}
                       </SelectItem>
                     ))}
                 </SelectContent>

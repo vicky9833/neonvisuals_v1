@@ -5,7 +5,7 @@ import { generateInvoicePDF } from "@/lib/engines/invoice-pdf";
 
 export const runtime = "nodejs";
 
-// GET — generate + stream the invoice PDF. Admin: any. Client: own company.
+// GET - generate + stream the invoice PDF. Admin: any. Client: own company.
 export async function GET(
   _request: Request,
   { params }: { params: Promise<{ id: string }> },
@@ -42,7 +42,10 @@ export async function GET(
   } catch (err) {
     const authResponse = apiAuthErrorResponse(err);
     if (authResponse) return authResponse;
-    const message = err instanceof Error ? err.message : "Unknown error";
-    return NextResponse.json({ error: "pdf_failed", message }, { status: 500 });
+    console.error("[invoices/[id]/pdf]", err);
+    return NextResponse.json(
+      { error: "server_error", message: "Failed to generate invoice PDF." },
+      { status: 500 },
+    );
   }
 }

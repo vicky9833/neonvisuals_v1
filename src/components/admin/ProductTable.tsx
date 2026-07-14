@@ -162,10 +162,10 @@ export function ProductTable({
                     )}
                   </TableCell>
                   <TableCell className="hidden md:table-cell text-sm text-[#6B7280]">
-                    {p.collection_code ?? "—"}
+                    {p.collection_code ?? "-"}
                   </TableCell>
                   <TableCell className="text-center font-numbers text-sm">
-                    {p.wow_score ?? "—"}
+                    {p.wow_score ?? "-"}
                   </TableCell>
                   <TableCell className="hidden sm:table-cell text-sm">
                     {p.images.length > 0 ? (

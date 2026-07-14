@@ -3,7 +3,7 @@ import { createAdminClient } from "@/lib/supabase/admin";
 
 /**
  * Admin product catalog access (DB-backed). NOTE: this updates the `products`
- * DATABASE rows only — the public static file `src/data/products.ts` remains
+ * DATABASE rows only - the public static file `src/data/products.ts` remains
  * the source of truth for the public site and is regenerated manually when
  * needed (export DB rows → products.ts). Pricing lives only in the DB.
  */
@@ -280,7 +280,7 @@ export async function removeProductImage(
   const product = await getAdminProduct(sku);
   if (!product) throw new Error("Product not found");
 
-  // Remove from storage (best effort — only if it's in our bucket).
+  // Remove from storage (best effort - only if it's in our bucket).
   const marker = `/public/${PRODUCT_IMAGES_BUCKET}/`;
   const idx = url.indexOf(marker);
   if (idx !== -1) {

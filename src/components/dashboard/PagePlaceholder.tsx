@@ -19,7 +19,7 @@ interface PagePlaceholderProps {
 export function PagePlaceholder({
   title,
   icon,
-  description = "Coming soon — this feature is being built.",
+  description = "Coming soon - this feature is being built.",
   ctaLabel = "In the meantime, browse our catalog",
   ctaHref = "/products",
 }: PagePlaceholderProps) {

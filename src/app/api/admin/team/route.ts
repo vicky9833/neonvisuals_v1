@@ -18,8 +18,11 @@ export async function GET() {
   } catch (err) {
     const authResponse = apiAuthErrorResponse(err);
     if (authResponse) return authResponse;
-    const message = err instanceof Error ? err.message : "Unknown error";
-    return NextResponse.json({ error: "list_failed", message }, { status: 500 });
+    console.error("[admin/team]", err);
+    return NextResponse.json(
+      { error: "server_error", message: "Failed to load team members." },
+      { status: 500 },
+    );
   }
 }
 
@@ -31,7 +34,13 @@ const patchSchema = z.object({
 export async function PATCH(request: Request) {
   try {
     const profile = await requireApiRole(["super_admin"]);
-    const body = await request.json();
+    const body = await request.json().catch(() => null);
+    if (body === null) {
+      return NextResponse.json(
+        { error: "invalid_input", message: "Invalid JSON body." },
+        { status: 400 },
+      );
+    }
     const parsed = patchSchema.safeParse(body);
     if (!parsed.success) {
       return NextResponse.json(
@@ -56,7 +65,10 @@ export async function PATCH(request: Request) {
   } catch (err) {
     const authResponse = apiAuthErrorResponse(err);
     if (authResponse) return authResponse;
-    const message = err instanceof Error ? err.message : "Unknown error";
-    return NextResponse.json({ error: "update_failed", message }, { status: 500 });
+    console.error("[admin/team]", err);
+    return NextResponse.json(
+      { error: "server_error", message: "Failed to update team member." },
+      { status: 500 },
+    );
   }
 }

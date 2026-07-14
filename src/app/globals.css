@@ -276,7 +276,8 @@
   }
   .animate-fade-in,
   .animate-slide-up,
-  .animate-scale-in {
+  .animate-scale-in,
+  .page-enter {
     opacity: 1 !important;
     transform: none !important;
   }
@@ -290,5 +291,157 @@
   }
   50% {
     transform: translateX(4px);
+  }
+}
+
+/* ------------------------------------------------------------------ */
+/* Hero entrance + floating gift animations                            */
+/* ------------------------------------------------------------------ */
+
+/* Gently float the hero gift icon up and down (2px) */
+@keyframes float {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-2px);
+  }
+}
+
+.animate-float {
+  animation: float 3s ease-in-out infinite;
+}
+
+/* Hero heading slides in from the left */
+@keyframes hero-fade-left {
+  from {
+    opacity: 0;
+    transform: translateX(-24px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+/* Hero supporting elements simply fade in */
+@keyframes hero-fade-in {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.hero-anim-heading {
+  animation: hero-fade-left 0.6s ease-out 0.3s both;
+}
+
+.hero-anim-sub {
+  animation: hero-fade-in 0.6s ease-out 0.5s both;
+}
+
+.hero-anim-cta {
+  animation: hero-fade-in 0.6s ease-out 0.7s both;
+}
+
+.hero-anim-stats {
+  animation: hero-fade-in 0.6s ease-out 0.9s both;
+}
+
+/* ------------------------------------------------------------------ */
+/* Floating WhatsApp button — subtle load-time pulse (runs twice)      */
+/* ------------------------------------------------------------------ */
+@keyframes wa-pulse {
+  0% {
+    box-shadow: 0 0 0 0 rgba(37, 211, 102, 0.5);
+  }
+  70% {
+    box-shadow: 0 0 0 12px rgba(37, 211, 102, 0);
+  }
+  100% {
+    box-shadow: 0 0 0 0 rgba(37, 211, 102, 0);
+  }
+}
+
+.animate-wa-pulse {
+  animation: wa-pulse 1.6s ease-out 2;
+}
+
+/* ------------------------------------------------------------------ */
+/* Page entrance animation                                             */
+/* ------------------------------------------------------------------ */
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+.page-enter {
+  animation: fadeIn 0.3s ease-out;
+}
+
+/* ------------------------------------------------------------------ */
+/* Hero badge — cycling label (slide up + fade)                        */
+/* ------------------------------------------------------------------ */
+@keyframes hero-badge-in {
+  from {
+    opacity: 0;
+    transform: translateY(100%);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes hero-badge-out {
+  from {
+    opacity: 1;
+    transform: translateY(0);
+  }
+  to {
+    opacity: 0;
+    transform: translateY(-100%);
+  }
+}
+
+.hero-badge-in {
+  animation: hero-badge-in 0.5s ease-out both;
+}
+
+.hero-badge-out {
+  animation: hero-badge-out 0.5s ease-out both;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .hero-badge-in,
+  .hero-badge-out {
+    animation: none;
+  }
+}
+
+/* ------------------------------------------------------------------ */
+/* Print styles — hide chrome, force high-contrast document           */
+/* ------------------------------------------------------------------ */
+@media print {
+  header,
+  footer,
+  .whatsapp-float,
+  .scroll-to-top {
+    display: none !important;
+  }
+  body {
+    background: #fff !important;
+    color: #000 !important;
   }
 }

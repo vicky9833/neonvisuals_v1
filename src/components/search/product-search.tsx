@@ -51,6 +51,29 @@ export function ProductSearch({ products, buckets, initialQuery = "" }: ProductS
 
   const filterCount = (collection !== "all" ? 1 : 0) + tags.length + (debounced.trim() ? 1 : 0);
   const grouped = collection === "all" && !debounced.trim() && tags.length === 0;
+  // Sub-header grouping: a specific collection is active and the user is not searching.
+  const categoryGrouped = collection !== "all" && !debounced.trim();
+
+  // Group filtered products by their `category` field, preserving stable order.
+  // Products with no category fall under a "More" group rendered last.
+  const categoryGroups = useMemo(() => {
+    if (!categoryGrouped) return [] as { name: string; items: Product[] }[];
+    const MORE = "More";
+    const order: string[] = [];
+    const map = new Map<string, Product[]>();
+    for (const p of filtered) {
+      const key = p.category?.trim() ? p.category : MORE;
+      if (!map.has(key)) {
+        map.set(key, []);
+        order.push(key);
+      }
+      map.get(key)!.push(p);
+    }
+    // Ensure the "More" group is always last while keeping other groups stable.
+    const named = order.filter((k) => k !== MORE);
+    const ordered = map.has(MORE) ? [...named, MORE] : named;
+    return ordered.map((name) => ({ name, items: map.get(name) ?? [] }));
+  }, [categoryGrouped, filtered]);
 
   return (
     <>
@@ -151,6 +174,17 @@ export function ProductSearch({ products, buckets, initialQuery = "" }: ProductS
                   </div>
                 );
               })}
+            </div>
+          ) : categoryGrouped ? (
+            <div>
+              {categoryGroups.map((g) => (
+                <div key={g.name}>
+                  <h3 className="mb-4 mt-8 border-l-4 border-[#C4A35A] pl-3 text-lg font-semibold text-[#1A1A2E]">
+                    {g.name}
+                  </h3>
+                  <ProductGrid products={g.items} />
+                </div>
+              ))}
             </div>
           ) : (
             <ProductGrid products={filtered} />

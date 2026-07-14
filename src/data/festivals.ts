@@ -2,7 +2,7 @@
 export interface Festival {
   name: string;
   slug: string;
-  /** Approximate calendar month (1–12); exact dates vary yearly. */
+  /** Approximate calendar month (1-12); exact dates vary yearly. */
   month: number;
   region?: string;
 }

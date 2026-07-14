@@ -3,16 +3,39 @@
  */
 
 export const COMPANY_NAME = "Neon Visuals";
-export const TAGLINE = "Where Creativity Sparks";
+export const TAGLINE = "Crafted with Intention. Remembered with Pride.";
+/** Positioning label shown in hero pill / studio references. */
+export const STUDIO_LABEL = "Premium Gifting Studio";
 export const DOMAIN = "neonvisuals.in";
-export const SUPPORT_EMAIL = "contact.neonvisuals@gmail.com";
-export const PHONE = "+91 9019409590";
+export const SUPPORT_EMAIL = "contact@neonvisuals.in";
+/** Primary inbox (alias of SUPPORT_EMAIL) used where copy prefers PRIMARY_EMAIL. */
+export const PRIMARY_EMAIL = "contact@neonvisuals.in";
+/** Legacy inbox kept as a secondary contact where explicitly listed. */
+export const LEGACY_EMAIL = "contact.neonvisuals@gmail.com";
+export const PHONE = "+91 90194 09590";
+export const PHONE_2 = "+91 72402 23607";
+export const PHONE_3 = "+91 98334 50699";
+/** All display phone numbers, in order. */
+export const PHONES = [PHONE, PHONE_2, PHONE_3] as const;
+
+/** Social + web presence. */
+export const INSTAGRAM_HANDLE = "@neonvisuals.co";
+export const INSTAGRAM_URL = "https://instagram.com/neonvisuals.co";
+export const LINKEDIN_URL = "https://linkedin.com/in/neonvisuals";
+export const WEBSITE_URL = "https://neonvisuals.in";
+
+/** Business locations. */
+export const ADDRESSES = ["Bengaluru, Karnataka", "Mumbai, Maharashtra"] as const;
+/** Business hours (display). */
+export const BUSINESS_HOURS = "Mon - Sat · 9:00 AM - 7:00 PM";
+/** Copyright year for footer/legal. */
+export const COPYRIGHT_YEAR = 2024;
 
 /** Digits-only number for wa.me / tel links. */
 export const WHATSAPP_NUMBER = "919019409590";
 export const WHATSAPP_URL = "https://wa.me/919019409590";
 
-/** Inquiry-first CTAs — prices are never shown publicly. */
+/** Inquiry-first CTAs - prices are never shown publicly. */
 export const INQUIRY_CTA_TEXT = "Get Pricing";
 export const INQUIRY_CTA_WHATSAPP = "Chat on WhatsApp";
 

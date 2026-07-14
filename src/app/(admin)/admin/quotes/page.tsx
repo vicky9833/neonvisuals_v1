@@ -4,7 +4,8 @@ import { QuotesAdmin } from "@/components/admin/quotes-admin";
 
 export const metadata: Metadata = { title: "Quotes" };
 
-// TODO: Protect with admin auth (Prompt 08). Temporary quote-flow test page.
+// Access is enforced by proxy.ts: /admin/* requires an authenticated
+// super_admin (non-admins are redirected to /dashboard or /login).
 export default function AdminQuotesPage() {
   return (
     <div className="space-y-8">

@@ -1,15 +1,29 @@
 /**
- * Catalog helpers — pure functions over the static no-price data layer
+ * Catalog helpers - pure functions over the static no-price data layer
  * (src/data/products.ts + src/data/buckets.ts). No Supabase / DB calls.
  *
  * Brand voice: "Collection" (not Bucket), "Enquire" (not Buy). Prices are
  * NEVER referenced here.
  */
 import { PRODUCTS as RAW_PRODUCTS } from "@/data/products";
+import * as PRODUCTS_DATA from "@/data/products";
 import { BUCKETS } from "@/data/buckets";
 import { PRODUCT_IMAGES } from "@/data/product-images";
 import type { Bucket, BucketCode, Product } from "@/lib/types/product";
 import { WHATSAPP_NUMBER } from "@/lib/utils/constants";
+
+/**
+ * Kit hero images (from `ALL KITS` + `EXPERIENCE KITS`) used as the fallback
+ * representative image for collections that have no product image yet.
+ *
+ * Read defensively: `products.ts` exports `kitHeroImages` once the catalogue is
+ * regenerated, but this stays build-safe (empty fallback) until then.
+ */
+const KIT_HERO_IMAGES: readonly string[] = Array.isArray(
+  (PRODUCTS_DATA as { kitHeroImages?: unknown }).kitHeroImages,
+)
+  ? ((PRODUCTS_DATA as { kitHeroImages?: string[] }).kitHeroImages ?? [])
+  : [];
 
 /**
  * Catalogue enriched with Supabase Storage image URLs (from product-images.ts).
@@ -53,6 +67,53 @@ export function getProductsByCode(code: BucketCode): Product[] {
 
 export function getCollectionProductCount(code: BucketCode): number {
   return getProductsByCode(code).length;
+}
+
+/**
+ * Pure resolution rule for a collection's representative image (Req 17.5, 15.1).
+ *
+ * Given a product list, the kit-hero fallback list and a collection code, the
+ * representative image is:
+ *   1. the `imageUrl` of the collection's first product that has an image
+ *      (data-file order preserved), else
+ *   2. the first `kitHeroImages` entry, else
+ *   3. `undefined` (caller renders the branded placeholder).
+ *
+ * Kept as a standalone pure function so it can be property-tested against
+ * synthetic inputs without coupling to the committed data files. All catalogue
+ * image URLs are built via `img()` on {@link STORAGE_BASE}, so a defined result
+ * always begins with the storage base.
+ */
+export function resolveRepresentativeImage(
+  products: readonly Product[],
+  kitHeroImages: readonly string[],
+  code: BucketCode,
+): string | undefined {
+  const firstWithImage = products.find(
+    (p) => p.bucket === code && Boolean(p.imageUrl),
+  );
+  return firstWithImage?.imageUrl ?? kitHeroImages[0];
+}
+
+/**
+ * Representative image for a collection (Req 17.5): the image of the
+ * collection's first product, falling back to a kit hero image when the
+ * collection has no product image. Returns `undefined` when neither exists so
+ * callers can render the branded placeholder.
+ */
+export function getCollectionRepresentativeImage(
+  code: BucketCode,
+): string | undefined {
+  return resolveRepresentativeImage(PRODUCTS, KIT_HERO_IMAGES, code);
+}
+
+/** A collection joined with its resolved representative image (Req 17.5). */
+export function getBucketWithImage(
+  code: BucketCode,
+): (Bucket & { representativeImage?: string }) | undefined {
+  const bucket = getBucketByCode(code);
+  if (!bucket) return undefined;
+  return { ...bucket, representativeImage: getCollectionRepresentativeImage(code) };
 }
 
 /** Related-collection map (spec: A↔F, B↔C, D↔H, E↔C, G↔I, J↔A, K standalone). */
@@ -114,16 +175,20 @@ export function searchProducts(query: string, products: Product[] = PRODUCTS): P
   });
 }
 
-/** Common tag filters surfaced on the catalog page. value = raw tag token. */
+/**
+ * Controlled tag vocabulary surfaced on the catalog page. `value` MUST equal the
+ * exact tag string stored on products (product filtering matches
+ * `(p.tags ?? []).includes(t)`), so label === value here.
+ */
 export const TAG_FILTERS: { label: string; value: string }[] = [
-  { label: "Desk Test ✓", value: "desk-test" },
-  { label: "Trending", value: "trending" },
-  { label: "Eco-Friendly", value: "eco-friendly" },
-  { label: "Tech", value: "tech" },
-  { label: "Apparel", value: "apparel" },
-  { label: "Instagram-Inspired", value: "instagram-inspired" },
-  { label: "Premium", value: "premium" },
-  { label: "Keepsake", value: "keepsake" },
+  { label: "Personalizable", value: "Personalizable" },
+  { label: "Best Seller", value: "Best Seller" },
+  { label: "Premium", value: "Premium" },
+  { label: "Eco Friendly", value: "Eco Friendly" },
+  { label: "Made in India", value: "Made in India" },
+  { label: "Employee Favourite", value: "Employee Favourite" },
+  { label: "New", value: "New" },
+  { label: "Limited Edition", value: "Limited Edition" },
 ];
 
 /** Build a WhatsApp enquiry URL with pre-filled context. */

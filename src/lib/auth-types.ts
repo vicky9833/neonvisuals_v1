@@ -1,7 +1,7 @@
 /**
  * Shared auth types for Neon Visuals.
  *
- * This module is import-safe from BOTH server and client components — it must
+ * This module is import-safe from BOTH server and client components - it must
  * never import `next/headers`, server-only Supabase clients, or any runtime.
  */
 
@@ -89,10 +89,10 @@ export const INDUSTRIES = [
 
 /** Employee-count ranges (stored as the label string). */
 export const EMPLOYEE_COUNTS = [
-  "10–50",
-  "50–200",
-  "200–500",
-  "500–1,000",
+  "10-50",
+  "50-200",
+  "200-500",
+  "500-1,000",
   "1,000+",
 ] as const;
 
@@ -104,21 +104,21 @@ export const GIFTING_OCCASIONS = [
   "Festive & seasonal (Diwali, Christmas, etc.)",
   "Client appreciation",
   "Team events / offsites",
-  "Not currently gifting — exploring options",
+  "Not currently gifting - exploring options",
 ] as const;
 
 /** Annual gifting budget ranges. */
 export const GIFTING_BUDGETS = [
   "Under ₹1 Lakh",
-  "₹1–3 Lakh",
-  "₹3–5 Lakh",
-  "₹5–10 Lakh",
+  "₹1-3 Lakh",
+  "₹3-5 Lakh",
+  "₹5-10 Lakh",
   "₹10 Lakh+",
   "Prefer not to say",
 ] as const;
 
 /** Number of gifting events per year. */
-export const GIFTING_FREQUENCIES = ["1–2", "3–5", "6–10", "10+"] as const;
+export const GIFTING_FREQUENCIES = ["1-2", "3-5", "6-10", "10+"] as const;
 
 /** Whether the Google OAuth button should render (graceful degradation). */
 export const GOOGLE_OAUTH_ENABLED =

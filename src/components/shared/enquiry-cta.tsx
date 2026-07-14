@@ -1,5 +1,5 @@
 /**
- * EnquiryCTA — WhatsApp (primary) + Call + Email actions for a product.
+ * EnquiryCTA - WhatsApp (primary) + Call + Email actions for a product.
  * Server-rendered; all links pre-fill product context. NO prices.
  */
 import { MessageCircle, Phone, Mail } from "lucide-react";

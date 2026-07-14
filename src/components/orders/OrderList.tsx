@@ -52,7 +52,7 @@ const STATUS_OPTIONS: { value: string; label: string }[] = [
   })),
 ];
 
-/** Compact ₹ for the stats bar — ₹4.2L / ₹89K. */
+/** Compact ₹ for the stats bar - ₹4.2L / ₹89K. */
 function compactRs(n: number): string {
   if (n >= 10_000_000) return `₹${(n / 10_000_000).toFixed(1)}Cr`;
   if (n >= 100_000) return `₹${(n / 100_000).toFixed(1)}L`;
@@ -214,17 +214,17 @@ export function OrderList({
                   >
                     <TableCell>
                       <p className="font-numbers font-medium text-navy">
-                        {o.order_number ?? "—"}
+                        {o.order_number ?? "-"}
                       </p>
                       <p className="text-xs text-[#9CA3AF]">
                         {formatDate(o.created_at)}
                       </p>
                     </TableCell>
                     <TableCell className="text-sm text-navy">
-                      {o.company_name ?? "—"}
+                      {o.company_name ?? "-"}
                     </TableCell>
                     <TableCell className="hidden md:table-cell text-sm text-[#6B7280]">
-                      {o.occasion_label ?? o.occasion_type ?? "—"}
+                      {o.occasion_label ?? o.occasion_type ?? "-"}
                     </TableCell>
                     <TableCell className="font-numbers text-right text-sm">
                       {o.kit_count.toLocaleString("en-IN")}

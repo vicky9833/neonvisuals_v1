@@ -27,7 +27,7 @@ const bodySchema = z.object({
   recipients: z.array(recipientSchema).min(1),
 });
 
-// GET — list recipients for this order (admin: any; client: own company).
+// GET - list recipients for this order (admin: any; client: own company).
 export async function GET(
   _request: Request,
   { params }: { params: Promise<{ id: string }> },
@@ -50,12 +50,15 @@ export async function GET(
   } catch (err) {
     const authResponse = apiAuthErrorResponse(err);
     if (authResponse) return authResponse;
-    const message = err instanceof Error ? err.message : "Unknown error";
-    return NextResponse.json({ error: "list_failed", message }, { status: 500 });
+    console.error("[orders/[id]/recipients]", err);
+    return NextResponse.json(
+      { error: "server_error", message: "Could not load recipients. Please try again." },
+      { status: 500 },
+    );
   }
 }
 
-// POST — add recipients (super_admin only).
+// POST - add recipients (super_admin only).
 export async function POST(
   request: Request,
   { params }: { params: Promise<{ id: string }> },
@@ -63,7 +66,13 @@ export async function POST(
   try {
     await requireApiRole(["super_admin"]);
     const { id } = await params;
-    const body = await request.json();
+    const body = await request.json().catch(() => null);
+    if (!body) {
+      return NextResponse.json(
+        { error: "invalid_input", message: "Invalid or missing request body." },
+        { status: 400 },
+      );
+    }
     const parsed = bodySchema.safeParse(body);
     if (!parsed.success) {
       return NextResponse.json(
@@ -81,7 +90,10 @@ export async function POST(
   } catch (err) {
     const authResponse = apiAuthErrorResponse(err);
     if (authResponse) return authResponse;
-    const message = err instanceof Error ? err.message : "Unknown error";
-    return NextResponse.json({ error: "add_failed", message }, { status: 500 });
+    console.error("[orders/[id]/recipients]", err);
+    return NextResponse.json(
+      { error: "server_error", message: "Could not add recipients. Please try again." },
+      { status: 500 },
+    );
   }
 }

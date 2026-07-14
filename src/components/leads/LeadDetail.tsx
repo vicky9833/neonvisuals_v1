@@ -390,7 +390,7 @@ function Field({ label, value }: { label: string; value: string | null }) {
   return (
     <div className="flex justify-between gap-3 text-sm">
       <span className="text-[#9CA3AF]">{label}</span>
-      <span className="text-right text-navy">{value || "—"}</span>
+      <span className="text-right text-navy">{value || "-"}</span>
     </div>
   );
 }

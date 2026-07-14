@@ -57,7 +57,7 @@ export function FromQuoteDialog({
           setQuotes(
             body.data.map((q: Record<string, unknown>) => ({
               id: q.id as string,
-              quote_number: (q.quote_number as string) ?? "—",
+              quote_number: (q.quote_number as string) ?? "-",
               client_company: (q.client_company as string) ?? "",
             })),
           );
@@ -83,7 +83,7 @@ export function FromQuoteDialog({
       if (!res.ok) {
         setError(
           body?.error === "no_company"
-            ? "Couldn't match a company automatically — pick one below."
+            ? "Couldn't match a company automatically - pick one below."
             : (body?.message ?? "Conversion failed."),
         );
         return;
@@ -119,7 +119,7 @@ export function FromQuoteDialog({
                 {quotes.map((q) => (
                   <SelectItem key={q.id} value={q.id}>
                     {q.quote_number}
-                    {q.client_company ? ` — ${q.client_company}` : ""}
+                    {q.client_company ? ` - ${q.client_company}` : ""}
                   </SelectItem>
                 ))}
               </SelectContent>

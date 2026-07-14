@@ -18,7 +18,7 @@ export function DeliveryConfirmationEmail({
         Order <strong>{reference}</strong> has been delivered. We hope the
         unboxing moment lands beautifully.
       </p>
-      <p>— The Neon Visuals team</p>
+      <p>- The Neon Visuals team</p>
     </div>
   );
 }

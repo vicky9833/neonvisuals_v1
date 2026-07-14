@@ -10,6 +10,7 @@ import * as T from "@/lib/services/email-templates";
  */
 
 const FROM = "Neon Visuals <hello@neonvisuals.in>";
+const FROM_FALLBACK_EMAIL = "hello@neonvisuals.in";
 
 const resend = process.env.RESEND_API_KEY
   ? new Resend(process.env.RESEND_API_KEY)
@@ -17,6 +18,19 @@ const resend = process.env.RESEND_API_KEY
 
 export function isEmailConfigured(): boolean {
   return Boolean(resend);
+}
+
+/**
+ * Internal ops/sales alert recipients. Reads OPS_ALERT_EMAIL (comma-separated),
+ * falling back to the FROM address so an alert is never sent to nobody.
+ */
+export function opsAlertRecipients(): string[] {
+  const raw = process.env.OPS_ALERT_EMAIL ?? "";
+  const list = raw
+    .split(",")
+    .map((e) => e.trim())
+    .filter((e) => e.length > 0);
+  return list.length > 0 ? list : [FROM_FALLBACK_EMAIL];
 }
 
 export interface EmailResult {
@@ -58,7 +72,7 @@ async function logEmail(
 
 async function sendEmail(params: SendParams): Promise<EmailResult> {
   if (!resend) {
-    console.warn("[Email] Resend not configured — skipping:", params.subject);
+    console.warn("[Email] Resend not configured - skipping:", params.subject);
     await logEmail(params, { status: "failed", error: "Email not configured" });
     return { success: false, error: "Email not configured" };
   }
@@ -72,7 +86,21 @@ async function sendEmail(params: SendParams): Promise<EmailResult> {
       cc: params.cc,
       attachments: params.attachments,
     });
+    // Resend returns { data, error } and does NOT throw on API errors. Treating
+    // a non-throw as success logs a phantom "sent" with a null id even when the
+    // send was rejected (e.g. unverified domain). Inspect result.error.
+    if (result.error) {
+      const message =
+        (result.error as { message?: string }).message ?? JSON.stringify(result.error);
+      console.error("[Email] Resend rejected send:", result.error);
+      await logEmail(params, { status: "failed", error: message });
+      return { success: false, error: message };
+    }
     const id = result.data?.id;
+    if (!id) {
+      await logEmail(params, { status: "failed", error: "Resend returned no id" });
+      return { success: false, error: "Resend returned no id" };
+    }
     await logEmail(params, { status: "sent", resendId: id });
     return { success: true, id };
   } catch (error) {
@@ -83,7 +111,7 @@ async function sendEmail(params: SendParams): Promise<EmailResult> {
 }
 
 /**
- * Throttle helper — returns true if an email of `template` was already sent to
+ * Throttle helper - returns true if an email of `template` was already sent to
  * `to` within the last `hours`. Used to prevent reminder/follow-up spam.
  */
 export async function wasEmailSentRecently(
@@ -144,7 +172,7 @@ export function sendQuoteEmail(params: {
 }): Promise<EmailResult> {
   return sendEmail({
     to: params.to,
-    subject: `Your Gifting Quote ${params.quoteNumber} — Neon Visuals`,
+    subject: `Your Gifting Quote ${params.quoteNumber} - Neon Visuals`,
     html: T.quoteTemplate(params),
     template: "quote_sent",
     attachments: params.pdfBuffer
@@ -168,7 +196,7 @@ export function sendOrderConfirmationEmail(params: {
 }): Promise<EmailResult> {
   return sendEmail({
     to: params.to,
-    subject: `Order Confirmed — ${params.orderNumber} 📦`,
+    subject: `Order Confirmed - ${params.orderNumber} 📦`,
     html: T.orderConfirmedTemplate(params),
     template: "order_confirmed",
     metadata: { orderNumber: params.orderNumber },
@@ -228,7 +256,7 @@ export function sendInvoiceEmail(params: {
 }): Promise<EmailResult> {
   return sendEmail({
     to: params.to,
-    subject: `Invoice ${params.invoiceNumber} — ${rs(params.amount)}`,
+    subject: `Invoice ${params.invoiceNumber} - ${rs(params.amount)}`,
     html: T.invoiceTemplate(params),
     template: "invoice_sent",
     attachments: params.pdfBuffer
@@ -251,7 +279,7 @@ export function sendPaymentConfirmationEmail(params: {
 }): Promise<EmailResult> {
   return sendEmail({
     to: params.to,
-    subject: `Payment Received — ${rs(params.amount)} for ${params.invoiceNumber} ✅`,
+    subject: `Payment Received - ${rs(params.amount)} for ${params.invoiceNumber} ✅`,
     html: T.paymentConfirmationTemplate(params),
     template: "payment_received",
     metadata: { invoiceNumber: params.invoiceNumber },
@@ -268,7 +296,7 @@ export function sendOccasionReminderEmail(params: {
 }): Promise<EmailResult> {
   return sendEmail({
     to: params.to,
-    subject: `Upcoming Gifting Moments — ${params.occasions.length} this week`,
+    subject: `Upcoming Gifting Moments - ${params.occasions.length} this week`,
     html: T.occasionReminderTemplate(params),
     template: "occasion_reminder",
     metadata: { count: params.occasions.length },
@@ -288,5 +316,65 @@ export function sendLeadFollowUpEmail(params: {
     html: T.leadFollowUpTemplate({ leads: params.leads }),
     template: "lead_followup",
     metadata: { count: params.leads.length },
+  });
+}
+
+// ---------------------------------------------------------------------------
+// 10. New lead alert (internal) — Prompt 0.5
+// ---------------------------------------------------------------------------
+export function sendNewLeadAlertEmail(params: {
+  name: string;
+  company: string;
+  email?: string;
+  phone?: string;
+  message?: string;
+  employeeCount?: string;
+  occasion?: string;
+  sourcePage: string;
+}): Promise<EmailResult> {
+  const timestampIST = new Intl.DateTimeFormat("en-IN", {
+    timeZone: "Asia/Kolkata",
+    dateStyle: "medium",
+    timeStyle: "short",
+  }).format(new Date());
+
+  // Click-to-chat link (only when we have a phone number).
+  let whatsappUrl: string | undefined;
+  if (params.phone) {
+    const digits = params.phone.replace(/\D/g, "");
+    const withCc = digits.length > 10 && digits.startsWith("91") ? digits : `91${digits}`;
+    if (digits.length >= 10) {
+      const greeting = `Hi ${params.name}, thanks for reaching out to Neon Visuals about corporate gifting for ${params.company}. When's a good time for a quick call?`;
+      whatsappUrl = `https://wa.me/${withCc}?text=${encodeURIComponent(greeting)}`;
+    }
+  }
+
+  return sendEmail({
+    to: opsAlertRecipients(),
+    subject: `New enquiry: ${params.name} - ${params.company}`,
+    html: T.newLeadAlertTemplate({ ...params, whatsappUrl, timestampIST }),
+    template: "new_lead_alert",
+    replyTo: params.email,
+    metadata: { company: params.company, source: params.sourcePage },
+  });
+}
+
+// ---------------------------------------------------------------------------
+// 11. Ops daily digest — upcoming occasions across ALL companies — Prompt 0.5
+// ---------------------------------------------------------------------------
+export function sendOpsDailyDigestEmail(params: {
+  rangeDays: number;
+  companies: Array<{
+    companyName: string;
+    events: Array<{ title: string; date: string; type: string }>;
+  }>;
+}): Promise<EmailResult> {
+  const total = params.companies.reduce((n, c) => n + c.events.length, 0);
+  return sendEmail({
+    to: opsAlertRecipients(),
+    subject: `Daily digest: ${total} upcoming gifting moment${total === 1 ? "" : "s"} (next ${params.rangeDays} days)`,
+    html: T.opsDailyDigestTemplate(params),
+    template: "ops_daily_digest",
+    metadata: { total, companies: params.companies.length },
   });
 }

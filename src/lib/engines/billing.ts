@@ -1,5 +1,5 @@
 /**
- * Billing Engine — INTERNAL USE ONLY (server-side).
+ * Billing Engine - INTERNAL USE ONLY (server-side).
  *
  * Generates GST-compliant tax invoices from orders, records payments (Razorpay
  * + manual), and powers the billing dashboards. SAC code 998396 (event
@@ -356,7 +356,7 @@ export async function createInvoice(
   }));
   if (Number(order.packaging_total ?? 0) > 0) {
     lineItems.push({
-      description: `Packaging — ${order.packaging_tier} (×${order.kit_count})`,
+      description: `Packaging - ${order.packaging_tier} (�-${order.kit_count})`,
       hsnSac: SAC_CODE,
       quantity: order.kit_count,
       unitPrice: round2(Number(order.packaging_total) / Math.max(1, order.kit_count)),
@@ -634,11 +634,11 @@ export async function createInvoicePaymentLink(
   const invoice = await getInvoice(invoiceId);
   if (!invoice) throw new Error("Invoice not found");
 
-  const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000";
+  const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? "https://neonvisuals.in";
   const link = await rzpCreatePaymentLink({
     amount: Math.round(invoice.amount_due * 100), // paise
     currency: "INR",
-    description: `Invoice ${invoice.invoice_number} — ${invoice.invoice_type} payment`,
+    description: `Invoice ${invoice.invoice_number} - ${invoice.invoice_type} payment`,
     customerName: invoice.buyer_name,
     customerEmail: invoice.buyer_email ?? undefined,
     customerPhone: invoice.buyer_phone ?? undefined,

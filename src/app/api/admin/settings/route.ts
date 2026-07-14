@@ -12,15 +12,26 @@ export async function GET() {
   } catch (err) {
     const authResponse = apiAuthErrorResponse(err);
     if (authResponse) return authResponse;
-    const message = err instanceof Error ? err.message : "Unknown error";
-    return NextResponse.json({ error: "get_failed", message }, { status: 500 });
+    console.error("[admin/settings]", err);
+    return NextResponse.json(
+      { error: "server_error", message: "Failed to load settings." },
+      { status: 500 },
+    );
   }
 }
 
 export async function PATCH(request: Request) {
   try {
     const profile = await requireApiRole(["super_admin"]);
-    const body = (await request.json()) as SystemSettings;
+    const body = (await request
+      .json()
+      .catch(() => null)) as SystemSettings | null;
+    if (body === null) {
+      return NextResponse.json(
+        { error: "invalid_input", message: "Invalid JSON body." },
+        { status: 400 },
+      );
+    }
     // Merge with current to be safe, then persist.
     const current = await getSettings();
     const merged: SystemSettings = {
@@ -33,7 +44,10 @@ export async function PATCH(request: Request) {
   } catch (err) {
     const authResponse = apiAuthErrorResponse(err);
     if (authResponse) return authResponse;
-    const message = err instanceof Error ? err.message : "Unknown error";
-    return NextResponse.json({ error: "save_failed", message }, { status: 500 });
+    console.error("[admin/settings]", err);
+    return NextResponse.json(
+      { error: "server_error", message: "Failed to save settings." },
+      { status: 500 },
+    );
   }
 }

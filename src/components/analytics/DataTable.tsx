@@ -98,7 +98,7 @@ export function DataTable<T extends Record<string, unknown>>({
                 <TableRow key={i} className={rowClassName?.(row)}>
                   {columns.map((c) => (
                     <TableCell key={c.key} className={c.numeric ? "text-right font-numbers" : ""}>
-                      {c.render ? c.render(row) : String(row[c.key] ?? "—")}
+                      {c.render ? c.render(row) : String(row[c.key] ?? "-")}
                     </TableCell>
                   ))}
                 </TableRow>

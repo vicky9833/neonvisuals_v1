@@ -23,7 +23,7 @@ export function OrderConfirmationEmail({
         <strong>{formatCurrency(total)}</strong>. We&apos;ll keep you posted as
         it moves through production.
       </p>
-      <p>— The Neon Visuals team</p>
+      <p>- The Neon Visuals team</p>
     </div>
   );
 }

@@ -10,7 +10,7 @@ import { DIETARY_PREFERENCES } from "@/types/employee";
 type Params = { params: Promise<{ id: string }> };
 
 function fmt(value?: string | null): string {
-  if (!value) return "—";
+  if (!value) return "-";
   try {
     return format(parseISO(value), "d MMM yyyy");
   } catch {
@@ -25,25 +25,25 @@ export default async function EmployeeDetailPage({ params }: Params) {
 
   const diet =
     DIETARY_PREFERENCES.find((d) => d.value === employee.dietary_preference)
-      ?.label ?? "—";
+      ?.label ?? "-";
 
   const rows: Array<[string, string]> = [
     ["Email", employee.email],
-    ["Employee Code", employee.employee_code ?? "—"],
-    ["Phone", employee.phone ?? "—"],
-    ["Department", employee.department ?? "—"],
-    ["Designation", employee.designation ?? "—"],
-    ["Manager", employee.manager_name ?? "—"],
+    ["Employee Code", employee.employee_code ?? "-"],
+    ["Phone", employee.phone ?? "-"],
+    ["Department", employee.department ?? "-"],
+    ["Designation", employee.designation ?? "-"],
+    ["Manager", employee.manager_name ?? "-"],
     ["Date of Birth", fmt(employee.date_of_birth)],
     ["Joining Date", fmt(employee.joining_date)],
-    ["T-Shirt Size", employee.tshirt_size ?? "—"],
+    ["T-Shirt Size", employee.tshirt_size ?? "-"],
     ["Dietary", diet],
-    ["Hobbies & Interests", employee.hobbies ?? "—"],
+    ["Hobbies & Interests", employee.hobbies ?? "-"],
     [
       "Address",
       [employee.delivery_address, employee.city, employee.pincode]
         .filter(Boolean)
-        .join(", ") || "—",
+        .join(", ") || "-",
     ],
   ];
 
@@ -64,7 +64,7 @@ export default async function EmployeeDetailPage({ params }: Params) {
             {employee.name}
           </h1>
           <p className="text-sm text-[#6B7280]">
-            {employee.designation ?? "—"}
+            {employee.designation ?? "-"}
           </p>
         </div>
       </div>

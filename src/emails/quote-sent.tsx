@@ -22,7 +22,7 @@ export function QuoteSentEmail({
         Quote <strong>{reference}</strong> is ready for your review. Estimated
         total: <strong>{formatCurrency(total)}</strong> (incl. GST).
       </p>
-      <p>— The Neon Visuals team</p>
+      <p>- The Neon Visuals team</p>
     </div>
   );
 }

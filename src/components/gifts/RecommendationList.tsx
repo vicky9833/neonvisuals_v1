@@ -10,7 +10,7 @@ export function RecommendationList({
   if (recommendations.length === 0) {
     return (
       <p className="text-sm text-[#6B7280]">
-        No recommendations yet — record a gift or set an archetype to improve
+        No recommendations yet - record a gift or set an archetype to improve
         suggestions.
       </p>
     );

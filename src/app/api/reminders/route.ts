@@ -34,6 +34,9 @@ export async function POST() {
 function handle(err: unknown, code: string): NextResponse {
   const authResponse = apiAuthErrorResponse(err);
   if (authResponse) return authResponse;
-  const message = err instanceof Error ? err.message : "Unknown error";
-  return NextResponse.json({ error: code, message }, { status: 500 });
+  console.error("[reminders]", err);
+  return NextResponse.json(
+    { error: code, message: "Something went wrong. Please try again." },
+    { status: 500 },
+  );
 }

@@ -27,7 +27,7 @@ export function baseTemplate(params: BaseTemplateParams): string {
       <table width="600" cellpadding="0" cellspacing="0" style="background:#FFFFFF;border-radius:16px;overflow:hidden;box-shadow:0 2px 8px rgba(0,0,0,0.05);">
         <tr><td style="background:#1A1A2E;padding:24px 32px;text-align:center;">
           <h1 style="color:#C4A35A;font-size:24px;margin:0;letter-spacing:2px;">NEON VISUALS</h1>
-          <p style="color:#94A3B8;font-size:12px;margin:4px 0 0;">Where Creativity Sparks</p>
+          <p style="color:#94A3B8;font-size:12px;margin:4px 0 0;">Crafted with Intention. Remembered with Pride.</p>
         </td></tr>
         <tr><td style="padding:32px;">
           <h2 style="color:#1A1A2E;font-size:22px;margin:0 0 16px;">${params.headline}</h2>
@@ -43,8 +43,8 @@ export function baseTemplate(params: BaseTemplateParams): string {
         <tr><td style="background:#F5F0E8;padding:24px 32px;border-top:1px solid #EDE9E3;">
           ${params.footerExtra || ""}
           <p style="color:#666;font-size:12px;margin:8px 0 0;text-align:center;">
-            Neon Visuals &middot; Bangalore, Karnataka, India<br>
-            9019409590 &middot; contact.neonvisuals@gmail.com<br>
+            Neon Visuals &middot; Bengaluru, Karnataka &amp; Mumbai, Maharashtra<br>
+            +91 90194 09590 &middot; contact@neonvisuals.in<br>
             <a href="https://neonvisuals.in" style="color:#C4A35A;">neonvisuals.in</a>
           </p>
         </td></tr>
@@ -72,7 +72,7 @@ export function welcomeTemplate(params: { name: string; companyName: string }) {
     preheader: `Welcome to Neon Visuals, ${params.name}!`,
     headline: `Welcome aboard, ${params.name}! 🎁`,
     body:
-      p(`We're thrilled to have <strong>${params.companyName}</strong> on Neon Visuals — the home of personalised corporate gifting that your team will actually remember.`) +
+      p(`We're thrilled to have <strong>${params.companyName}</strong> on Neon Visuals - the home of personalised corporate gifting that your team will actually remember.`) +
       p("Here's what you can do next:") +
       `<ul style="color:#333;font-size:15px;line-height:1.7;">
         <li>Browse 120+ products across 11 collections</li>
@@ -124,7 +124,7 @@ export function orderConfirmedTemplate(params: {
     .join("");
   return baseTemplate({
     preheader: `Order ${params.orderNumber} confirmed`,
-    headline: `Order Confirmed — ${params.orderNumber} 📦`,
+    headline: `Order Confirmed - ${params.orderNumber} 📦`,
     body:
       p(`Hi ${params.clientName}, your order is confirmed and moving into production.`) +
       `<table width="100%" cellpadding="6" style="font-size:14px;color:#333;">
@@ -151,7 +151,7 @@ export function orderShippedTemplate(params: {
     preheader: `Order ${params.orderNumber} shipped`,
     headline: `Your Order Has Been Shipped! 🚚`,
     body:
-      p(`Hi ${params.clientName}, great news — order <strong>${params.orderNumber}</strong> is on its way.`) +
+      p(`Hi ${params.clientName}, great news - order <strong>${params.orderNumber}</strong> is on its way.`) +
       `<table width="100%" cellpadding="6" style="font-size:14px;color:#333;">
         ${params.courierPartner ? `<tr><td style="color:#666;">Courier</td><td align="right">${params.courierPartner}</td></tr>` : ""}
         ${params.trackingNumber ? `<tr><td style="color:#666;">Tracking</td><td align="right"><strong>${params.trackingNumber}</strong></td></tr>` : ""}
@@ -173,7 +173,7 @@ export function orderDeliveredTemplate(params: {
     headline: `Your Gifts Have Been Delivered! 🎉`,
     body:
       p(`Hi ${params.clientName}, all ${params.kitCount} kits from order <strong>${params.orderNumber}</strong> have been delivered.`) +
-      p("We'd love to hear how your team reacted — your feedback helps us make every future gift even better."),
+      p("We'd love to hear how your team reacted - your feedback helps us make every future gift even better."),
     ctaText: "Share Your Team's Reaction →",
     ctaUrl: WA,
   });
@@ -189,7 +189,7 @@ export function invoiceTemplate(params: {
   paymentLinkUrl?: string;
 }) {
   return baseTemplate({
-    preheader: `Invoice ${params.invoiceNumber} — ${rs(params.amount)}`,
+    preheader: `Invoice ${params.invoiceNumber} - ${rs(params.amount)}`,
     headline: `Invoice ${params.invoiceNumber}`,
     body:
       p(`Hi ${params.clientName}, please find your ${params.invoiceType} invoice attached.`) +
@@ -232,7 +232,7 @@ export function occasionReminderTemplate(params: {
   const list = params.occasions
     .map(
       (o) =>
-        `<li><strong>${o.title}</strong> — ${o.date}${o.employeeName ? ` (${o.employeeName})` : ""}</li>`,
+        `<li><strong>${o.title}</strong> - ${o.date}${o.employeeName ? ` (${o.employeeName})` : ""}</li>`,
     )
     .join("");
   return baseTemplate({
@@ -254,7 +254,7 @@ export function leadFollowUpTemplate(params: {
   const list = params.leads
     .map(
       (l) =>
-        `<li><strong>${l.companyName}</strong> — ${l.contactName} (due ${l.followUpDate})${l.notes ? `<br><span style="color:#666;">${l.notes}</span>` : ""}</li>`,
+        `<li><strong>${l.companyName}</strong> - ${l.contactName} (due ${l.followUpDate})${l.notes ? `<br><span style="color:#666;">${l.notes}</span>` : ""}</li>`,
     )
     .join("");
   return baseTemplate({
@@ -265,5 +265,79 @@ export function leadFollowUpTemplate(params: {
       `<ul style="color:#333;font-size:15px;line-height:1.8;">${list}</ul>`,
     ctaText: "Open Sales Pipeline →",
     ctaUrl: `${APP_URL}/admin/leads`,
+  });
+}
+
+// 10. New lead alert (internal — Prompt 0.5, "stop the bleeding")
+export function newLeadAlertTemplate(params: {
+  name: string;
+  company: string;
+  email?: string;
+  phone?: string;
+  message?: string;
+  employeeCount?: string;
+  occasion?: string;
+  sourcePage: string;
+  whatsappUrl?: string;
+  timestampIST: string;
+}): string {
+  const row = (label: string, value?: string) =>
+    value
+      ? `<tr><td style="color:#666;padding:6px 0;">${label}</td><td align="right" style="padding:6px 0;"><strong>${value}</strong></td></tr>`
+      : "";
+  return baseTemplate({
+    preheader: `New enquiry from ${params.name} at ${params.company}`,
+    headline: `New enquiry: ${params.name}`,
+    body:
+      p(`A new enquiry just came in. Everything you need to make the call is below — no dashboard required.`) +
+      `<table width="100%" cellpadding="0" cellspacing="0" style="font-size:14px;color:#333;border-collapse:collapse;">
+        ${row("Name", params.name)}
+        ${row("Company", params.company)}
+        ${row("Work email", params.email)}
+        ${row("Phone", params.phone)}
+        ${row("Employees", params.employeeCount)}
+        ${row("Occasion", params.occasion)}
+        ${row("Source", params.sourcePage)}
+        ${row("Received (IST)", params.timestampIST)}
+      </table>` +
+      (params.message
+        ? `<p style="color:#333;font-size:15px;margin:16px 0 6px;"><strong>Message</strong></p>${p(params.message)}`
+        : "") +
+      (params.email
+        ? p(`Reply directly: <a href="mailto:${params.email}" style="color:#C4A35A;">${params.email}</a>`)
+        : ""),
+    ctaText: params.whatsappUrl ? "Chat on WhatsApp →" : "Open Sales Pipeline →",
+    ctaUrl: params.whatsappUrl ?? `${APP_URL}/admin/leads`,
+  });
+}
+
+// 11. Ops daily digest — upcoming occasions across ALL companies (Prompt 0.5)
+export function opsDailyDigestTemplate(params: {
+  rangeDays: number;
+  companies: Array<{
+    companyName: string;
+    events: Array<{ title: string; date: string; type: string }>;
+  }>;
+}): string {
+  const total = params.companies.reduce((n, c) => n + c.events.length, 0);
+  const blocks = params.companies
+    .map(
+      (c) =>
+        `<p style="color:#1A1A2E;font-size:15px;margin:18px 0 6px;"><strong>${c.companyName}</strong></p>
+         <ul style="color:#333;font-size:14px;line-height:1.8;margin:0;">
+           ${c.events
+             .map((e) => `<li>${e.date} — ${e.title} <span style="color:#999;">(${e.type})</span></li>`)
+             .join("")}
+         </ul>`,
+    )
+    .join("");
+  return baseTemplate({
+    preheader: `${total} upcoming gifting moments in the next ${params.rangeDays} days`,
+    headline: `Upcoming Gifting Moments — Next ${params.rangeDays} Days`,
+    body:
+      p(`Proactive call list: <strong>${total}</strong> occasions across <strong>${params.companies.length}</strong> ${params.companies.length === 1 ? "company" : "companies"} in the next ${params.rangeDays} days.`) +
+      (blocks || p("No upcoming occasions in the window. Enjoy the quiet.")),
+    ctaText: "Open Admin →",
+    ctaUrl: `${APP_URL}/admin`,
   });
 }

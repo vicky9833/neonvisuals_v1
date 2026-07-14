@@ -2,7 +2,7 @@ import type { ArchetypeName, EmployeeBrief } from "@/lib/types/employee";
 
 /**
  * Archetype engine (EIGS). Assigns one of 8 archetypes from a privacy-safe
- * HR brief. The default for zero-signal profiles is "Minimalist" — never
+ * HR brief. The default for zero-signal profiles is "Minimalist" - never
  * invent personality from thin air.
  */
 

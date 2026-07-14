@@ -11,7 +11,7 @@ interface RevealProps {
 }
 
 /**
- * Minimal scroll reveal — opacity-only fade-in (no movement), the single
+ * Minimal scroll reveal - opacity-only fade-in (no movement), the single
  * permitted entrance animation. The only client JS on the homepage.
  */
 export function Reveal({ children, className, delay = 0 }: RevealProps) {

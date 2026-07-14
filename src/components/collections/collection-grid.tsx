@@ -1,5 +1,5 @@
 /**
- * CollectionGrid — responsive grid (2/3/4 cols) with staggered scroll-reveal.
+ * CollectionGrid - responsive grid (2/3/4 cols) with staggered scroll-reveal.
  */
 import type { Bucket } from "@/lib/types/product";
 import { Reveal } from "@/components/marketing/reveal";

@@ -31,6 +31,32 @@ interface FormState {
   notes: string;
 }
 
+/** A product line as stored on a persisted quote (snake_case from the API). */
+interface QuoteProductRow {
+  sku: string;
+  quantity: number;
+}
+
+/** A persisted quote row as returned by the quotes API (snake_case fields). */
+interface QuoteRow {
+  id?: string;
+  client_name?: string;
+  client_company?: string;
+  client_email?: string;
+  client_phone?: string;
+  occasion?: string;
+  products?: QuoteProductRow[];
+  kit_count?: number;
+  packaging_tier?: Tier;
+  personalisation_level?: Level;
+  resume_intelligence?: boolean;
+  rush_order?: boolean;
+  rush_days?: number;
+  discount_percent?: number;
+  validity_days?: number;
+  notes?: string;
+}
+
 const EMPTY: FormState = {
   clientName: "",
   clientCompany: "",
@@ -194,14 +220,14 @@ export function QuotesAdmin() {
     if (json.data) window.open(channel === "wa" ? json.data.whatsappUrl : json.data.emailUrl, "_blank");
   }
 
-  function loadIntoForm(q: any) {
+  function loadIntoForm(q: QuoteRow) {
     setForm({
       clientName: q.client_name ?? "",
       clientCompany: q.client_company ?? "",
       clientEmail: q.client_email ?? "",
       clientPhone: q.client_phone ?? "+91 ",
       occasion: q.occasion ?? OCCASIONS[0].label,
-      selected: (q.products ?? []).map((p: any) => ({
+      selected: (q.products ?? []).map((p: QuoteProductRow) => ({
         sku: p.sku,
         name: PRODUCTS.find((x) => x.sku === p.sku)?.name ?? p.sku,
         quantity: p.quantity,
@@ -223,7 +249,7 @@ export function QuotesAdmin() {
   async function duplicate(id: string) {
     const res = await fetch(`/api/quotes/${id}`);
     const json = await res.json();
-    const q = json.data;
+    const q = json.data as QuoteRow | undefined;
     if (!q) return;
     const input = {
       clientName: q.client_name,
@@ -231,7 +257,7 @@ export function QuotesAdmin() {
       clientEmail: q.client_email,
       clientPhone: q.client_phone,
       occasion: q.occasion,
-      products: (q.products ?? []).map((p: any) => ({ sku: p.sku, quantity: p.quantity })),
+      products: (q.products ?? []).map((p: QuoteProductRow) => ({ sku: p.sku, quantity: p.quantity })),
       packagingTier: q.packaging_tier,
       personalisation: q.personalisation_level,
       resumeIntelligence: q.resume_intelligence,

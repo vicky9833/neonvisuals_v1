@@ -36,7 +36,10 @@ export async function GET() {
   } catch (err) {
     const authResponse = apiAuthErrorResponse(err);
     if (authResponse) return authResponse;
-    const message = err instanceof Error ? err.message : "Unknown error";
-    return NextResponse.json({ error: "stats_failed", message }, { status: 500 });
+    console.error("[employees/stats]", err);
+    return NextResponse.json(
+      { error: "server_error", message: "Failed to load employee stats." },
+      { status: 500 },
+    );
   }
 }

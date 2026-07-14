@@ -29,7 +29,7 @@ import { EmployeeGiftPanel } from "@/components/gifts/EmployeeGiftPanel";
 import { DIETARY_PREFERENCES, type Employee } from "@/types/employee";
 
 function fmtDate(value?: string | null): string {
-  if (!value) return "—";
+  if (!value) return "-";
   try {
     return format(parseISO(value), "d MMM yyyy");
   } catch {
@@ -38,7 +38,7 @@ function fmtDate(value?: string | null): string {
 }
 
 function dietLabel(value?: string | null): string {
-  return DIETARY_PREFERENCES.find((d) => d.value === value)?.label ?? "—";
+  return DIETARY_PREFERENCES.find((d) => d.value === value)?.label ?? "-";
 }
 
 export function EmployeeDetail({
@@ -106,7 +106,7 @@ export function EmployeeDetail({
                 {employee.name}
               </SheetTitle>
               <p className="text-sm text-[#6B7280]">
-                {employee.designation ?? "—"}
+                {employee.designation ?? "-"}
               </p>
               <span
                 className={`mt-1 inline-block rounded-full px-2 py-0.5 text-[10px] font-medium ${
@@ -245,7 +245,7 @@ function Detail({
   return (
     <div className={full ? "col-span-2" : ""}>
       <dt className="text-xs uppercase tracking-wide text-[#9CA3AF]">{label}</dt>
-      <dd className="mt-0.5 text-[#333333]">{value || "—"}</dd>
+      <dd className="mt-0.5 text-[#333333]">{value || "-"}</dd>
     </div>
   );
 }

@@ -15,7 +15,10 @@ export async function GET(request: Request) {
   } catch (err) {
     const authResponse = apiAuthErrorResponse(err);
     if (authResponse) return authResponse;
-    const message = err instanceof Error ? err.message : "Unknown error";
-    return NextResponse.json({ error: "upcoming_failed", message }, { status: 500 });
+    console.error("[occasions/upcoming]", err);
+    return NextResponse.json(
+      { error: "server_error", message: "Failed to load upcoming events." },
+      { status: 500 },
+    );
   }
 }

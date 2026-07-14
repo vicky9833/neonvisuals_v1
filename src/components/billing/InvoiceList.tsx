@@ -135,7 +135,7 @@ export function InvoiceList({
                       {inv.buyer_company}
                     </TableCell>
                     <TableCell className="hidden lg:table-cell text-sm text-[#6B7280]">
-                      {inv.order_number ?? "—"}
+                      {inv.order_number ?? "-"}
                     </TableCell>
                     <TableCell className="text-sm">
                       {INVOICE_TYPE_LABEL[inv.invoice_type]}

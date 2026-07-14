@@ -159,7 +159,7 @@ export function BlogAdminTable({
                     </span>
                   </TableCell>
                   <TableCell className="hidden lg:table-cell text-sm text-[#6B7280]">
-                    {post.published_at ? formatDate(post.published_at) : "—"}
+                    {post.published_at ? formatDate(post.published_at) : "-"}
                   </TableCell>
                   <TableCell className="font-numbers text-right text-sm">
                     {post.view_count.toLocaleString("en-IN")}

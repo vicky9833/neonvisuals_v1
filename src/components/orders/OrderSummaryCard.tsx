@@ -59,7 +59,7 @@ export function OrderSummaryCard({ order }: OrderSummaryCardProps) {
         <div>
           <p className="text-xs text-[#9CA3AF]">Occasion</p>
           <p className="font-medium text-navy">
-            {order.occasion_label ?? order.occasion_type ?? "—"}
+            {order.occasion_label ?? order.occasion_type ?? "-"}
           </p>
         </div>
         <div>

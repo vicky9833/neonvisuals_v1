@@ -45,7 +45,7 @@ export function LeadCard({ lead, onClick }: LeadCardProps) {
         <p className="font-numbers mt-1.5 text-xs text-[#2D2D2D]">
           {lead.estimated_order_value
             ? formatCurrency(Number(lead.estimated_order_value))
-            : "—"}
+            : "-"}
           {lead.estimated_kit_count
             ? ` · ${lead.estimated_kit_count} kits`
             : ""}

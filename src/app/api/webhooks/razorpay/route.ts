@@ -10,23 +10,31 @@ export const runtime = "nodejs";
  * quickly; event processing is best-effort.
  */
 export async function POST(request: Request) {
-  const raw = await request.text();
-  const signature = request.headers.get("x-razorpay-signature") ?? "";
+  try {
+    const raw = await request.text();
+    const signature = request.headers.get("x-razorpay-signature") ?? "";
 
-  if (!verifyWebhookSignature(raw, signature)) {
+    if (!verifyWebhookSignature(raw, signature)) {
+      return NextResponse.json(
+        { error: "invalid_signature" },
+        { status: 400 },
+      );
+    }
+
+    // Acknowledge immediately; process without blocking the 200.
+    try {
+      const payload = JSON.parse(raw);
+      await handleRazorpayWebhook(payload);
+    } catch {
+      // Swallow - Razorpay retries failed deliveries; never 500 on parse issues.
+    }
+
+    return NextResponse.json({ received: true });
+  } catch (err) {
+    console.error("[webhooks/razorpay]", err);
     return NextResponse.json(
-      { error: "invalid_signature" },
-      { status: 400 },
+      { error: "server_error", message: "Webhook processing failed." },
+      { status: 500 },
     );
   }
-
-  // Acknowledge immediately; process without blocking the 200.
-  try {
-    const payload = JSON.parse(raw);
-    await handleRazorpayWebhook(payload);
-  } catch {
-    // Swallow — Razorpay retries failed deliveries; never 500 on parse issues.
-  }
-
-  return NextResponse.json({ received: true });
 }

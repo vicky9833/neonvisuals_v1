@@ -23,7 +23,7 @@ export async function GET(_request: Request, { params }: Ctx) {
     const prefs = await getEmployeePreferences(id);
     return NextResponse.json({ data: prefs });
   } catch (err) {
-    return handle(err, "prefs_failed");
+    return handle(err);
   }
 }
 
@@ -37,7 +37,13 @@ export async function PATCH(request: Request, { params }: Ctx) {
       );
     }
     const { id } = await params;
-    const body = await request.json();
+    const body = await request.json().catch(() => null);
+    if (!body) {
+      return NextResponse.json(
+        { error: "invalid_input", message: "Invalid JSON body." },
+        { status: 400 },
+      );
+    }
     const parsed = schema.safeParse(body);
     if (!parsed.success) {
       return NextResponse.json(
@@ -48,13 +54,16 @@ export async function PATCH(request: Request, { params }: Ctx) {
     await updateEmployeeArchetype(profile.company_id, id, parsed.data);
     return NextResponse.json({ data: { id, updated: true } });
   } catch (err) {
-    return handle(err, "update_failed");
+    return handle(err);
   }
 }
 
-function handle(err: unknown, code: string): NextResponse {
+function handle(err: unknown): NextResponse {
   const authResponse = apiAuthErrorResponse(err);
   if (authResponse) return authResponse;
-  const message = err instanceof Error ? err.message : "Unknown error";
-  return NextResponse.json({ error: code, message }, { status: 500 });
+  console.error("[employees/[id]/preferences]", err);
+  return NextResponse.json(
+    { error: "server_error", message: "Failed to process employee preferences." },
+    { status: 500 },
+  );
 }

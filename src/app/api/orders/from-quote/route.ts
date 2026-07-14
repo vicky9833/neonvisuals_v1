@@ -10,11 +10,17 @@ const schema = z.object({
   companyId: z.string().uuid().optional(),
 });
 
-// POST — convert an accepted quote into a draft order (super_admin only).
+// POST - convert an accepted quote into a draft order (super_admin only).
 export async function POST(request: Request) {
   try {
     const profile = await requireApiRole(["super_admin"]);
-    const body = await request.json();
+    const body = await request.json().catch(() => null);
+    if (!body) {
+      return NextResponse.json(
+        { error: "invalid_input", message: "Invalid or missing request body." },
+        { status: 400 },
+      );
+    }
     const parsed = schema.safeParse(body);
     if (!parsed.success) {
       return NextResponse.json(
@@ -32,10 +38,17 @@ export async function POST(request: Request) {
     const authResponse = apiAuthErrorResponse(err);
     if (authResponse) return authResponse;
     const message = err instanceof Error ? err.message : "Unknown error";
-    const isClientError = message.includes("Could not resolve a company");
+    // Known client error: quote has no company and none was provided.
+    if (message.includes("Could not resolve a company")) {
+      return NextResponse.json(
+        { error: "no_company", message },
+        { status: 400 },
+      );
+    }
+    console.error("[orders/from-quote]", err);
     return NextResponse.json(
-      { error: isClientError ? "no_company" : "convert_failed", message },
-      { status: isClientError ? 400 : 500 },
+      { error: "server_error", message: "Could not create the order. Please try again." },
+      { status: 500 },
     );
   }
 }

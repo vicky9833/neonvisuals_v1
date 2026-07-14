@@ -65,7 +65,7 @@ export function EmployeeGiftPanel({
           <span className="font-medium text-navy">{stats.deskTestScore}%</span>
           {" · "}Avg reaction{" "}
           <span className="font-medium text-navy">
-            {stats.avgReaction > 0 ? `${stats.avgReaction}/4` : "—"}
+            {stats.avgReaction > 0 ? `${stats.avgReaction}/4` : "-"}
           </span>
           {stats.collectionsReceived.length > 0 ? (
             <> {" · "}Collections {stats.collectionsReceived.join(", ")}</>

@@ -79,13 +79,13 @@ export function RecipientTable({
                 )}
               </TableCell>
               <TableCell className="hidden md:table-cell text-sm text-[#6B7280]">
-                {r.recipient_department ?? "—"}
+                {r.recipient_department ?? "-"}
               </TableCell>
               <TableCell className="text-sm text-navy">
                 {r.personalisation_name}
               </TableCell>
               <TableCell className="hidden lg:table-cell max-w-[220px] text-sm text-[#6B7280]">
-                {r.personalisation_message ?? "—"}
+                {r.personalisation_message ?? "-"}
               </TableCell>
               <TableCell>
                 {editable && onStatusChange ? (

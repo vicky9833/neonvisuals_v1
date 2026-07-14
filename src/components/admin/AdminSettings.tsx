@@ -115,7 +115,7 @@ export function AdminSettings({ initial, razorpayConfigured }: AdminSettingsProp
           <div className="flex items-center gap-2 rounded-card border border-border bg-secondary/40 p-4">
             <AlertTriangle className="size-5 text-amber-500" />
             <span className="text-sm text-[#6B7280]">
-              Resend email is not configured yet — coming in Prompt 20.
+              Resend email is not configured yet - coming in Prompt 20.
             </span>
           </div>
         </TabsContent>
@@ -136,7 +136,7 @@ export function AdminSettings({ initial, razorpayConfigured }: AdminSettingsProp
             <F label="Secondary colour" value={settings.branding.secondaryColor} onChange={(v) => set("branding", "secondaryColor", v)} />
           </div>
           <p className="mt-3 text-xs text-[#9CA3AF]">
-            Branding values are informational — the live design system is defined
+            Branding values are informational - the live design system is defined
             in code.
           </p>
         </TabsContent>

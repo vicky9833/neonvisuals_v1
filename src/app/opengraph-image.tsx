@@ -1,7 +1,7 @@
 import { ImageResponse } from "next/og";
 
 export const runtime = "nodejs";
-export const alt = "Neon Visuals — Premium Corporate Gifting";
+export const alt = "Neon Visuals - Premium Corporate Gifting";
 export const size = { width: 1200, height: 630 };
 export const contentType = "image/png";
 
@@ -33,7 +33,7 @@ export default function OgImage() {
           Neon Visuals
         </div>
         <div style={{ fontSize: 32, marginTop: 8, color: "#C4A35A" }}>
-          Where Creativity Sparks
+          Crafted with Intention. Remembered with Pride.
         </div>
         <div style={{ fontSize: 40, marginTop: 40, fontWeight: 600 }}>
           Premium Corporate Gifting

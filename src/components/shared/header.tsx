@@ -1,10 +1,12 @@
 import Link from "next/link";
 import { ChevronDown } from "lucide-react";
 import { Logo } from "@/components/brand/logo";
+import { AnnouncementBar } from "@/components/shared/announcement-bar";
 import { MobileNav, type NavLink } from "@/components/shared/mobile-nav";
 import { SearchOverlay } from "@/components/search/search-overlay";
 import { CollectionIcon } from "@/components/collections/collection-icon";
 import { HeaderAuth } from "@/components/auth/HeaderAuth";
+import { NavLinks } from "@/components/shared/nav-links";
 import { BUCKETS } from "@/data/buckets";
 
 const NAV_LINKS: NavLink[] = [
@@ -12,14 +14,22 @@ const NAV_LINKS: NavLink[] = [
   { label: "Collections", href: "/collections" },
   { label: "Products", href: "/products" },
   { label: "About", href: "/about" },
+  { label: "Contact", href: "/contact" },
   { label: "Blog", href: "/blog" },
 ];
 
 export function Header() {
   return (
     <header className="sticky top-0 z-50 w-full border-b border-[#F0EDE8] bg-background/85 backdrop-blur-md">
+      <AnnouncementBar />
       <div className="mx-auto flex h-16 max-w-[1200px] items-center justify-between px-6">
-        <Logo />
+        {/* Mobile: icon only (28px). Desktop: full lockup (32px icon + wordmark). */}
+        <span className="inline-flex md:hidden">
+          <Logo variant="icon" theme="dark" iconSize={28} />
+        </span>
+        <span className="hidden md:inline-flex">
+          <Logo variant="horizontal" theme="dark" iconSize={32} />
+        </span>
 
         <nav className="hidden items-center gap-8 md:flex">
           <Link
@@ -63,17 +73,11 @@ export function Header() {
             </div>
           </div>
 
-          {NAV_LINKS.filter(
-            (l) => l.href !== "/occasions" && l.href !== "/collections",
-          ).map((link) => (
-            <Link
-              key={link.href}
-              href={link.href}
-              className="relative text-sm font-medium text-[#555555] transition-colors after:absolute after:-bottom-1 after:left-0 after:h-0.5 after:w-0 after:bg-gold after:transition-all after:duration-300 hover:text-navy hover:after:w-full"
-            >
-              {link.label}
-            </Link>
-          ))}
+          <NavLinks
+            links={NAV_LINKS.filter(
+              (l) => l.href !== "/occasions" && l.href !== "/collections",
+            )}
+          />
         </nav>
 
         <div className="flex items-center gap-2">

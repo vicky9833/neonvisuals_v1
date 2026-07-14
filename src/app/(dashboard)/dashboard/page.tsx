@@ -35,6 +35,7 @@ import { QuickActionCard } from "@/components/dashboard/QuickActionCard";
 import { RemindersPanel } from "@/components/occasions/RemindersPanel";
 import { RecentActivity } from "@/components/dashboard/RecentActivity";
 import { CalendarPreview } from "@/components/dashboard/CalendarPreview";
+import { ErrorBoundary } from "@/components/shared/error-boundary";
 
 export const metadata: Metadata = { title: "Dashboard" };
 
@@ -125,8 +126,9 @@ export default async function DashboardOverviewPage() {
   }));
 
   return (
-    <div className="space-y-8">
-      <SetPageTitle title="Overview" />
+    <ErrorBoundary>
+      <div className="space-y-8">
+        <SetPageTitle title="Overview" />
 
       {/* Welcome */}
       <header>
@@ -219,7 +221,7 @@ export default async function DashboardOverviewPage() {
         />
         <QuickActionCard
           title="Set Up Occasions"
-          description="Configure your gifting calendar — birthdays, anniversaries, festivals, and more."
+          description="Configure your gifting calendar - birthdays, anniversaries, festivals, and more."
           href="/dashboard/occasions"
           buttonLabel="View Calendar"
           icon={CalendarPlus}
@@ -244,6 +246,7 @@ export default async function DashboardOverviewPage() {
 
       {/* Calendar */}
       <CalendarPreview occasions={monthlyOccasions} month={month} year={year} />
-    </div>
+      </div>
+    </ErrorBoundary>
   );
 }

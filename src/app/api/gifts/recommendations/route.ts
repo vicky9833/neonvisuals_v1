@@ -15,7 +15,13 @@ const schema = z.object({
 export async function POST(request: Request) {
   try {
     await requireApiAuth();
-    const body = await request.json();
+    const body = await request.json().catch(() => null);
+    if (!body) {
+      return NextResponse.json(
+        { error: "invalid_input", message: "Invalid JSON body." },
+        { status: 400 },
+      );
+    }
     const parsed = schema.safeParse(body);
     if (!parsed.success) {
       return NextResponse.json(
@@ -28,7 +34,10 @@ export async function POST(request: Request) {
   } catch (err) {
     const authResponse = apiAuthErrorResponse(err);
     if (authResponse) return authResponse;
-    const message = err instanceof Error ? err.message : "Unknown error";
-    return NextResponse.json({ error: "recommend_failed", message }, { status: 500 });
+    console.error("[gifts/recommendations]", err);
+    return NextResponse.json(
+      { error: "server_error", message: "Failed to generate recommendations." },
+      { status: 500 },
+    );
   }
 }

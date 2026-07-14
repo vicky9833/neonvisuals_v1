@@ -38,7 +38,7 @@ const updateSchema = z.object({
   balanceDate: z.string().nullable().optional(),
 });
 
-// GET — order detail. Admin: full. Client: own company only, no pricing.
+// GET - order detail. Admin: full. Client: own company only, no pricing.
 export async function GET(
   _request: Request,
   { params }: { params: Promise<{ id: string }> },
@@ -68,12 +68,15 @@ export async function GET(
   } catch (err) {
     const authResponse = apiAuthErrorResponse(err);
     if (authResponse) return authResponse;
-    const message = err instanceof Error ? err.message : "Unknown error";
-    return NextResponse.json({ error: "get_failed", message }, { status: 500 });
+    console.error("[orders/[id]]", err);
+    return NextResponse.json(
+      { error: "server_error", message: "Could not load the order. Please try again." },
+      { status: 500 },
+    );
   }
 }
 
-// PATCH — update order (super_admin only).
+// PATCH - update order (super_admin only).
 export async function PATCH(
   request: Request,
   { params }: { params: Promise<{ id: string }> },
@@ -81,7 +84,13 @@ export async function PATCH(
   try {
     await requireApiRole(["super_admin"]);
     const { id } = await params;
-    const body = await request.json();
+    const body = await request.json().catch(() => null);
+    if (!body) {
+      return NextResponse.json(
+        { error: "invalid_input", message: "Invalid or missing request body." },
+        { status: 400 },
+      );
+    }
     const parsed = updateSchema.safeParse(body);
     if (!parsed.success) {
       return NextResponse.json(
@@ -94,7 +103,10 @@ export async function PATCH(
   } catch (err) {
     const authResponse = apiAuthErrorResponse(err);
     if (authResponse) return authResponse;
-    const message = err instanceof Error ? err.message : "Unknown error";
-    return NextResponse.json({ error: "update_failed", message }, { status: 500 });
+    console.error("[orders/[id]]", err);
+    return NextResponse.json(
+      { error: "server_error", message: "Could not update the order. Please try again." },
+      { status: 500 },
+    );
   }
 }

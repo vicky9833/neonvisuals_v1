@@ -1,7 +1,7 @@
 import { computeQuoteTotals, type QuoteTotals } from "@/lib/engines/pricing";
 
 /**
- * Gift Builder engine — powers the visual kit configurator (the killer
+ * Gift Builder engine - powers the visual kit configurator (the killer
  * differentiator). Validates kit composition and computes kit pricing.
  */
 export interface BuilderItem {

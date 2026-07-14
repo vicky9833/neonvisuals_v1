@@ -19,6 +19,8 @@ const updateSchema = z.object({
   department: z.string().optional(),
   designation: z.string().optional(),
   date_of_birth: z.string().optional(),
+  dob_day: z.number().int().min(1).max(31).optional(),
+  dob_month: z.number().int().min(1).max(12).optional(),
   joining_date: z.string().optional(),
   manager_name: z.string().optional(),
   manager_email: z.string().email().optional().or(z.literal("")),
@@ -42,7 +44,7 @@ export async function GET(_request: Request, { params }: Ctx) {
     }
     return NextResponse.json({ data: employee });
   } catch (err) {
-    return handle(err, "get_failed");
+    return handle(err);
   }
 }
 
@@ -50,7 +52,13 @@ export async function PATCH(request: Request, { params }: Ctx) {
   try {
     await requireApiAuth();
     const { id } = await params;
-    const body = await request.json();
+    const body = await request.json().catch(() => null);
+    if (!body) {
+      return NextResponse.json(
+        { error: "invalid_input", message: "Invalid JSON body." },
+        { status: 400 },
+      );
+    }
     const parsed = updateSchema.safeParse(body);
     if (!parsed.success) {
       return NextResponse.json(
@@ -61,7 +69,7 @@ export async function PATCH(request: Request, { params }: Ctx) {
     const employee = await updateEmployee(id, parsed.data);
     return NextResponse.json({ data: employee });
   } catch (err) {
-    return handle(err, "update_failed");
+    return handle(err);
   }
 }
 
@@ -72,13 +80,16 @@ export async function DELETE(_request: Request, { params }: Ctx) {
     await deleteEmployee(id);
     return NextResponse.json({ data: { id, is_active: false } });
   } catch (err) {
-    return handle(err, "delete_failed");
+    return handle(err);
   }
 }
 
-function handle(err: unknown, code: string): NextResponse {
+function handle(err: unknown): NextResponse {
   const authResponse = apiAuthErrorResponse(err);
   if (authResponse) return authResponse;
-  const message = err instanceof Error ? err.message : "Unknown error";
-  return NextResponse.json({ error: code, message }, { status: 500 });
+  console.error("[employees/[id]]", err);
+  return NextResponse.json(
+    { error: "server_error", message: "Failed to process employee request." },
+    { status: 500 },
+  );
 }

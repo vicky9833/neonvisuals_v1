@@ -28,7 +28,10 @@ export async function GET(request: Request) {
   } catch (err) {
     const authResponse = apiAuthErrorResponse(err);
     if (authResponse) return authResponse;
-    const message = err instanceof Error ? err.message : "Unknown error";
-    return NextResponse.json({ error: "calendar_failed", message }, { status: 500 });
+    console.error("[occasions/calendar]", err);
+    return NextResponse.json(
+      { error: "server_error", message: "Failed to load calendar events." },
+      { status: 500 },
+    );
   }
 }

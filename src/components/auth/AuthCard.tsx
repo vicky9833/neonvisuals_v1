@@ -16,7 +16,7 @@ export function AuthCard({ title, subtitle, children, footer }: AuthCardProps) {
       <div className="w-full max-w-md">
         <div className="rounded-2xl border border-[#EDE9E3] bg-white p-8 shadow-sm">
           <div className="mb-6 flex flex-col items-center text-center">
-            <Logo className="mb-5" asLink={false} />
+            <Logo variant="full" theme="dark" className="mb-5" asLink={false} />
             <h1 className="font-heading text-2xl font-bold text-navy">
               {title}
             </h1>

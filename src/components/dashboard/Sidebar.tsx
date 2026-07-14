@@ -18,6 +18,7 @@ import {
   type LucideIcon,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { Logo } from "@/components/brand/logo";
 import { WHATSAPP_NUMBER, TAGLINE } from "@/lib/utils/constants";
 import type { Role } from "@/lib/auth-types";
 import { useDashboard } from "@/components/dashboard/DashboardProvider";
@@ -136,10 +137,8 @@ export function SidebarBody({
       {/* Brand */}
       <div className="border-b border-white/10 px-6 py-5">
         <Link href="/dashboard" onClick={onNavigate} className="block">
-          <span className="block text-lg font-extrabold uppercase tracking-tight text-gold">
-            Neon Visuals
-          </span>
-          <span className="block text-xs text-slate-400">{TAGLINE}</span>
+          <Logo variant="horizontal" theme="light" iconSize={32} asLink={false} />
+          <span className="mt-1 block text-xs text-slate-400">{TAGLINE}</span>
         </Link>
       </div>
 

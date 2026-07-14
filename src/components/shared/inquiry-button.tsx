@@ -34,7 +34,7 @@ function buildWhatsAppHref(productName?: string, occasion?: string): string {
 }
 
 /**
- * Inquiry-first CTA. Prices are never shown publicly — this component
+ * Inquiry-first CTA. Prices are never shown publicly - this component
  * replaces all price displays on public pages with WhatsApp / call actions.
  */
 export function InquiryButton({

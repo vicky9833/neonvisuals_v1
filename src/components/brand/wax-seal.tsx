@@ -8,7 +8,7 @@ interface WaxSealProps {
 }
 
 /**
- * Decorative burgundy wax seal — a signature Neon Visuals brand element
+ * Decorative burgundy wax seal - a signature Neon Visuals brand element
  * signalling ceremony and craft.
  */
 export function WaxSeal({ className, label = "NV", size = 64 }: WaxSealProps) {
