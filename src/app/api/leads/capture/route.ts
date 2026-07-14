@@ -139,17 +139,22 @@ export async function POST(request: Request) {
       kitSummary,
     });
 
-    // Alert staff immediately (fire-and-forget — must never fail capture).
-    void sendNewLeadAlertEmail({
-      name,
-      company,
-      email: email || undefined,
-      phone,
-      message: message ?? kitSummary,
-      employeeCount: teamSize,
-      occasion,
-      sourcePage: source ? `Enquiry (${source})` : "Gift builder",
-    }).catch((err) => console.error("[LEAD_ALERT_FAILED]", err));
+    // Alert staff immediately. MUST be awaited (Vercel serverless drops
+    // post-response work); wrapped so it can never fail the capture.
+    try {
+      await sendNewLeadAlertEmail({
+        name,
+        company,
+        email: email || undefined,
+        phone,
+        message: message ?? kitSummary,
+        employeeCount: teamSize,
+        occasion,
+        sourcePage: source ? `Enquiry (${source})` : "Gift builder",
+      });
+    } catch (err) {
+      console.error("[LEAD_ALERT_FAILED]", err);
+    }
 
     return NextResponse.json({ success: true });
   } catch {

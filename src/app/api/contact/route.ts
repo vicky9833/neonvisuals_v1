@@ -54,11 +54,15 @@ export async function POST(request: NextRequest) {
       sourcePage: "Contact form",
     };
 
-    // 2a. Happy path: alert is fire-and-forget and can never fail the capture.
+    // 2a. Happy path: alert the team. MUST be awaited — on Vercel serverless,
+    // work started after the response returns is frozen/dropped, so a
+    // fire-and-forget send never runs. Wrapped so it can never fail the capture.
     if (captured) {
-      void sendNewLeadAlertEmail(alertPayload).catch((err) =>
-        console.error("[CONTACT_ALERT_FAILED]", err),
-      );
+      try {
+        await sendNewLeadAlertEmail(alertPayload);
+      } catch (err) {
+        console.error("[CONTACT_ALERT_FAILED]", err);
+      }
       return NextResponse.json({ data: { received: true } });
     }
 
