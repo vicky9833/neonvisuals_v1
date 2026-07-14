@@ -567,8 +567,9 @@ export async function recordPayment(
 
   await recomputeOrderPaymentStatus(invoice.order_id);
 
-  // Fire-and-forget payment confirmation email to the client.
-  void (async () => {
+  // Awaited (serverless-safe) payment confirmation email to the client.
+  // Wrapped so a send failure can't fail payment recording.
+  await (async () => {
     const remaining = Math.max(0, invoice.amount_due - amountPaid);
     if (invoice.buyer_email) {
       await sendPaymentConfirmationEmail({

@@ -19,7 +19,9 @@ export default async function AdminOverviewPage() {
   // Daily lead follow-up digest to the admin (throttled via email_log).
   if (data.pipeline.overdueFollowUps > 0 && profile?.email) {
     const adminEmail = profile.email;
-    void (async () => {
+    // Awaited (serverless-safe): fire-and-forget is dropped on Vercel. Guarded
+    // by wasEmailSentRecently (24h); wrapped so it can't break the page render.
+    await (async () => {
       if (await wasEmailSentRecently(adminEmail, "lead_followup", 24)) return;
       const todayISO = new Date().toISOString().slice(0, 10);
       const { leads } = await listLeads({

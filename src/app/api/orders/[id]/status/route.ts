@@ -63,7 +63,10 @@ export async function PATCH(
     // Fire-and-forget branded status email (confirmed / shipped / delivered).
     const status = parsed.data.status;
     if (["confirmed", "shipped", "delivered"].includes(status)) {
-      void (async () => {
+      // Awaited (serverless-safe): Vercel freezes the function after the
+      // response, so fire-and-forget sends never run. Wrapped so a send
+      // failure can't fail the status update.
+      await (async () => {
         const ctx = await getOrderEmailContext(id);
         if (!ctx) return;
         if (status === "confirmed") {

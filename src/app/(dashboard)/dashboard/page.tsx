@@ -102,7 +102,10 @@ export default async function DashboardOverviewPage() {
     return days >= 0 && days <= 7;
   });
   if (contactEmail && within7.length > 0) {
-    void (async () => {
+    // Awaited (serverless-safe): fire-and-forget is dropped on Vercel. Guarded
+    // by wasEmailSentRecently so it sends at most once/week; wrapped so it
+    // can't break the dashboard render.
+    await (async () => {
       if (await wasEmailSentRecently(contactEmail, "occasion_reminder", 168)) return;
       await sendOccasionReminderEmail({
         to: contactEmail,
