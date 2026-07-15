@@ -121,7 +121,7 @@ export function CreateOrderForm({
         return;
       }
       onOpenChange(false);
-      router.push(`/admin/orders/${body.data.id}`);
+      router.push(`/ops/orders/${body.data.id}`);
       router.refresh();
     } catch (e) {
       setError(e instanceof Error ? e.message : "Failed to create order.");

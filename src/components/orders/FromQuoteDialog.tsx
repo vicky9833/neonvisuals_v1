@@ -89,7 +89,7 @@ export function FromQuoteDialog({
         return;
       }
       onOpenChange(false);
-      router.push(`/admin/orders/${body.data.id}`);
+      router.push(`/ops/orders/${body.data.id}`);
       router.refresh();
     } catch (e) {
       setError(e instanceof Error ? e.message : "Conversion failed.");

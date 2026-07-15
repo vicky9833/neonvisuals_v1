@@ -57,7 +57,7 @@ export function ProductEditDrawer({
   async function load() {
     if (!sku) return;
     setLoading(true);
-    const res = await fetch(`/api/admin/products/${sku}`);
+    const res = await fetch(`/api/ops/products/${sku}`);
     if (res.ok) {
       const body = await res.json();
       const p = body.data as AdminProduct;
@@ -114,7 +114,7 @@ export function ProductEditDrawer({
     setBusy(true);
     try {
       const num = (v: string) => (v === "" ? null : Number(v));
-      const res = await fetch(`/api/admin/products/${sku}`, {
+      const res = await fetch(`/api/ops/products/${sku}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -157,7 +157,7 @@ export function ProductEditDrawer({
     try {
       const fd = new FormData();
       fd.append("file", file);
-      const res = await fetch(`/api/admin/products/${sku}/images`, {
+      const res = await fetch(`/api/ops/products/${sku}/images`, {
         method: "POST",
         body: fd,
       });
@@ -175,7 +175,7 @@ export function ProductEditDrawer({
     if (!sku) return;
     setBusy(true);
     try {
-      const res = await fetch(`/api/admin/products/${sku}/images`, {
+      const res = await fetch(`/api/ops/products/${sku}/images`, {
         method: "DELETE",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ url }),

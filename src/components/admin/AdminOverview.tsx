@@ -13,10 +13,10 @@ function compactRs(n: number): string {
 }
 
 const QUICK_ACTIONS = [
-  { label: "New Lead", href: "/admin/leads" },
-  { label: "New Quote", href: "/admin/quotes" },
-  { label: "New Order", href: "/admin/orders" },
-  { label: "Write Blog Post", href: "/admin/blog" },
+  { label: "New Lead", href: "/ops/leads" },
+  { label: "New Quote", href: "/ops/quotes" },
+  { label: "New Order", href: "/ops/orders" },
+  { label: "Write Blog Post", href: "/ops/blog" },
 ];
 
 export function AdminOverview({ data }: { data: AdminOverviewData }) {
@@ -56,7 +56,7 @@ export function AdminOverview({ data }: { data: AdminOverviewData }) {
             Sales Pipeline
           </h2>
           <Link
-            href="/admin/leads"
+            href="/ops/leads"
             className="inline-flex items-center gap-1 text-sm font-medium text-gold hover:underline"
           >
             View Pipeline <ArrowRight className="size-3.5" />

@@ -64,7 +64,7 @@ export function ClientTable({ clients }: { clients: AdminClientRow[] }) {
                 <TableRow
                   key={c.id}
                   className="cursor-pointer"
-                  onClick={() => router.push(`/admin/clients/${c.id}`)}
+                  onClick={() => router.push(`/ops/clients/${c.id}`)}
                 >
                   <TableCell className="font-medium text-navy">{c.name}</TableCell>
                   <TableCell className="hidden md:table-cell text-sm text-[#6B7280]">

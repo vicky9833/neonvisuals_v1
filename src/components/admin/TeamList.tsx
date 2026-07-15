@@ -43,7 +43,7 @@ export function TeamList({ members }: { members: TeamMember[] }) {
   const [inviteEmail, setInviteEmail] = useState("");
 
   async function changeRole(id: string, role: string) {
-    await fetch("/api/admin/team", {
+    await fetch("/api/ops/team", {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ id, role }),
@@ -87,9 +87,11 @@ export function TeamList({ members }: { members: TeamMember[] }) {
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="super_admin">super_admin</SelectItem>
+                      <SelectItem value="owner">owner</SelectItem>
                       <SelectItem value="admin">admin</SelectItem>
-                      <SelectItem value="client">client (demote)</SelectItem>
+                      <SelectItem value="ops">ops</SelectItem>
+                      <SelectItem value="finance">finance</SelectItem>
+                      <SelectItem value="support">support</SelectItem>
                     </SelectContent>
                   </Select>
                 </TableCell>
@@ -107,8 +109,8 @@ export function TeamList({ members }: { members: TeamMember[] }) {
           <DialogHeader>
             <DialogTitle>Invite Team Member</DialogTitle>
             <DialogDescription>
-              Automated email invitations arrive in Prompt 20 (Resend). For now,
-              promote a registered user with a quick SQL command.
+              Automated invitations arrive in a later prompt. For now, add a
+              registered user to platform_staff with a quick SQL command.
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-3">
@@ -123,7 +125,8 @@ export function TeamList({ members }: { members: TeamMember[] }) {
                 After they register at /register, run this in Supabase SQL Editor:
               </p>
               <code className="block break-all font-mono text-xs text-navy">
-                UPDATE profiles SET role = &apos;super_admin&apos; WHERE email = &apos;
+                INSERT INTO platform_staff (user_id, role) SELECT id,
+                &apos;admin&apos; FROM profiles WHERE email = &apos;
                 {inviteEmail || "their@email.com"}&apos;;
               </code>
             </div>

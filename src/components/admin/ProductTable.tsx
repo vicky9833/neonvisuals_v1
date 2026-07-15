@@ -59,7 +59,7 @@ export function ProductTable({
   }, [products, search, collection, status]);
 
   async function refresh() {
-    const res = await fetch("/api/admin/products");
+    const res = await fetch("/api/ops/products");
     if (res.ok) {
       const body = await res.json();
       setProducts(body.data as AdminProductRow[]);

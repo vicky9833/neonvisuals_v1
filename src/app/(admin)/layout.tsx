@@ -1,5 +1,6 @@
 import { redirect } from "next/navigation";
 import { getProfile } from "@/lib/auth";
+import { getAuthContext } from "@/lib/authz/context";
 import { AdminProvider } from "@/components/admin/AdminProvider";
 import { AdminSidebar } from "@/components/admin/AdminSidebar";
 import { AdminMobileSidebar } from "@/components/admin/AdminMobileSidebar";
@@ -10,19 +11,22 @@ export const metadata = {
 };
 
 /**
- * Admin shell. proxy.ts already restricts /admin/* to super_admin; this layout
- * fetches the profile once and shares it with the sidebar/topbar via context.
- * Provides ONLY chrome - individual pages render their own PageHeader.
+ * Ops (platform) shell at /ops/*. The proxy already default-denies /ops to
+ * non-platform-staff; this layout re-checks platform staff via getAuthContext()
+ * (defense-in-depth, two-plane model — no profiles.role read) and shares the
+ * profile with the sidebar/topbar via context. Chrome only.
  */
-export default async function AdminLayout({
+export default async function OpsLayout({
   children,
 }: {
   children: React.ReactNode;
 }) {
+  const ctx = await getAuthContext();
+  if (!ctx) redirect("/login");
+  if (!ctx.isPlatformStaff) redirect("/dashboard");
+
   const profileWithCompany = await getProfile();
   if (!profileWithCompany) redirect("/login");
-  if (profileWithCompany.role !== "super_admin") redirect("/dashboard");
-
   const { company: _company, ...profile } = profileWithCompany;
 
   return (

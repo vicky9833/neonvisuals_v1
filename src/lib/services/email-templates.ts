@@ -264,7 +264,7 @@ export function leadFollowUpTemplate(params: {
       p("These leads need your attention today:") +
       `<ul style="color:#333;font-size:15px;line-height:1.8;">${list}</ul>`,
     ctaText: "Open Sales Pipeline →",
-    ctaUrl: `${APP_URL}/admin/leads`,
+    ctaUrl: `${APP_URL}/ops/leads`,
   });
 }
 
@@ -307,7 +307,7 @@ export function newLeadAlertTemplate(params: {
         ? p(`Reply directly: <a href="mailto:${params.email}" style="color:#C4A35A;">${params.email}</a>`)
         : ""),
     ctaText: params.whatsappUrl ? "Chat on WhatsApp →" : "Open Sales Pipeline →",
-    ctaUrl: params.whatsappUrl ?? `${APP_URL}/admin/leads`,
+    ctaUrl: params.whatsappUrl ?? `${APP_URL}/ops/leads`,
   });
 }
 
@@ -338,6 +338,6 @@ export function opsDailyDigestTemplate(params: {
       p(`Proactive call list: <strong>${total}</strong> occasions across <strong>${params.companies.length}</strong> ${params.companies.length === 1 ? "company" : "companies"} in the next ${params.rangeDays} days.`) +
       (blocks || p("No upcoming occasions in the window. Enjoy the quiet.")),
     ctaText: "Open Admin →",
-    ctaUrl: `${APP_URL}/admin`,
+    ctaUrl: `${APP_URL}/ops`,
   });
 }

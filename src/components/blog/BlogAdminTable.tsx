@@ -70,7 +70,7 @@ export function BlogAdminTable({
         }),
       });
       const body = await res.json();
-      if (res.ok) router.push(`/admin/blog/${body.data.id}`);
+      if (res.ok) router.push(`/ops/blog/${body.data.id}`);
     } finally {
       setBusy(false);
     }
@@ -144,7 +144,7 @@ export function BlogAdminTable({
                 <TableRow key={post.id}>
                   <TableCell
                     className="cursor-pointer font-medium text-navy"
-                    onClick={() => router.push(`/admin/blog/${post.id}`)}
+                    onClick={() => router.push(`/ops/blog/${post.id}`)}
                   >
                     {post.title}
                   </TableCell>
@@ -169,7 +169,7 @@ export function BlogAdminTable({
                       <Button
                         size="sm"
                         variant="ghost"
-                        onClick={() => router.push(`/admin/blog/${post.id}`)}
+                        onClick={() => router.push(`/ops/blog/${post.id}`)}
                       >
                         Edit
                       </Button>

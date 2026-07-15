@@ -41,7 +41,7 @@ export function AnalyticsDashboard({ initialData, initialRange }: Props) {
     setLoading(true);
     try {
       const res = await fetch(
-        `/api/admin/analytics?start=${next.start}&end=${next.end}&section=all`,
+        `/api/ops/analytics?start=${next.start}&end=${next.end}&section=all`,
       );
       if (res.ok) {
         const body = await res.json();

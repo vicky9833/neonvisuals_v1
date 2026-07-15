@@ -35,7 +35,7 @@ export function AdminSettings({ initial, razorpayConfigured }: AdminSettingsProp
     setBusy(true);
     setToast(null);
     try {
-      const res = await fetch("/api/admin/settings", {
+      const res = await fetch("/api/ops/settings", {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(settings),

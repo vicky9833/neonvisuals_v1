@@ -2,15 +2,15 @@
 
 import { useEffect, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
-import type { Role } from "@/lib/auth-types";
 
 export interface AuthProfileLite {
   id: string;
   full_name: string;
   email: string;
-  role: Role;
   avatar_url: string | null;
   is_onboarded: boolean;
+  /** Platform-staff flag (from platform_staff), replaces the old profiles.role. */
+  isPlatformStaff: boolean;
 }
 
 export interface UseAuthProfile {
@@ -43,16 +43,21 @@ export function useAuthProfile(): UseAuthProfile {
         return;
       }
 
-      const { data } = await supabase
-        .from("profiles")
-        .select("id, full_name, email, role, avatar_url, is_onboarded")
-        .eq("id", user.id)
-        .single();
+      const [{ data }, { data: staff }] = await Promise.all([
+        supabase
+          .from("profiles")
+          .select("id, full_name, email, avatar_url, is_onboarded")
+          .eq("id", user.id)
+          .single(),
+        supabase.from("platform_staff").select("user_id").eq("user_id", user.id).maybeSingle(),
+      ]);
 
       if (active) {
         setState({
           loading: false,
-          profile: (data as AuthProfileLite | null) ?? null,
+          profile: data
+            ? ({ ...(data as Omit<AuthProfileLite, "isPlatformStaff">), isPlatformStaff: staff != null } as AuthProfileLite)
+            : null,
         });
       }
     }

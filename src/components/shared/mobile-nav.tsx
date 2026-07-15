@@ -3,13 +3,7 @@
 import { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import {
-  Building2,
-  LayoutDashboard,
-  LogOut,
-  Menu,
-  Shield,
-} from "lucide-react";
+import { Building2, LayoutDashboard, LogOut, Menu } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   Sheet,
@@ -128,16 +122,6 @@ export function MobileNav({ links }: MobileNavProps) {
                 <Building2 className="size-4" />
                 Company Settings
               </Link>
-              {profile.role === "super_admin" ? (
-                <Link
-                  href="/admin"
-                  onClick={() => setOpen(false)}
-                  className="flex items-center gap-2 rounded-button px-3 py-2 text-sm font-medium text-foreground transition-colors hover:bg-secondary"
-                >
-                  <Shield className="size-4" />
-                  Admin Panel
-                </Link>
-              ) : null}
               <button
                 type="button"
                 onClick={handleSignOut}

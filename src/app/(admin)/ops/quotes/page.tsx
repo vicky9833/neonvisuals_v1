@@ -4,7 +4,7 @@ import { QuotesAdmin } from "@/components/admin/quotes-admin";
 
 export const metadata: Metadata = { title: "Quotes" };
 
-// Access is enforced by proxy.ts: /admin/* requires an authenticated
+// Access is enforced by proxy.ts: /ops/* requires an authenticated
 // super_admin (non-admins are redirected to /dashboard or /login).
 export default function AdminQuotesPage() {
   return (

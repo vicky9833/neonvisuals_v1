@@ -22,7 +22,7 @@ export default async function AdminOrderDetailPage({
   return (
     <div className="space-y-6">
       <Link
-        href="/admin/orders"
+        href="/ops/orders"
         className="inline-flex items-center gap-1 text-sm font-medium text-[#6B7280] hover:text-navy"
       >
         <ArrowLeft className="size-4" /> Back to orders

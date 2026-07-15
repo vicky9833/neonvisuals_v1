@@ -137,7 +137,7 @@ async function recentActivity(): Promise<AdminActivityItem[]> {
       icon: "quote",
       description: `Quote ${q.quote_number ?? ""} ${q.status === "accepted" ? "accepted" : "created"}`.trim(),
       timestamp: q.created_at as string,
-      href: "/admin/quotes",
+      href: "/ops/quotes",
     });
   }
   for (const o of orders) {
@@ -146,7 +146,7 @@ async function recentActivity(): Promise<AdminActivityItem[]> {
       icon: "order",
       description: `Order ${o.order_number ?? ""} · ${(o.status as string)?.replace("_", " ")}`.trim(),
       timestamp: o.created_at as string,
-      href: `/admin/orders/${o.id}`,
+      href: `/ops/orders/${o.id}`,
     });
   }
   for (const l of leads) {
@@ -155,7 +155,7 @@ async function recentActivity(): Promise<AdminActivityItem[]> {
       icon: "lead",
       description: `New lead: ${l.company_name} (${l.source})`,
       timestamp: l.created_at as string,
-      href: "/admin/leads",
+      href: "/ops/leads",
     });
   }
   for (const inv of invoices) {
@@ -164,7 +164,7 @@ async function recentActivity(): Promise<AdminActivityItem[]> {
       icon: "invoice",
       description: `Invoice ${inv.invoice_number ?? ""} · ${inv.status}`.trim(),
       timestamp: inv.created_at as string,
-      href: "/admin/billing",
+      href: "/ops/billing",
     });
   }
   for (const b of blog) {
@@ -173,7 +173,7 @@ async function recentActivity(): Promise<AdminActivityItem[]> {
       icon: "blog",
       description: `Blog "${b.title}" ${b.status === "published" ? "published" : "saved"}`,
       timestamp: (b.published_at as string) ?? (b.created_at as string),
-      href: "/admin/blog",
+      href: "/ops/blog",
     });
   }
 

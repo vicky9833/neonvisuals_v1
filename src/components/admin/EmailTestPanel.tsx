@@ -32,7 +32,7 @@ export function EmailTestPanel({ configured }: { configured: boolean }) {
     setBusy(true);
     setMsg(null);
     try {
-      const res = await fetch("/api/admin/emails/test", {
+      const res = await fetch("/api/ops/emails/test", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ template }),

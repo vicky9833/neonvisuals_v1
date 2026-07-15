@@ -1,0 +1,32 @@
+﻿
+ RUN  v4.1.10 C:/neonvisuals_v1
+
+ Γ£ô src/lib/authz/clamp.test.ts > Allowlist classification (item 2) > /ops ΓåÆ platform 3ms
+ Γ£ô src/lib/authz/clamp.test.ts > Allowlist classification (item 2) > /ops/leads ΓåÆ platform 0ms
+ Γ£ô src/lib/authz/clamp.test.ts > Allowlist classification (item 2) > /dashboard ΓåÆ tenant 0ms
+ Γ£ô src/lib/authz/clamp.test.ts > Allowlist classification (item 2) > /dashboard/orders ΓåÆ tenant 0ms
+ Γ£ô src/lib/authz/clamp.test.ts > Allowlist classification (item 2) > /onboarding ΓåÆ onboarding 0ms
+ Γ£ô src/lib/authz/clamp.test.ts > Allowlist classification (item 2) > /login ΓåÆ auth 0ms
+ Γ£ô src/lib/authz/clamp.test.ts > Allowlist classification (item 2) > / (home) ΓåÆ public 0ms
+ Γ£ô src/lib/authz/clamp.test.ts > Allowlist classification (item 2) > /products/x ΓåÆ public 0ms
+ Γ£ô src/lib/authz/clamp.test.ts > Allowlist classification (item 2) > UNLISTED route ΓåÆ null (default-deny) 1ms
+ Γ£ô src/lib/authz/clamp.test.ts > Allowlist classification (item 2) > /ops/vendors ΓåÆ denied (no vendor management) 0ms
+ Γ£ô src/lib/authz/clamp.test.ts > Proxy decision ΓÇö default-deny (item 2 acceptance) > ROUTE OFF THE ALLOWLIST default-denies with 403 1ms
+ Γ£ô src/lib/authz/clamp.test.ts > Proxy decision ΓÇö default-deny (item 2 acceptance) > TENANT USER hitting /ops ΓåÆ 403 0ms
+ Γ£ô src/lib/authz/clamp.test.ts > Proxy decision ΓÇö default-deny (item 2 acceptance) > /ops/vendors ΓåÆ 403 for platform staff too (explicitly disabled) 0ms
+ Γ£ô src/lib/authz/clamp.test.ts > Proxy decision ΓÇö default-deny (item 2 acceptance) > ORPHAN USER (authenticated, zero memberships) on /dashboard ΓåÆ redirect to /onboarding 0ms
+ Γ£ô src/lib/authz/clamp.test.ts > Proxy decision ΓÇö default-deny (item 2 acceptance) > tenant member on /dashboard ΓåÆ pass 0ms
+ Γ£ô src/lib/authz/clamp.test.ts > Proxy decision ΓÇö default-deny (item 2 acceptance) > platform staff on /ops ΓåÆ pass 0ms
+ Γ£ô src/lib/authz/clamp.test.ts > Proxy decision ΓÇö default-deny (item 2 acceptance) > platform staff on /dashboard ΓåÆ redirected to /ops 0ms
+ Γ£ô src/lib/authz/clamp.test.ts > Proxy decision ΓÇö default-deny (item 2 acceptance) > anonymous on /dashboard ΓåÆ redirect to /login 0ms
+ Γ£ô src/lib/authz/clamp.test.ts > Proxy decision ΓÇö default-deny (item 2 acceptance) > anonymous on public page ΓåÆ pass 0ms
+ Γ£ô src/lib/authz/clamp.test.ts > LOAD-BEARING: tenant viewer WRITE on money tables ΓåÆ 403 from authorize() (mig-020 gap) > viewer denied quote create (quote.request) 0ms
+ Γ£ô src/lib/authz/clamp.test.ts > LOAD-BEARING: tenant viewer WRITE on money tables ΓåÆ 403 from authorize() (mig-020 gap) > viewer denied quote approve (quote.approve) 0ms
+ Γ£ô src/lib/authz/clamp.test.ts > LOAD-BEARING: tenant viewer WRITE on money tables ΓåÆ 403 from authorize() (mig-020 gap) > viewer denied invoice/billing write (billing.manage) 0ms
+ Γ£ô src/lib/authz/clamp.test.ts > LOAD-BEARING: tenant viewer WRITE on money tables ΓåÆ 403 from authorize() (mig-020 gap) > the 403 body a route emits for a viewer quote WRITE 0ms
+
+ Test Files  1 passed (1)
+      Tests  23 passed (23)
+   Start at  19:51:36
+   Duration  348ms (transform 70ms, setup 0ms, import 95ms, tests 10ms, environment 0ms)
+

@@ -40,48 +40,48 @@ const GROUPS: NavGroup[] = [
   {
     label: "Overview",
     items: [
-      { label: "Dashboard", icon: LayoutDashboard, href: "/admin" },
-      { label: "Analytics", icon: BarChart3, href: "/admin/analytics" },
+      { label: "Dashboard", icon: LayoutDashboard, href: "/ops" },
+      { label: "Analytics", icon: BarChart3, href: "/ops/analytics" },
     ],
   },
   {
     label: "Sales",
     items: [
-      { label: "Sales Pipeline", icon: Target, href: "/admin/leads" },
-      { label: "Quotes", icon: FileText, href: "/admin/quotes" },
-      { label: "Orders", icon: Package, href: "/admin/orders" },
-      { label: "Billing", icon: Receipt, href: "/admin/billing" },
+      { label: "Sales Pipeline", icon: Target, href: "/ops/leads" },
+      { label: "Quotes", icon: FileText, href: "/ops/quotes" },
+      { label: "Orders", icon: Package, href: "/ops/orders" },
+      { label: "Billing", icon: Receipt, href: "/ops/billing" },
     ],
   },
   {
     label: "Catalog",
     items: [
-      { label: "Products", icon: Gift, href: "/admin/products" },
-      { label: "Collections", icon: FolderTree, href: "/admin/collections" },
+      { label: "Products", icon: Gift, href: "/ops/products" },
+      { label: "Collections", icon: FolderTree, href: "/ops/collections" },
     ],
   },
   {
     label: "Clients",
     items: [
-      { label: "Companies", icon: Building2, href: "/admin/clients" },
+      { label: "Companies", icon: Building2, href: "/ops/clients" },
     ],
   },
   {
     label: "Content",
-    items: [{ label: "Blog", icon: PenLine, href: "/admin/blog" }],
+    items: [{ label: "Blog", icon: PenLine, href: "/ops/blog" }],
   },
   {
     label: "System",
     items: [
-      { label: "Settings", icon: Settings, href: "/admin/settings" },
-      { label: "Emails", icon: Mail, href: "/admin/emails" },
-      { label: "Team", icon: UserCog, href: "/admin/team" },
+      { label: "Settings", icon: Settings, href: "/ops/settings" },
+      { label: "Emails", icon: Mail, href: "/ops/emails" },
+      { label: "Team", icon: UserCog, href: "/ops/team" },
     ],
   },
 ];
 
 function isActivePath(pathname: string, href: string): boolean {
-  if (href === "/admin") return pathname === "/admin";
+  if (href === "/ops") return pathname === "/ops";
   return pathname === href || pathname.startsWith(`${href}/`);
 }
 
@@ -131,7 +131,7 @@ export function AdminSidebarBody({ onNavigate }: { onNavigate?: () => void }) {
   return (
     <div className="flex h-full flex-col bg-navy text-white">
       <div className="border-b border-white/10 px-6 py-5">
-        <Link href="/admin" onClick={onNavigate} className="block">
+        <Link href="/ops" onClick={onNavigate} className="block">
           <Logo variant="horizontal" theme="light" iconSize={32} asLink={false} />
           <span className="mt-1 inline-block rounded bg-white/10 px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wider text-slate-300">
             Admin Panel

@@ -34,7 +34,7 @@
  * The service-role client BYPASSES RLS entirely. It is permitted ONLY in:
  *   (a) webhooks (e.g. /api/webhooks/razorpay),
  *   (b) cron jobs (e.g. /api/reminders/cron),
- *   (c) explicitly cross-tenant PLATFORM-plane operations (e.g. /api/admin/*).
+ *   (c) explicitly cross-tenant PLATFORM-plane operations (e.g. /api/ops/*).
  * Every TENANT-plane read/write MUST use the request-scoped cookie client so
  * RLS applies, AND MUST additionally perform an API-layer company_id check.
  * Belt AND braces.
@@ -46,7 +46,7 @@
  * note was incorrect and has been removed.
  * STILL ELEVATED (justified system callers, service-role by design):
  *   - Razorpay webhook (billing.handleRazorpayWebhook + threaded helpers),
- *   - reminder cron (/api/reminders/cron), /api/admin/team,
+ *   - reminder cron (/api/reminders/cron), /api/ops/team,
  *   - public lead capture (lead.captureLead), lead→client company insert
  *     (lead.convertLeadToClient), onboarding company insert, PDF storage upload.
  * ============================================================================
