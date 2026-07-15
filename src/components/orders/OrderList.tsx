@@ -210,7 +210,7 @@ export function OrderList({
                   <TableRow
                     key={o.id}
                     className="cursor-pointer"
-                    onClick={() => router.push(`/admin/orders/${o.id}`)}
+                    onClick={() => router.push(`/ops/orders/${o.id}`)}
                   >
                     <TableCell>
                       <p className="font-numbers font-medium text-navy">

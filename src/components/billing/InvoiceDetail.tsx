@@ -39,7 +39,7 @@ export function InvoiceDetail({
           <p className="text-sm text-[#6B7280]">
             {INVOICE_TYPE_LABEL[invoice.invoice_type]} ·{" "}
             <Link
-              href={`/admin/orders/${invoice.order_id}`}
+              href={`/ops/orders/${invoice.order_id}`}
               className="text-gold hover:underline"
             >
               {invoice.order_number ?? "Order"}

@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
-import { requireApiRole, apiAuthErrorResponse } from "@/lib/api-auth";
+import { requirePlatform, apiAuthErrorResponse } from "@/lib/api-auth";
 import {
   getOrder,
   getOrderEmailContext,
@@ -37,8 +37,12 @@ export async function PATCH(
   { params }: { params: Promise<{ id: string }> },
 ) {
   try {
-    const profile = await requireApiRole(["super_admin"]);
     const { id } = await params;
+    const profile = await requirePlatform("platform.orders.manage", {
+      entity: "order",
+      entityId: id,
+      action: "order.status",
+    });
     const body = await request.json().catch(() => null);
     if (!body) {
       return NextResponse.json(

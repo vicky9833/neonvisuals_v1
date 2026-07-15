@@ -4,8 +4,16 @@
  * Self-contained CRM: every enquiry is a lead, leads carry an activity log and
  * status history, and converting a won lead creates a company (client) record.
  * No external CRM integration. All business logic lives here.
+ *
+ * Prompt 2 (item 6): CRM reads/writes use the request-scoped RLS client
+ * (`createClient`) — platform staff satisfy the `leads_platform` policies.
+ * KEPT ELEVATED: public `captureLead` (no session) and `convertLeadToClient`
+ * (inserts a company; companies has no authenticated INSERT policy). The
+ * request-scoped client is imported DYNAMICALLY (see `userDb`) so this server
+ * engine stays import-safe from client components that use its exported values.
  */
 import { createAdminClient } from "@/lib/supabase/admin";
+import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Company } from "@/lib/auth-types";
 
 // ---------------------------------------------------------------------------
@@ -166,33 +174,14 @@ export interface LeadStatusEntry {
 // Pipeline definition
 // ---------------------------------------------------------------------------
 
-export const PIPELINE_STAGES: { status: LeadStatus; label: string }[] = [
-  { status: "new", label: "New" },
-  { status: "contacted", label: "Contacted" },
-  { status: "qualified", label: "Qualified" },
-  { status: "proposal_sent", label: "Proposal" },
-  { status: "negotiation", label: "Negotiation" },
-  { status: "won", label: "Won" },
-  { status: "lost", label: "Lost" },
-];
-
-/** Statuses still "in play" - used for pipeline value + overdue follow-ups. */
-export const ACTIVE_LEAD_STATUSES: LeadStatus[] = [
-  "new",
-  "contacted",
-  "qualified",
-  "proposal_sent",
-  "negotiation",
-];
-
-export const LOSS_REASONS = [
-  { value: "too_expensive", label: "Too expensive" },
-  { value: "chose_competitor", label: "Chose competitor" },
-  { value: "no_budget", label: "No budget" },
-  { value: "no_response", label: "No response" },
-  { value: "timing", label: "Bad timing" },
-  { value: "other", label: "Other" },
-] as const;
+// Pure CRM constants live in ./lead-constants (client-safe). Imported for
+// internal use here and re-exported for server callers.
+import {
+  PIPELINE_STAGES,
+  ACTIVE_LEAD_STATUSES,
+  LOSS_REASONS,
+} from "./lead-constants";
+export { PIPELINE_STAGES, ACTIVE_LEAD_STATUSES, LOSS_REASONS };
 
 // ---------------------------------------------------------------------------
 // Row mapping + payload building
@@ -309,8 +298,8 @@ const LEAD_SELECT = "*";
 // CRUD
 // ---------------------------------------------------------------------------
 
-export async function createLead(input: LeadInput): Promise<Lead> {
-  const supa = createAdminClient();
+export async function createLead(input: LeadInput, db?: SupabaseClient): Promise<Lead> {
+  const supa = db ?? (await userDb());
   const { data, error } = await supa
     .from("leads")
     .insert(buildLeadPayload(input))
@@ -333,7 +322,7 @@ export async function updateLead(
   id: string,
   updates: Partial<LeadInput>,
 ): Promise<Lead> {
-  const supa = createAdminClient();
+  const supa = await userDb();
   const payload = buildLeadPayload(updates);
   if (Object.keys(payload).length > 0) {
     const { error } = await supa.from("leads").update(payload).eq("id", id);
@@ -346,7 +335,7 @@ export async function updateLead(
 }
 
 export async function getLead(id: string): Promise<Lead | null> {
-  const supa = createAdminClient();
+  const supa = await userDb();
   const { data, error } = await supa
     .from("leads")
     .select("*, lead_activities(*)")
@@ -391,7 +380,7 @@ export async function listLeads(
     page = 1,
     pageSize = 100,
   } = options;
-  const supa = createAdminClient();
+  const supa = await userDb();
   let query = supa.from("leads").select(LEAD_SELECT, { count: "exact" });
 
   if (options.status) {
@@ -435,7 +424,7 @@ export async function updateLeadStatus(
   changedBy?: string,
   lossReason?: string,
 ): Promise<void> {
-  const supa = createAdminClient();
+  const supa = await userDb();
   const { data: current, error: readErr } = await supa
     .from("leads")
     .select("status")
@@ -479,7 +468,7 @@ export async function updateLeadStatus(
 export async function getLeadStatusHistory(
   leadId: string,
 ): Promise<LeadStatusEntry[]> {
-  const supa = createAdminClient();
+  const supa = await userDb();
   const { data, error } = await supa
     .from("lead_status_history")
     .select("*")
@@ -498,7 +487,7 @@ export async function addActivity(
   activity: ActivityInput,
   performedBy?: string,
 ): Promise<LeadActivity> {
-  const supa = createAdminClient();
+  const supa = await userDb();
   const { data, error } = await supa
     .from("lead_activities")
     .insert({
@@ -531,7 +520,7 @@ export async function addActivity(
 }
 
 export async function getActivities(leadId: string): Promise<LeadActivity[]> {
-  const supa = createAdminClient();
+  const supa = await userDb();
   const { data, error } = await supa
     .from("lead_activities")
     .select("*")
@@ -548,7 +537,7 @@ export async function getActivities(leadId: string): Promise<LeadActivity[]> {
 const LARGE_SIZES = new Set(["200-500", "500-1000", "1000+", "200-500", "500-1,000", "1,000+"]);
 
 export async function calculateLeadScore(leadId: string): Promise<number> {
-  const supa = createAdminClient();
+  const supa = await userDb();
   const { data: lead } = await supa
     .from("leads")
     .select(
@@ -611,6 +600,8 @@ export async function convertLeadToClient(
   companyData?: Partial<CompanyInput>,
   changedBy?: string,
 ): Promise<{ lead: Lead; company: Company }> {
+  // KEPT ELEVATED (item 6): inserts a company; `companies` has no authenticated
+  // INSERT policy, so this platform-plane conversion runs on the service role.
   const supa = createAdminClient();
   const existing = await getLead(leadId);
   if (!existing) throw new Error("Lead not found");
@@ -690,7 +681,7 @@ export interface LeadStats {
 }
 
 export async function getLeadStats(): Promise<LeadStats> {
-  const supa = createAdminClient();
+  const supa = await userDb();
   const { data, error } = await supa
     .from("leads")
     .select(
@@ -804,6 +795,7 @@ export interface CaptureInput {
 export async function captureLead(
   input: CaptureInput,
 ): Promise<{ created: boolean }> {
+  // KEPT ELEVATED (item 6): PUBLIC endpoint, no user session → service role.
   const supa = createAdminClient();
 
   // Dedupe by email when provided.
@@ -828,15 +820,18 @@ export async function captureLead(
     }
   }
 
-  const lead = await createLead({
-    contactName: input.name,
-    contactEmail: input.email,
-    contactPhone: input.phone,
-    companyName: input.company,
-    source: input.source ?? "gift_builder",
-    interestedOccasions: input.occasion ? [input.occasion] : undefined,
-    priority: "warm",
-  });
+  const lead = await createLead(
+    {
+      contactName: input.name,
+      contactEmail: input.email,
+      contactPhone: input.phone,
+      companyName: input.company,
+      source: input.source ?? "gift_builder",
+      interestedOccasions: input.occasion ? [input.occasion] : undefined,
+      priority: "warm",
+    },
+    supa, // KEPT ELEVATED: public capture, no session.
+  );
 
   await supa.from("lead_activities").insert({
     lead_id: lead.id,
@@ -850,7 +845,7 @@ export async function captureLead(
 
 /** Count of leads created since midnight today (admin overview quick-view). */
 export async function getNewLeadsToday(): Promise<number> {
-  const supa = createAdminClient();
+  const supa = await userDb();
   const start = new Date();
   start.setHours(0, 0, 0, 0);
   const { count } = await supa
@@ -858,4 +853,12 @@ export async function getNewLeadsToday(): Promise<number> {
     .select("id", { count: "exact", head: true })
     .gte("created_at", start.toISOString());
   return count ?? 0;
+}
+
+// Request-scoped RLS client, imported dynamically so this server-only engine
+// can be imported by client components (for its exported values) without
+// pulling `next/headers` into the client bundle.
+async function userDb() {
+  const { createClient } = await import("@/lib/supabase/server");
+  return createClient();
 }

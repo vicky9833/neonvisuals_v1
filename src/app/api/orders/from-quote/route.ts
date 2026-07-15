@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
-import { requireApiRole, apiAuthErrorResponse } from "@/lib/api-auth";
+import { requirePlatform, apiAuthErrorResponse } from "@/lib/api-auth";
 import { convertQuoteToOrder } from "@/lib/engines/order";
 
 export const runtime = "nodejs";
@@ -13,7 +13,10 @@ const schema = z.object({
 // POST - convert an accepted quote into a draft order (super_admin only).
 export async function POST(request: Request) {
   try {
-    const profile = await requireApiRole(["super_admin"]);
+    const profile = await requirePlatform("platform.orders.manage", {
+      entity: "order",
+      action: "order.from_quote",
+    });
     const body = await request.json().catch(() => null);
     if (!body) {
       return NextResponse.json(

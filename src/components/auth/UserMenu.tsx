@@ -2,7 +2,7 @@
 
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { Building2, LayoutDashboard, LogOut, Shield } from "lucide-react";
+import { Building2, LayoutDashboard, LogOut } from "lucide-react";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -69,14 +69,8 @@ export function UserMenu({ profile }: { profile: AuthProfileLite }) {
             Company Settings
           </Link>
         </DropdownMenuItem>
-        {profile.role === "super_admin" ? (
-          <DropdownMenuItem asChild>
-            <Link href="/admin">
-              <Shield className="size-4" />
-              Admin Panel
-            </Link>
-          </DropdownMenuItem>
-        ) : null}
+        {/* Prompt 2 item 7: leaked "Admin Panel" link removed. Platform staff
+            reach /ops via direct nav; the proxy authorize() gate is the control. */}
         <DropdownMenuSeparator />
         <DropdownMenuItem variant="destructive" onSelect={handleSignOut}>
           <LogOut className="size-4" />

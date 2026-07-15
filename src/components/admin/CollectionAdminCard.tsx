@@ -31,7 +31,7 @@ export function CollectionAdminCard({ data }: { data: CollectionAdminData }) {
       </dl>
       <div className="mt-4 flex flex-wrap gap-3 border-t border-border pt-3 text-sm">
         <Link
-          href={`/admin/products?collection=${data.code}`}
+          href={`/ops/products?collection=${data.code}`}
           className="font-medium text-gold hover:underline"
         >
           View Products

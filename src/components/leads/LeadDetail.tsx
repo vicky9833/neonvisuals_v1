@@ -28,7 +28,7 @@ import type {
   Lead,
   LeadStatus,
 } from "@/lib/engines/lead";
-import { PIPELINE_STAGES } from "@/lib/engines/lead";
+import { PIPELINE_STAGES } from "@/lib/engines/lead-constants";
 import { PriorityDot } from "./LeadStatusBadge";
 import { LeadScoreIndicator } from "./LeadScoreIndicator";
 import { LeadActivityForm } from "./LeadActivityForm";
@@ -275,7 +275,7 @@ export function LeadDetail({
                   <Card title="Linked Quote">
                     {lead.first_quote_id ? (
                       <Link
-                        href={`/admin/quotes`}
+                        href={`/ops/quotes`}
                         className="inline-flex items-center gap-1 text-sm text-gold hover:underline"
                       >
                         View quote <ExternalLink className="size-3.5" />
@@ -287,7 +287,7 @@ export function LeadDetail({
                   <Card title="Linked Order">
                     {lead.first_order_id ? (
                       <Link
-                        href={`/admin/orders/${lead.first_order_id}`}
+                        href={`/ops/orders/${lead.first_order_id}`}
                         className="inline-flex items-center gap-1 text-sm text-gold hover:underline"
                       >
                         View order <ExternalLink className="size-3.5" />
@@ -297,7 +297,7 @@ export function LeadDetail({
                     )}
                   </Card>
                   <Button asChild variant="outline" className="w-full">
-                    <Link href="/admin/quotes">Create Quote for This Lead</Link>
+                    <Link href="/ops/quotes">Create Quote for This Lead</Link>
                   </Button>
                   {lead.company_id && (
                     <p className="text-xs text-green-700">

@@ -1,7 +1,11 @@
 import { NextResponse } from "next/server";
 import { getQuote } from "@/lib/engines/quote";
 import { generateQuotePDF } from "@/lib/engines/pdf";
-import { requireApiAuth, apiAuthErrorResponse } from "@/lib/api-auth";
+import {
+  requireApiAuth,
+  auditCrossTenantAccess,
+  apiAuthErrorResponse,
+} from "@/lib/api-auth";
 import { createClient } from "@/lib/supabase/server";
 
 export const runtime = "nodejs";
@@ -15,9 +19,15 @@ export async function GET(_request: Request, { params }: Ctx) {
     const quote = await getQuote(id);
     if (!quote) return NextResponse.json({ error: "not_found", message: "Quote not found" }, { status: 404 });
 
-    // Super admins can download any quote. Otherwise the quote must belong to
-    // the requester (matching email, or their company name).
-    if (profile.role !== "super_admin") {
+    // Platform staff can download any quote (cross-tenant → audited). Otherwise
+    // the quote must belong to the requester (matching email, or company name).
+    if (profile.isPlatformStaff) {
+      await auditCrossTenantAccess(profile, "platform.billing.manage", {
+        entity: "quote",
+        entityId: id,
+        action: "quote.pdf",
+      });
+    } else {
       let companyName: string | null = null;
       if (profile.company_id) {
         const supabase = await createClient();

@@ -2,7 +2,8 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 import {
   requireApiAuth,
-  requireApiRole,
+  requirePlatform,
+  auditCrossTenantAccess,
   apiAuthErrorResponse,
 } from "@/lib/api-auth";
 import { getInvoice, getPayments, recordPayment } from "@/lib/engines/billing";
@@ -31,7 +32,13 @@ export async function GET(
   try {
     const profile = await requireApiAuth();
     const { id } = await params;
-    if (profile.role !== "super_admin") {
+    if (profile.isPlatformStaff) {
+      await auditCrossTenantAccess(profile, "platform.billing.manage", {
+        entity: "invoice",
+        entityId: id,
+        action: "invoice.payments.read",
+      });
+    } else {
       const invoice = await getInvoice(id);
       if (!invoice || invoice.company_id !== profile.company_id) {
         return NextResponse.json(
@@ -59,8 +66,12 @@ export async function POST(
   { params }: { params: Promise<{ id: string }> },
 ) {
   try {
-    const profile = await requireApiRole(["super_admin"]);
     const { id } = await params;
+    const profile = await requirePlatform("platform.billing.manage", {
+      entity: "invoice",
+      entityId: id,
+      action: "invoice.payment.record",
+    });
     const body = await request.json().catch(() => null);
     if (body === null) {
       return NextResponse.json(

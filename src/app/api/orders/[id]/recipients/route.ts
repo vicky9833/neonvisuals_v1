@@ -2,7 +2,8 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 import {
   requireApiAuth,
-  requireApiRole,
+  requirePlatform,
+  auditCrossTenantAccess,
   apiAuthErrorResponse,
 } from "@/lib/api-auth";
 import {
@@ -36,7 +37,13 @@ export async function GET(
     const profile = await requireApiAuth();
     const { id } = await params;
 
-    if (profile.role !== "super_admin") {
+    if (profile.isPlatformStaff) {
+      await auditCrossTenantAccess(profile, "platform.orders.manage", {
+        entity: "order",
+        entityId: id,
+        action: "order.recipients.read",
+      });
+    } else {
       const order = await getOrder(id);
       if (!order || order.company_id !== profile.company_id) {
         return NextResponse.json(
@@ -64,8 +71,8 @@ export async function POST(
   { params }: { params: Promise<{ id: string }> },
 ) {
   try {
-    await requireApiRole(["super_admin"]);
     const { id } = await params;
+    await requirePlatform("platform.orders.manage", { entity: "order", entityId: id, action: "order.recipients.add" });
     const body = await request.json().catch(() => null);
     if (!body) {
       return NextResponse.json(

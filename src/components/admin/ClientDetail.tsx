@@ -134,7 +134,7 @@ export function ClientDetail({ data }: { data: ClientDetailData }) {
                 {orders.map((o) => (
                   <TableRow key={o.id}>
                     <TableCell>
-                      <Link href={`/admin/orders/${o.id}`} className="font-numbers text-navy hover:underline">
+                      <Link href={`/ops/orders/${o.id}`} className="font-numbers text-navy hover:underline">
                         {o.order_number ?? "-"}
                       </Link>
                     </TableCell>

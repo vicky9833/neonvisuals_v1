@@ -7,7 +7,6 @@ import {
   ChevronDown,
   ExternalLink,
   LogOut,
-  Shield,
   UserRound,
 } from "lucide-react";
 import {
@@ -80,14 +79,8 @@ export function UserMenu() {
             Visit Website
           </a>
         </DropdownMenuItem>
-        {profile.role === "super_admin" ? (
-          <DropdownMenuItem asChild>
-            <Link href="/admin">
-              <Shield className="size-4" />
-              Admin Panel
-            </Link>
-          </DropdownMenuItem>
-        ) : null}
+        {/* Prompt 2 item 7: role-gated "Admin Panel" link removed. Platform
+            staff are redirected from /dashboard to /ops by the proxy anyway. */}
         <DropdownMenuSeparator />
         <DropdownMenuItem variant="destructive" onSelect={handleSignOut}>
           <LogOut className="size-4" />

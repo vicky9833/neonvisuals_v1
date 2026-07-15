@@ -20,7 +20,6 @@ import {
 import { cn } from "@/lib/utils";
 import { Logo } from "@/components/brand/logo";
 import { WHATSAPP_NUMBER, TAGLINE } from "@/lib/utils/constants";
-import type { Role } from "@/lib/auth-types";
 import { useDashboard } from "@/components/dashboard/DashboardProvider";
 
 interface NavItem {
@@ -28,24 +27,23 @@ interface NavItem {
   icon: LucideIcon;
   href: string;
   external?: boolean;
-  roles: Role[];
 }
 
-const ALL: Role[] = ["client", "admin", "super_admin"];
-
+// Nav is uniform for every tenant member; fine-grained capability gating is
+// enforced server-side (proxy allowlist + authorize()), not by hiding nav rows.
 const MAIN_NAV: NavItem[] = [
-  { label: "Overview", icon: LayoutDashboard, href: "/dashboard", roles: ALL },
-  { label: "Employees", icon: Users, href: "/dashboard/employees", roles: ALL },
-  { label: "Gift History", icon: Gift, href: "/dashboard/gifts", roles: ALL },
-  { label: "Occasions", icon: Calendar, href: "/dashboard/occasions", roles: ALL },
-  { label: "My Quotes", icon: FileText, href: "/dashboard/quotes", roles: ALL },
-  { label: "Orders", icon: Package, href: "/dashboard/orders", roles: ALL },
-  { label: "Billing", icon: Receipt, href: "/dashboard/billing", roles: ALL },
+  { label: "Overview", icon: LayoutDashboard, href: "/dashboard" },
+  { label: "Employees", icon: Users, href: "/dashboard/employees" },
+  { label: "Gift History", icon: Gift, href: "/dashboard/gifts" },
+  { label: "Occasions", icon: Calendar, href: "/dashboard/occasions" },
+  { label: "My Quotes", icon: FileText, href: "/dashboard/quotes" },
+  { label: "Orders", icon: Package, href: "/dashboard/orders" },
+  { label: "Billing", icon: Receipt, href: "/dashboard/billing" },
 ];
 
 const QUICK_ACTIONS: NavItem[] = [
-  { label: "Curate a Kit", icon: Palette, href: "/gift-builder", external: true, roles: ALL },
-  { label: "Browse Catalog", icon: BookOpen, href: "/products", external: true, roles: ALL },
+  { label: "Curate a Kit", icon: Palette, href: "/gift-builder", external: true },
+  { label: "Browse Catalog", icon: BookOpen, href: "/products", external: true },
   {
     label: "WhatsApp Us",
     icon: MessageCircle,
@@ -53,13 +51,12 @@ const QUICK_ACTIONS: NavItem[] = [
       "Hi, I need help with my gifting order",
     )}`,
     external: true,
-    roles: ALL,
   },
 ];
 
 const SETTINGS_NAV: NavItem[] = [
-  { label: "Settings", icon: Settings, href: "/dashboard/settings", roles: ALL },
-  { label: "Help & Support", icon: HelpCircle, href: "/dashboard/support", roles: ALL },
+  { label: "Settings", icon: Settings, href: "/dashboard/settings" },
+  { label: "Help & Support", icon: HelpCircle, href: "/dashboard/support" },
 ];
 
 function isActivePath(pathname: string, href: string): boolean {
@@ -120,17 +117,14 @@ function SectionLabel({ children }: { children: string }) {
 
 /** Shared sidebar content used by both the desktop sidebar and mobile drawer. */
 export function SidebarBody({
-  role,
   companyName,
   onNavigate,
 }: {
-  role: Role;
   companyName: string;
   onNavigate?: () => void;
 }) {
   const pathname = usePathname();
-  const visible = (items: NavItem[]) =>
-    items.filter((i) => i.roles.includes(role));
+  const visible = (items: NavItem[]) => items;
 
   return (
     <div className="flex h-full flex-col bg-navy text-white">
@@ -183,13 +177,10 @@ export function SidebarBody({
 
 /** Permanent desktop sidebar (hidden below lg). */
 export function Sidebar() {
-  const { profile, company } = useDashboard();
+  const { company } = useDashboard();
   return (
     <aside className="fixed inset-y-0 left-0 z-30 hidden w-64 lg:block">
-      <SidebarBody
-        role={profile.role}
-        companyName={company?.name ?? "Your Company"}
-      />
+      <SidebarBody companyName={company?.name ?? "Your Company"} />
     </aside>
   );
 }

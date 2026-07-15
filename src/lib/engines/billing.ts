@@ -4,8 +4,18 @@
  * Generates GST-compliant tax invoices from orders, records payments (Razorpay
  * + manual), and powers the billing dashboards. SAC code 998396 (event
  * management / corporate gifting services). All financial logic lives here.
+ *
+ * Prompt 2 (item 6): user-facing invoice/payment CRUD uses the request-scoped
+ * RLS client (`createClient`) — RLS `invoices_*`/`payments_*` policies scope
+ * access, `authorize()` is the role gate. The Razorpay webhook path
+ * (`handleRazorpayWebhook` → recordPayment/getInvoice/recomputeOrderPaymentStatus)
+ * has NO user session and STAYS elevated: it passes an explicit service-role
+ * client down via the optional `db` parameter. The request-scoped client is
+ * imported DYNAMICALLY (see `userDb`) so this server engine stays import-safe
+ * from client components that use its exported types.
  */
 import { createAdminClient } from "@/lib/supabase/admin";
+import type { SupabaseClient } from "@supabase/supabase-js";
 import { getOrder } from "@/lib/engines/order";
 import {
   createPaymentLink as rzpCreatePaymentLink,
@@ -334,7 +344,7 @@ export async function createInvoice(
   input: CreateInvoiceInput,
   createdBy?: string,
 ): Promise<Invoice> {
-  const supa = createAdminClient();
+  const supa = await userDb();
   const order = await getOrder(input.orderId);
   if (!order) throw new Error("Order not found");
 
@@ -436,7 +446,7 @@ export async function updateInvoice(
   id: string,
   updates: InvoiceUpdate,
 ): Promise<Invoice> {
-  const supa = createAdminClient();
+  const supa = await userDb();
   const map: Record<string, string> = {
     status: "status",
     dueDate: "due_date",
@@ -460,8 +470,8 @@ export async function updateInvoice(
   return invoice;
 }
 
-export async function getInvoice(id: string): Promise<Invoice | null> {
-  const supa = createAdminClient();
+export async function getInvoice(id: string, db?: SupabaseClient): Promise<Invoice | null> {
+  const supa = db ?? (await userDb());
   const { data, error } = await supa
     .from("invoices")
     .select(INVOICE_SELECT)
@@ -484,7 +494,7 @@ export async function listInvoices(
   options: ListInvoicesOptions = {},
 ): Promise<{ invoices: Invoice[]; total: number }> {
   const { page = 1, pageSize = 100 } = options;
-  const supa = createAdminClient();
+  const supa = await userDb();
   let query = supa
     .from("invoices")
     .select(INVOICE_SELECT, { count: "exact" })
@@ -522,9 +532,10 @@ export async function recordPayment(
   invoiceId: string,
   payment: RecordPaymentInput,
   recordedBy?: string,
+  db?: SupabaseClient,
 ): Promise<Payment> {
-  const supa = createAdminClient();
-  const invoice = await getInvoice(invoiceId);
+  const supa = db ?? (await userDb());
+  const invoice = await getInvoice(invoiceId, supa);
   if (!invoice) throw new Error("Invoice not found");
 
   const { data, error } = await supa
@@ -565,7 +576,7 @@ export async function recordPayment(
   if (payment.razorpayPaymentId) patch.razorpay_payment_id = payment.razorpayPaymentId;
   await supa.from("invoices").update(patch).eq("id", invoiceId);
 
-  await recomputeOrderPaymentStatus(invoice.order_id);
+  await recomputeOrderPaymentStatus(invoice.order_id, supa);
 
   // Awaited (serverless-safe) payment confirmation email to the client.
   // Wrapped so a send failure can't fail payment recording.
@@ -587,8 +598,11 @@ export async function recordPayment(
 }
 
 /** Recomputes orders.payment_status from this order's invoice payments. */
-async function recomputeOrderPaymentStatus(orderId: string): Promise<void> {
-  const supa = createAdminClient();
+async function recomputeOrderPaymentStatus(
+  orderId: string,
+  db?: SupabaseClient,
+): Promise<void> {
+  const supa = db ?? (await userDb());
   const { data: invoices } = await supa
     .from("invoices")
     .select("invoice_type, amount_due, amount_paid, status")
@@ -611,7 +625,7 @@ async function recomputeOrderPaymentStatus(orderId: string): Promise<void> {
 }
 
 export async function getPayments(invoiceId: string): Promise<Payment[]> {
-  const supa = createAdminClient();
+  const supa = await userDb();
   const { data, error } = await supa
     .from("payments")
     .select("*")
@@ -631,8 +645,8 @@ export async function createInvoicePaymentLink(
   if (!isRazorpayConfigured()) {
     throw new Error("Razorpay is not configured.");
   }
-  const supa = createAdminClient();
-  const invoice = await getInvoice(invoiceId);
+  const supa = await userDb();
+  const invoice = await getInvoice(invoiceId, supa);
   if (!invoice) throw new Error("Invoice not found");
 
   const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? "https://neonvisuals.in";
@@ -664,6 +678,8 @@ export async function handleRazorpayWebhook(payload: any): Promise<void> {
   const event = payload?.event as string | undefined;
   if (event !== "payment_link.paid") return;
 
+  // KEPT ELEVATED (item 6): the Razorpay webhook has no end-user session, so it
+  // runs on the service-role client and threads it down to recordPayment.
   const supa = createAdminClient();
   const linkEntity = payload?.payload?.payment_link?.entity;
   const paymentEntity = payload?.payload?.payment?.entity;
@@ -693,14 +709,19 @@ export async function handleRazorpayWebhook(payload: any): Promise<void> {
   );
   const amount = amountPaise > 0 ? amountPaise / 100 : Number(invoice.amount_due);
 
-  await recordPayment(invoice.id as string, {
-    amount,
-    paymentMethod: "razorpay",
-    razorpayPaymentId: paymentId,
-    razorpayPaymentLinkId: linkId,
-    status: "completed",
-    notes: "Razorpay payment link paid",
-  });
+  await recordPayment(
+    invoice.id as string,
+    {
+      amount,
+      paymentMethod: "razorpay",
+      razorpayPaymentId: paymentId,
+      razorpayPaymentLinkId: linkId,
+      status: "completed",
+      notes: "Razorpay payment link paid",
+    },
+    undefined,
+    supa, // KEPT ELEVATED: webhook has no user session.
+  );
 }
 /* eslint-enable @typescript-eslint/no-explicit-any */
 
@@ -720,7 +741,7 @@ export interface BillingStats {
 }
 
 export async function getBillingStats(companyId?: string): Promise<BillingStats> {
-  const supa = createAdminClient();
+  const supa = await userDb();
 
   let invQuery = supa
     .from("invoices")
@@ -826,4 +847,12 @@ export function toClientInvoice(invoice: Invoice): ClientInvoice {
     pdf_url: invoice.pdf_url,
     notes: invoice.notes,
   };
+}
+
+// Request-scoped RLS client, imported dynamically so this server-only engine
+// can be imported by client components (for its exported types) without
+// pulling `next/headers` into the client bundle.
+async function userDb() {
+  const { createClient } = await import("@/lib/supabase/server");
+  return createClient();
 }

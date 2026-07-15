@@ -2,7 +2,7 @@ import "server-only";
 import { redirect } from "next/navigation";
 import type { Session, User } from "@supabase/supabase-js";
 import { createClient } from "@/lib/supabase/server";
-import type { Profile, ProfileWithCompany, Role } from "@/lib/auth-types";
+import type { Profile, ProfileWithCompany } from "@/lib/auth-types";
 
 /**
  * Server-side auth helpers for Server Components, Route Handlers, and Server
@@ -44,11 +44,6 @@ export async function getProfile(): Promise<ProfileWithCompany | null> {
   return (data as ProfileWithCompany | null) ?? null;
 }
 
-export async function getRole(): Promise<Role | null> {
-  const profile = await getProfile();
-  return profile?.role ?? null;
-}
-
 export async function isOnboarded(): Promise<boolean> {
   const profile = await getProfile();
   return profile?.is_onboarded === true;
@@ -64,13 +59,7 @@ export async function requireAuth(): Promise<Profile> {
   return profile;
 }
 
-/**
- * Guarantees the user holds one of the allowed roles. Redirects unauthenticated
- * users to /login and wrong-role users to /dashboard.
- */
-export async function requireRole(role: Role | Role[]): Promise<Profile> {
-  const profile = await requireAuth();
-  const allowed = Array.isArray(role) ? role : [role];
-  if (!allowed.includes(profile.role)) redirect("/dashboard");
-  return profile;
-}
+// requireRole()/getRole() were removed in Prompt 2 (item 4): they read the
+// deprecated profiles.role. Authorization now flows through the two-plane matrix
+// (src/lib/authz/matrix.ts) via requirePlatform/requireTenant in api-auth.ts and
+// getAuthContext() in server components.

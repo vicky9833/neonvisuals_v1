@@ -1,5 +1,9 @@
 import { NextResponse } from "next/server";
-import { requireApiAuth, apiAuthErrorResponse } from "@/lib/api-auth";
+import {
+  requireApiAuth,
+  auditCrossTenantAccess,
+  apiAuthErrorResponse,
+} from "@/lib/api-auth";
 import { getOrderStats } from "@/lib/engines/order";
 
 export const runtime = "nodejs";
@@ -8,11 +12,17 @@ export const runtime = "nodejs";
 export async function GET() {
   try {
     const profile = await requireApiAuth();
-    const isAdmin = profile.role === "super_admin";
+    const isAdmin = profile.isPlatformStaff;
 
     if (!isAdmin && !profile.company_id) {
       return NextResponse.json({
         data: { total: 0, byStatus: {}, thisMonth: 0, lastMonth: 0 },
+      });
+    }
+    if (isAdmin) {
+      await auditCrossTenantAccess(profile, "platform.orders.manage", {
+        entity: "order",
+        action: "order.stats",
       });
     }
 

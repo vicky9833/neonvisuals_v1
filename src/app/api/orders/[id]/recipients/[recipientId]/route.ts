@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
-import { requireApiRole, apiAuthErrorResponse } from "@/lib/api-auth";
+import { requirePlatform, apiAuthErrorResponse } from "@/lib/api-auth";
 import {
   removeRecipient,
   updateRecipientStatus,
@@ -26,8 +26,8 @@ export async function PATCH(
   { params }: { params: Promise<{ id: string; recipientId: string }> },
 ) {
   try {
-    await requireApiRole(["super_admin"]);
     const { recipientId } = await params;
+    await requirePlatform("platform.orders.manage", { entity: "order_recipient", entityId: recipientId, action: "order.recipient.update" });
     const body = await request.json().catch(() => null);
     if (!body) {
       return NextResponse.json(
@@ -64,8 +64,8 @@ export async function DELETE(
   { params }: { params: Promise<{ id: string; recipientId: string }> },
 ) {
   try {
-    await requireApiRole(["super_admin"]);
     const { recipientId } = await params;
+    await requirePlatform("platform.orders.manage", { entity: "order_recipient", entityId: recipientId, action: "order.recipient.remove" });
     await removeRecipient(recipientId);
     return NextResponse.json({ data: { ok: true } });
   } catch (err) {

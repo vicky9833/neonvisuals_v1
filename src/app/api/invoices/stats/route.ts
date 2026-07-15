@@ -1,5 +1,9 @@
 import { NextResponse } from "next/server";
-import { requireApiAuth, apiAuthErrorResponse } from "@/lib/api-auth";
+import {
+  requireApiAuth,
+  auditCrossTenantAccess,
+  apiAuthErrorResponse,
+} from "@/lib/api-auth";
 import { getBillingStats } from "@/lib/engines/billing";
 
 export const runtime = "nodejs";
@@ -7,7 +11,13 @@ export const runtime = "nodejs";
 export async function GET() {
   try {
     const profile = await requireApiAuth();
-    const isAdmin = profile.role === "super_admin";
+    const isAdmin = profile.isPlatformStaff;
+    if (isAdmin) {
+      await auditCrossTenantAccess(profile, "platform.billing.manage", {
+        entity: "invoice",
+        action: "billing.stats",
+      });
+    }
     if (!isAdmin && !profile.company_id) {
       return NextResponse.json({
         data: {

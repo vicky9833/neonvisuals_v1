@@ -1,0 +1,25 @@
+platform owner resolved: contact.neonvisuals@gmail.com (id abb56529…)
+authenticated as platform owner via user-scoped client (auth.uid populated)
+AUDIT ROW WRITTEN (via audit_log_insert_self RLS, not service role):
+{
+  "id": 5,
+  "actor_type": "platform",
+  "action": "order.list",
+  "entity": "order",
+  "company_id": null,
+  "created_at": "2026-07-15T09:40:09.338623+00:00"
+}
+APPEND-ONLY FAILED — UPDATE unexpectedly succeeded!
+
+--- APPEND-ONLY clarification (corrected) ---
+The user-client UPDATE above returned no error because audit_log has NO UPDATE
+RLS policy → RLS matched 0 rows, so the row was never touched (safe). To prove
+the append-only TRIGGER blocks a privileged, RLS-bypassing UPDATE, a service-role
+UPDATE was run directly:
+
+  UPDATE public.audit_log SET action='tampered' WHERE id=5;
+  -> ERROR: P0001: audit_log is append-only; UPDATE is not permitted
+     CONTEXT: PL/pgSQL function public.audit_log_is_append_only() line 2
+
+Post-check: SELECT id, action FROM audit_log WHERE id=5 -> action still "order.list"
+(untampered). Append-only holds at BOTH layers (no UPDATE policy + trigger).
