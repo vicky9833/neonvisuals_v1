@@ -55,7 +55,7 @@ export async function isOnboarded(): Promise<boolean> {
 }
 
 /**
- * Guarantees an authenticated, profiled request — otherwise redirects to
+ * Guarantees an authenticated, profiled request - otherwise redirects to
  * /login. Returns the profile for convenience.
  */
 export async function requireAuth(): Promise<Profile> {

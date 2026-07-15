@@ -7,7 +7,7 @@ export const metadata = {
 
 /**
  * Auth route group reuses the marketing chrome (header + footer visible),
- * per spec — auth forms sit on the warm-white marketing background.
+ * per spec - auth forms sit on the warm-white marketing background.
  */
 export default function AuthLayout({
   children,

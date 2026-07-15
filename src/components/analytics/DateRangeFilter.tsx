@@ -81,7 +81,7 @@ export function DateRangeFilter({ value, onChange }: DateRangeFilterProps) {
             onChange={(e) => onChange({ ...value, start: e.target.value })}
             className="w-[150px]"
           />
-          <span className="text-[#9CA3AF]">–</span>
+          <span className="text-[#9CA3AF]">-</span>
           <Input
             type="date"
             value={value.end}

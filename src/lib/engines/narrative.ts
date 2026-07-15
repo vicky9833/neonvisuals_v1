@@ -2,7 +2,7 @@ import type { ArchetypeName } from "@/lib/types/employee";
 import { NARRATIVE_TEMPLATES } from "@/data/narrative-templates";
 
 /**
- * Narrative engine — produces the message-card copy that is the soul of
+ * Narrative engine - produces the message-card copy that is the soul of
  * the package. Picks an archetype + occasion template, with a graceful
  * fallback when no exact match exists.
  */

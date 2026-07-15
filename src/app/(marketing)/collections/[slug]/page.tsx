@@ -30,7 +30,7 @@ export async function generateMetadata({ params }: Params): Promise<Metadata> {
   if (!bucket) return buildMetadata({ title: "Collection", description: "" });
   const count = getProductsByCode(bucket.code).length;
   return buildMetadata({
-    title: `${bucket.name} — Corporate Gifting | Neon Visuals`,
+    title: `${bucket.name} - Corporate Gifting | Neon Visuals`,
     description: `${bucket.description ?? bucket.purpose}. Explore ${count} personalised products. Enquire now.`,
     path: `/collections/${bucket.slug}`,
   });
@@ -66,7 +66,7 @@ export default async function CollectionPage({ params }: Params) {
     {
       "@context": "https://schema.org",
       "@type": "ItemList",
-      name: `${bucket.name} — Products`,
+      name: `${bucket.name} - Products`,
       numberOfItems: products.length,
       itemListElement: products.map((p, i) => ({
         "@type": "ListItem",

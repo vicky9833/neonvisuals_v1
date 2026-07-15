@@ -132,7 +132,7 @@ export async function getRevenueAnalytics(range: DateRange) {
   // By collection
   const colRev = new Map<string, { revenue: number; orders: Set<string> }>();
   for (const i of items) {
-    const code = (i.collection_code as string) ?? "—";
+    const code = (i.collection_code as string) ?? "-";
     const agg = colRev.get(code) ?? { revenue: 0, orders: new Set<string>() };
     agg.revenue += Number(i.line_total ?? 0);
     agg.orders.add(i.order_id as string);
@@ -446,7 +446,7 @@ export async function getProductAnalytics(range: DateRange) {
   for (const p of products ?? []) {
     prodMeta.set(p.sku as string, {
       name: p.name as string,
-      collection: (p as any).buckets?.code ?? "—",
+      collection: (p as any).buckets?.code ?? "-",
       margin: Number(p.margin_percent ?? 0),
     });
   }
@@ -460,7 +460,7 @@ export async function getProductAnalytics(range: DateRange) {
     agg.revenue += Number(i.line_total ?? 0);
     skuAgg.set(sku, agg);
 
-    const code = (i.collection_code as string) ?? "—";
+    const code = (i.collection_code as string) ?? "-";
     const c = colAgg.get(code) ?? { units: 0, revenue: 0, skus: new Set<string>() };
     c.units += Number(i.quantity ?? 0);
     c.revenue += Number(i.line_total ?? 0);
@@ -472,7 +472,7 @@ export async function getProductAnalytics(range: DateRange) {
     .map(([sku, agg]) => ({
       sku,
       name: agg.name,
-      collection: prodMeta.get(sku)?.collection ?? "—",
+      collection: prodMeta.get(sku)?.collection ?? "-",
       unitsSold: agg.units,
       revenue: round(agg.revenue),
       margin: prodMeta.get(sku)?.margin ?? 0,
@@ -563,7 +563,7 @@ export async function getGiftImpactAnalytics(range: DateRange) {
   // Desk test by collection
   const colAgg = new Map<string, { onDesk: number; checked: number }>();
   for (const g of checked) {
-    const code = (g.collection_code as string) ?? "—";
+    const code = (g.collection_code as string) ?? "-";
     const agg = colAgg.get(code) ?? { onDesk: 0, checked: 0 };
     agg.checked += 1;
     if (g.desk_test_status === "on_desk") agg.onDesk += 1;

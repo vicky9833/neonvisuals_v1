@@ -9,7 +9,7 @@ export interface CalendarEvent {
   type: CalendarEventType;
   title: string;
   description?: string;
-  date: string; // ISO date — this occurrence
+  date: string; // ISO date - this occurrence
   originalDate?: string; // actual birthday / joining date
   yearsCount?: number;
   employeeId?: string;

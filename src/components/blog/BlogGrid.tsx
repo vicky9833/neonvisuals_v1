@@ -6,6 +6,7 @@ import type { BlogPost } from "@/lib/engines/blog";
 import { BlogCard } from "./BlogCard";
 import { CategoryFilter } from "./CategoryFilter";
 import { BlogSearch } from "./BlogSearch";
+import { ErrorBoundary } from "@/components/shared/error-boundary";
 
 interface BlogGridProps {
   initialPosts: BlogPost[];
@@ -77,17 +78,19 @@ export function BlogGrid({
         <BlogSearch value={search} onChange={setSearch} />
       </div>
 
-      {posts.length === 0 ? (
-        <p className="py-16 text-center text-[#9CA3AF]">
-          {loading ? "Loading…" : "No articles found. Try a different search."}
-        </p>
-      ) : (
-        <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">
-          {posts.map((post) => (
-            <BlogCard key={post.id} post={post} />
-          ))}
-        </div>
-      )}
+      <ErrorBoundary>
+        {posts.length === 0 ? (
+          <p className="py-16 text-center text-[#9CA3AF]">
+            {loading ? "Loading…" : "No articles found. Try a different search."}
+          </p>
+        ) : (
+          <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">
+            {posts.map((post, i) => (
+              <BlogCard key={post.id} post={post} index={i} />
+            ))}
+          </div>
+        )}
+      </ErrorBoundary>
 
       {hasMore && (
         <div className="flex justify-center">

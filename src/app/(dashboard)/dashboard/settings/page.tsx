@@ -6,7 +6,7 @@ export default function SettingsPage() {
     <PagePlaceholder
       title="Settings"
       icon={<Settings className="size-8" />}
-      description="Manage your profile, company, and preferences. Coming soon — this feature is being built."
+      description="Manage your profile, company, and preferences. Coming soon - this feature is being built."
     />
   );
 }

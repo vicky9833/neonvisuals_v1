@@ -51,7 +51,7 @@ export async function POST(request: Request) {
         { status: 400 },
       );
     }
-    const body = await request.json();
+    const body = await request.json().catch(() => null);
     const parsed = schema.safeParse(body);
     if (!parsed.success) {
       return NextResponse.json(
@@ -85,6 +85,9 @@ export async function POST(request: Request) {
 function handle(err: unknown, code: string): NextResponse {
   const authResponse = apiAuthErrorResponse(err);
   if (authResponse) return authResponse;
-  const message = err instanceof Error ? err.message : "Unknown error";
-  return NextResponse.json({ error: code, message }, { status: 500 });
+  console.error("[occasions/custom]", err);
+  return NextResponse.json(
+    { error: code, message: "Something went wrong. Please try again." },
+    { status: 500 },
+  );
 }

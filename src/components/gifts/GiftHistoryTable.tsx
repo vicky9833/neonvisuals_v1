@@ -59,7 +59,7 @@ export function GiftHistoryTable({
                       <EmployeeAvatar name={r.employee_name ?? "?"} size="sm" />
                       <div className="min-w-0">
                         <p className="font-medium text-navy">
-                          {r.employee_name ?? "—"}
+                          {r.employee_name ?? "-"}
                         </p>
                         <p className="text-xs text-[#9CA3AF]">
                           {r.employee_department ?? ""}
@@ -100,13 +100,13 @@ export function GiftHistoryTable({
                         <div className="space-y-1 text-xs text-[#6B7280]">
                           <p>
                             <span className="font-medium text-navy">Packaging:</span>{" "}
-                            {r.packaging_tier ?? "—"}
+                            {r.packaging_tier ?? "-"}
                           </p>
                           <p>
                             <span className="font-medium text-navy">
                               Personalisation:
                             </span>{" "}
-                            {r.personalisation_level?.replace(/_/g, " ") ?? "—"}
+                            {r.personalisation_level?.replace(/_/g, " ") ?? "-"}
                           </p>
                           <p>
                             <span className="font-medium text-navy">Delivery:</span>{" "}

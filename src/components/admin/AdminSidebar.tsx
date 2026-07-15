@@ -22,6 +22,7 @@ import {
   type LucideIcon,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { Logo } from "@/components/brand/logo";
 
 interface AdminNavItem {
   label: string;
@@ -131,9 +132,7 @@ export function AdminSidebarBody({ onNavigate }: { onNavigate?: () => void }) {
     <div className="flex h-full flex-col bg-navy text-white">
       <div className="border-b border-white/10 px-6 py-5">
         <Link href="/admin" onClick={onNavigate} className="block">
-          <span className="block text-lg font-extrabold uppercase tracking-tight text-gold">
-            Neon Visuals
-          </span>
+          <Logo variant="horizontal" theme="light" iconSize={32} asLink={false} />
           <span className="mt-1 inline-block rounded bg-white/10 px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wider text-slate-300">
             Admin Panel
           </span>

@@ -45,7 +45,7 @@ export async function GET(request: Request) {
     });
     return NextResponse.json({ data: result });
   } catch (err) {
-    return handle(err, "list_failed");
+    return handle(err);
   }
 }
 
@@ -58,7 +58,13 @@ export async function POST(request: Request) {
         { status: 400 },
       );
     }
-    const body = await request.json();
+    const body = await request.json().catch(() => null);
+    if (!body) {
+      return NextResponse.json(
+        { error: "invalid_input", message: "Invalid JSON body." },
+        { status: 400 },
+      );
+    }
     const parsed = recordSchema.safeParse(body);
     if (!parsed.success) {
       return NextResponse.json(
@@ -69,13 +75,16 @@ export async function POST(request: Request) {
     const gift = await recordGift(profile.company_id, profile.id, parsed.data);
     return NextResponse.json({ data: gift }, { status: 201 });
   } catch (err) {
-    return handle(err, "record_failed");
+    return handle(err);
   }
 }
 
-function handle(err: unknown, code: string): NextResponse {
+function handle(err: unknown): NextResponse {
   const authResponse = apiAuthErrorResponse(err);
   if (authResponse) return authResponse;
-  const message = err instanceof Error ? err.message : "Unknown error";
-  return NextResponse.json({ error: code, message }, { status: 500 });
+  console.error("[gifts]", err);
+  return NextResponse.json(
+    { error: "server_error", message: "Failed to process gift request." },
+    { status: 500 },
+  );
 }

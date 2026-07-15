@@ -1,5 +1,5 @@
 /**
- * StickyMobileCTA — fixed bottom enquiry bar shown only on mobile for the
+ * StickyMobileCTA - fixed bottom enquiry bar shown only on mobile for the
  * product detail page. Server-rendered (plain link). NO prices.
  */
 import { MessageCircle } from "lucide-react";

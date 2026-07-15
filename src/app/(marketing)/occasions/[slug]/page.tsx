@@ -58,7 +58,7 @@ function buildKits(products: Product[]): Kit[] {
     },
     {
       tier: "Standard Kit",
-      range: "₹1,000 – ₹3,000",
+      range: "₹1,000 - ₹3,000",
       items: [
         names[0] ?? "Personalised desk piece",
         names[1] ?? "Premium gift box",
@@ -104,7 +104,7 @@ export default async function OccasionPage({ params }: Params) {
     {
       "@context": "https://schema.org",
       "@type": "ItemList",
-      name: `${occasion.title} — Recommended Gifts`,
+      name: `${occasion.title} - Recommended Gifts`,
       itemListElement: products.map((p, i) => ({
         "@type": "ListItem",
         position: i + 1,
@@ -205,7 +205,7 @@ export default async function OccasionPage({ params }: Params) {
                 Recommended for {occasion.title}
               </h2>
               <p className="mt-4 text-lg text-[#666666]">
-                Hand-picked pieces — every one personalised, not just packaged.
+                Hand-picked pieces - every one personalised, not just packaged.
               </p>
             </Reveal>
             <div className="mt-12 grid grid-cols-2 gap-6 lg:grid-cols-4">
@@ -347,7 +347,7 @@ export default async function OccasionPage({ params }: Params) {
               Let&apos;s Create Something Memorable
             </h2>
             <p className="mx-auto mt-5 max-w-xl text-lg leading-[1.7] text-[#9CA3AF]">
-              Start with a conversation. No catalogs, no commitments — just good
+              Start with a conversation. No catalogs, no commitments - just good
               gifting, personalised for your team.
             </p>
             <div className="mt-9 flex justify-center">

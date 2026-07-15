@@ -50,11 +50,11 @@ export function StepPersonalisation({
             rows={3}
             value={state.sampleMessage}
             onChange={(e) => dispatch({ type: "SET_FIELD", field: "sampleMessage", value: e.target.value })}
-            placeholder="e.g., 'Dear Priya, your dedication over these 5 years has shaped who we are as a company. This is a small token of our immense gratitude. — Vikas, CEO'"
+            placeholder="e.g., 'Dear Priya, your dedication over these 5 years has shaped who we are as a company. This is a small token of our immense gratitude. - Vikas, CEO'"
             className="mt-2 w-full rounded-xl border border-[#EDE9E3] bg-white p-4 text-sm focus-visible:border-gold focus-visible:outline-none"
           />
           <p className="mt-1.5 text-xs text-[#999999]">
-            This is a sample. You&apos;ll provide individual messages later — or we can craft them for you.
+            This is a sample. You&apos;ll provide individual messages later - or we can craft them for you.
           </p>
         </div>
       ) : null}

@@ -3,7 +3,7 @@ import { z } from "zod";
 import { createQuote, listQuotes, type QuoteStatus } from "@/lib/engines/quote";
 import { requireApiRole, apiAuthErrorResponse } from "@/lib/api-auth";
 
-// Quotes are internal — super_admin only (Neon Visuals team).
+// Quotes are internal - super_admin only (Neon Visuals team).
 export const runtime = "nodejs";
 
 const quoteSchema = z.object({
@@ -31,7 +31,10 @@ const quoteSchema = z.object({
 export async function POST(request: Request) {
   try {
     await requireApiRole(["super_admin"]);
-    const body = await request.json();
+    const body = await request.json().catch(() => null);
+    if (body === null) {
+      return NextResponse.json({ error: "invalid_input", message: "Invalid or missing request body." }, { status: 400 });
+    }
     const parsed = quoteSchema.safeParse(body);
     if (!parsed.success) {
       return NextResponse.json({ error: "invalid_input", message: parsed.error.message }, { status: 400 });
@@ -41,8 +44,11 @@ export async function POST(request: Request) {
   } catch (err) {
     const authResponse = apiAuthErrorResponse(err);
     if (authResponse) return authResponse;
-    const message = err instanceof Error ? err.message : "Unknown error";
-    return NextResponse.json({ error: "create_failed", message }, { status: 500 });
+    console.error("[quotes]", err);
+    return NextResponse.json(
+      { error: "server_error", message: "Could not save the quote. Please try again." },
+      { status: 500 },
+    );
   }
 }
 
@@ -60,7 +66,10 @@ export async function GET(request: Request) {
   } catch (err) {
     const authResponse = apiAuthErrorResponse(err);
     if (authResponse) return authResponse;
-    const message = err instanceof Error ? err.message : "Unknown error";
-    return NextResponse.json({ error: "list_failed", message }, { status: 500 });
+    console.error("[quotes]", err);
+    return NextResponse.json(
+      { error: "server_error", message: "Could not load quotes. Please try again." },
+      { status: 500 },
+    );
   }
 }

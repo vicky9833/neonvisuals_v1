@@ -142,7 +142,7 @@ export function LeadList({
                   <TableCell className="font-numbers text-right text-sm text-navy">
                     {lead.estimated_order_value
                       ? formatCurrency(Number(lead.estimated_order_value))
-                      : "—"}
+                      : "-"}
                   </TableCell>
                   <TableCell>
                     <LeadScoreIndicator score={lead.lead_score} />
@@ -158,7 +158,7 @@ export function LeadList({
                         {overdue && <AlertTriangle className="size-3" />}
                       </span>
                     ) : (
-                      "—"
+                      "-"
                     )}
                   </TableCell>
                 </TableRow>

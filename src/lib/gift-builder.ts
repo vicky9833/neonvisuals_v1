@@ -134,7 +134,7 @@ export const PACKAGING_TIERS: PackagingTier[] = [
     icon: Gift,
     description:
       "Rigid board box with full-colour print, matt lamination, foil-stamped name. Coloured tissue, grosgrain ribbon, 300 GSM card with wax seal.",
-    bestFor: "Most popular — perfect balance of premium feel and value",
+    bestFor: "Most popular - perfect balance of premium feel and value",
     dots: 2,
     badge: "Most Popular",
   },
@@ -153,7 +153,7 @@ export const PACKAGING_TIERS: PackagingTier[] = [
     icon: Gem,
     description:
       "Fabric-wrapped drawer or book-style box with gold foil, metal corners, satin lining. Individual item wrapping, 400 GSM letterpress card, QR/NFC digital experience.",
-    bestFor: "The ultimate unboxing — top 1% gifts, founder editions",
+    bestFor: "The ultimate unboxing - top 1% gifts, founder editions",
     dots: 4,
   },
 ];
@@ -186,7 +186,7 @@ export const PERSONALISATION_LEVELS: PersonalisationLevel[] = [
     name: "Name + Occasion",
     icon: Calendar,
     description:
-      "Name plus the occasion date or milestone (e.g., 'Priya — 5 Years, Oct 2025'). Perfect for anniversaries and milestones.",
+      "Name plus the occasion date or milestone (e.g., 'Priya - 5 Years, Oct 2025'). Perfect for anniversaries and milestones.",
     hasMessage: true,
   },
   {
@@ -206,9 +206,9 @@ export function getPersonalisationLevel(id: PersonalisationLevelId): Personalisa
 
 export const TIMELINES: { id: TimelineId; label: string }[] = [
   { id: "within_1_week", label: "Within 1 week" },
-  { id: "2_3_weeks", label: "2–3 weeks" },
+  { id: "2_3_weeks", label: "2-3 weeks" },
   { id: "1_month_plus", label: "1 month+" },
-  { id: "exploring", label: "No specific date — just exploring" },
+  { id: "exploring", label: "No specific date - just exploring" },
 ];
 
 export function getTimelineLabel(id: TimelineId): string {
@@ -216,10 +216,10 @@ export function getTimelineLabel(id: TimelineId): string {
 }
 
 export const QUANTITY_PRESETS: { label: string; value: number }[] = [
-  { label: "10–25", value: 10 },
-  { label: "25–50", value: 25 },
-  { label: "50–100", value: 50 },
-  { label: "100–250", value: 100 },
+  { label: "10-25", value: 10 },
+  { label: "25-50", value: 25 },
+  { label: "50-100", value: 50 },
+  { label: "100-250", value: 100 },
   { label: "250+", value: 250 },
 ];
 
@@ -229,6 +229,13 @@ export interface KitTemplate {
   occasion: string;
   skus: string[];
   packaging: PackagingTierId;
+  /** One-line summary shown on the template card. */
+  description: string;
+  /**
+   * Optional lucide icon key. Icons may also be mapped by template id in the
+   * rendering component; this field is an additive convenience.
+   */
+  icon?: string;
 }
 
 export const TEMPLATES: KitTemplate[] = [
@@ -238,6 +245,9 @@ export const TEMPLATES: KitTemplate[] = [
     occasion: "onboarding",
     skus: ["NV-A01", "NV-A09", "NV-A03", "NV-A15"],
     packaging: "standard",
+    description:
+      "Backpack, bottle, diary, pen, and mug - everything for a memorable first day.",
+    icon: "Package",
   },
   {
     id: "legacy",
@@ -245,6 +255,9 @@ export const TEMPLATES: KitTemplate[] = [
     occasion: "milestone",
     skus: ["NV-B05", "NV-B06", "NV-B10"],
     packaging: "premium",
+    description:
+      "Crystal award, leather portfolio, and copper bar set - honouring half a decade.",
+    icon: "Trophy",
   },
   {
     id: "diwali",
@@ -252,6 +265,9 @@ export const TEMPLATES: KitTemplate[] = [
     occasion: "festive",
     skus: ["NV-D01", "NV-D02", "NV-D13"],
     packaging: "standard",
+    description:
+      "Brass diyas, soy candles, festive tote, and sweets box - festival-ready.",
+    icon: "Sparkles",
   },
   {
     id: "ceo-star",
@@ -259,6 +275,29 @@ export const TEMPLATES: KitTemplate[] = [
     occasion: "ceo",
     skus: ["NV-C01", "NV-C10"],
     packaging: "flagship",
+    description:
+      "Crystal trophy, executive pen set, and wax-sealed letter - leadership-grade.",
+    icon: "Crown",
+  },
+  {
+    id: "client-thankyou",
+    name: "Client Thank You Kit",
+    occasion: "client",
+    skus: ["NV-E-001", "NV-E-002", "NV-E-009"],
+    packaging: "premium",
+    description:
+      "Artisanal tea set, brass pen stand, and marble coaster - perfect for client appreciation.",
+    icon: "Handshake",
+  },
+  {
+    id: "college-fest",
+    name: "College Fest Kit",
+    occasion: "college",
+    skus: ["NV-J-005", "NV-J-004", "NV-J-001", "NV-J-003"],
+    packaging: "standard",
+    description:
+      "Custom tote bag, branded t-shirt, diary, and phone stand - fest-ready merchandise.",
+    icon: "GraduationCap",
   },
 ];
 
@@ -330,9 +369,9 @@ export function buildWhatsAppUrl(state: KitBuilderState): string {
 
 export function buildEmailUrl(state: KitBuilderState): string {
   const occasion = getOccasion(state.occasion)?.label ?? "Custom";
-  const subject = `Experience Kit Enquiry — ${state.contactCompany || "New"} — ${occasion} — ${state.selectedProducts.length} Items`;
+  const subject = `Experience Kit Enquiry - ${state.contactCompany || "New"} - ${occasion} - ${state.selectedProducts.length} Items`;
   const body = buildKitMessage(state, { plain: true });
-  return `mailto:contact.neonvisuals@gmail.com?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
+  return `mailto:contact@neonvisuals.in?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
 }
 
 /** Re-export for convenience in client components. */

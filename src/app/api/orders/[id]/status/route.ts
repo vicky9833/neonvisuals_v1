@@ -30,7 +30,7 @@ const schema = z.object({
   notes: z.string().optional(),
 });
 
-// PATCH — advance order status (super_admin only). Validates the transition,
+// PATCH - advance order status (super_admin only). Validates the transition,
 // logs history, and auto-generates gift records on "delivered".
 export async function PATCH(
   request: Request,
@@ -39,7 +39,13 @@ export async function PATCH(
   try {
     const profile = await requireApiRole(["super_admin"]);
     const { id } = await params;
-    const body = await request.json();
+    const body = await request.json().catch(() => null);
+    if (!body) {
+      return NextResponse.json(
+        { error: "invalid_input", message: "Invalid or missing request body." },
+        { status: 400 },
+      );
+    }
     const parsed = schema.safeParse(body);
     if (!parsed.success) {
       return NextResponse.json(
@@ -57,7 +63,10 @@ export async function PATCH(
     // Fire-and-forget branded status email (confirmed / shipped / delivered).
     const status = parsed.data.status;
     if (["confirmed", "shipped", "delivered"].includes(status)) {
-      void (async () => {
+      // Awaited (serverless-safe): Vercel freezes the function after the
+      // response, so fire-and-forget sends never run. Wrapped so a send
+      // failure can't fail the status update.
+      await (async () => {
         const ctx = await getOrderEmailContext(id);
         if (!ctx) return;
         if (status === "confirmed") {
@@ -100,9 +109,16 @@ export async function PATCH(
     const isClientError =
       message.startsWith("Invalid status transition") ||
       message.includes("reason is required");
+    if (isClientError) {
+      return NextResponse.json(
+        { error: "invalid_transition", message },
+        { status: 400 },
+      );
+    }
+    console.error("[orders/[id]/status]", err);
     return NextResponse.json(
-      { error: isClientError ? "invalid_transition" : "status_failed", message },
-      { status: isClientError ? 400 : 500 },
+      { error: "server_error", message: "Could not update the order status. Please try again." },
+      { status: 500 },
     );
   }
 }

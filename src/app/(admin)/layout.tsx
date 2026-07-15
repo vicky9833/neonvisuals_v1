@@ -12,7 +12,7 @@ export const metadata = {
 /**
  * Admin shell. proxy.ts already restricts /admin/* to super_admin; this layout
  * fetches the profile once and shares it with the sidebar/topbar via context.
- * Provides ONLY chrome — individual pages render their own PageHeader.
+ * Provides ONLY chrome - individual pages render their own PageHeader.
  */
 export default async function AdminLayout({
   children,

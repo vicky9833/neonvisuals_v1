@@ -48,7 +48,7 @@ export function ClientDetail({ data }: { data: ClientDetailData }) {
       <div>
         <h1 className="font-heading text-2xl font-bold text-navy">{company.name}</h1>
         <p className="text-sm text-[#6B7280]">
-          {[company.industry, company.city].filter(Boolean).join(" · ") || "—"}
+          {[company.industry, company.city].filter(Boolean).join(" · ") || "-"}
           {company.onboarding_completed ? (
             <span className="ml-2 rounded-full bg-green-50 px-2 py-0.5 text-xs font-medium text-green-700">
               Active Client
@@ -112,7 +112,7 @@ export function ClientDetail({ data }: { data: ClientDetailData }) {
           ) : (
             <SimpleTable
               head={["Name", "Email", "Department", "Designation"]}
-              rows={employees.map((e) => [e.name, e.email ?? "—", e.department ?? "—", e.designation ?? "—"])}
+              rows={employees.map((e) => [e.name, e.email ?? "-", e.department ?? "-", e.designation ?? "-"])}
             />
           )}
         </TabsContent>
@@ -135,7 +135,7 @@ export function ClientDetail({ data }: { data: ClientDetailData }) {
                   <TableRow key={o.id}>
                     <TableCell>
                       <Link href={`/admin/orders/${o.id}`} className="font-numbers text-navy hover:underline">
-                        {o.order_number ?? "—"}
+                        {o.order_number ?? "-"}
                       </Link>
                     </TableCell>
                     <TableCell className="text-sm">{o.status.replace("_", " ")}</TableCell>
@@ -158,7 +158,7 @@ export function ClientDetail({ data }: { data: ClientDetailData }) {
           ) : (
             <SimpleTable
               head={["Quote #", "Status", "Created"]}
-              rows={quotes.map((q) => [q.quote_number ?? "—", q.status, formatDate(q.created_at)])}
+              rows={quotes.map((q) => [q.quote_number ?? "-", q.status, formatDate(q.created_at)])}
             />
           )}
         </TabsContent>
@@ -198,7 +198,7 @@ export function ClientDetail({ data }: { data: ClientDetailData }) {
               head={["Product", "Recipient", "Occasion", "Date"]}
               rows={gifts.map((g) => [
                 g.product_name,
-                g.employee_name ?? "—",
+                g.employee_name ?? "-",
                 g.occasion_type,
                 formatDate(g.gifted_date),
               ])}
@@ -232,7 +232,7 @@ function Info({ label, value }: { label: string; value: string | null }) {
   return (
     <div className="rounded-card border border-border bg-white p-3">
       <p className="text-xs text-[#9CA3AF]">{label}</p>
-      <p className="text-sm text-navy">{value || "—"}</p>
+      <p className="text-sm text-navy">{value || "-"}</p>
     </div>
   );
 }

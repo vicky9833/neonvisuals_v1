@@ -46,7 +46,7 @@ export function AdminProvider({
   return <AdminContext.Provider value={value}>{children}</AdminContext.Provider>;
 }
 
-/** Renders nothing — sets the admin topbar title for the current page. */
+/** Renders nothing - sets the admin topbar title for the current page. */
 export function SetAdminPageTitle({ title }: { title: string }) {
   const { setPageTitle } = useAdmin();
   useEffect(() => {

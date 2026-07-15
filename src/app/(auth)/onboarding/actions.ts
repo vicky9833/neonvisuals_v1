@@ -88,7 +88,10 @@ export async function createCompanyAndCompleteOnboarding(
   // Fire-and-forget branded welcome email.
   const welcomeTo = profile?.email ?? user.email ?? null;
   if (welcomeTo) {
-    void sendWelcomeEmail({
+    // Awaited (serverless-safe): a server action is frozen after it returns,
+    // so a fire-and-forget send is dropped on Vercel. Wrapped so it can't
+    // fail onboarding completion.
+    await sendWelcomeEmail({
       to: welcomeTo,
       name: profile?.full_name ?? "there",
       companyName: company.name,

@@ -15,7 +15,7 @@ function compactRs(n: number): string {
   return `₹${n}`;
 }
 
-/** CSS-based funnel — each stage bar width scales to the top stage. */
+/** CSS-based funnel - each stage bar width scales to the top stage. */
 export function FunnelChart({
   data,
   exportName = "sales-funnel",
@@ -53,7 +53,7 @@ export function FunnelChart({
                 </div>
               </div>
               <span className="w-12 shrink-0 text-right text-xs text-[#9CA3AF]">
-                {i === 0 ? "—" : `${stage.conversionFromPrevious}%`}
+                {i === 0 ? "-" : `${stage.conversionFromPrevious}%`}
               </span>
             </div>
           );

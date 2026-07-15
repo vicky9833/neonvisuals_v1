@@ -1,5 +1,5 @@
 /**
- * Order Engine — INTERNAL USE ONLY (server-side).
+ * Order Engine - INTERNAL USE ONLY (server-side).
  *
  * Orders are the operational backbone connecting quotes (Prompt 07) to gift
  * records (Prompt 12). Created by the Neon Visuals team (super_admin) after a
@@ -9,7 +9,7 @@
  * (format NV-O-YYYY-XXXX). Pricing is stored as integers in Rupees and is
  * NEVER exposed to clients (the API strips financial fields by role).
  *
- * All business logic lives here — never in Supabase functions.
+ * All business logic lives here - never in Supabase functions.
  */
 import { createAdminClient } from "@/lib/supabase/admin";
 import {
@@ -605,7 +605,7 @@ export async function updateOrderStatus(
 
 /**
  * Loads the data needed to send a status-change email (company contact +
- * order details). Used by the status API route — kept out of the engine's
+ * order details). Used by the status API route - kept out of the engine's
  * status mutation so this module stays client-bundle-safe.
  */
 export interface OrderEmailContext {
@@ -789,7 +789,7 @@ export async function convertQuoteToOrder(
 /**
  * For each recipient with a linked employee, create one gift_record per line
  * item, link it back to the order, and bump employee_preferences counters.
- * Idempotent at the recipient level — recipients already linked to a gift
+ * Idempotent at the recipient level - recipients already linked to a gift
  * record are skipped.
  */
 export async function generateGiftRecords(

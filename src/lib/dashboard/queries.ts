@@ -46,6 +46,16 @@ function yearsSince(dateStr: string): number {
   return Math.max(0, new Date().getFullYear() - d.getFullYear());
 }
 
+/** Next occurrence of a (month, day) as ISO — no birth year required. */
+function nextOccurrenceFromDM(month: number, day: number): string | null {
+  if (!month || !day) return null;
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  let next = new Date(today.getFullYear(), month - 1, day);
+  if (next < today) next = new Date(today.getFullYear() + 1, month - 1, day);
+  return next.toISOString().slice(0, 10);
+}
+
 export async function getEmployeeCount(companyId: string): Promise<number> {
   try {
     return await employeeCount(companyId);
@@ -80,7 +90,10 @@ export async function getUpcomingOccasions(
 
     const items: OccasionItem[] = [];
     for (const e of birthdays) {
-      const date = e.date_of_birth ? nextOccurrenceISO(e.date_of_birth) : null;
+      const date =
+        e.dob_month && e.dob_day
+          ? nextOccurrenceFromDM(e.dob_month, e.dob_day)
+          : null;
       if (date) {
         items.push({
           id: `bday-${e.id}`,
@@ -97,7 +110,7 @@ export async function getUpcomingOccasions(
         const years = e.joining_date ? yearsSince(e.joining_date) : 0;
         items.push({
           id: `anniv-${e.id}`,
-          title: `${e.name} — ${years} Year Anniversary`,
+          title: `${e.name} - ${years} Year Anniversary`,
           date,
           occasion_type: "work_anniversary",
           employee_name: e.name,
@@ -235,33 +248,31 @@ export async function getMonthlyOccasions(
     const supabase = await createClient();
     const { data } = await supabase
       .from("employees")
-      .select("id, full_name, date_of_birth, joining_date")
+      .select("id, full_name, dob_day, dob_month, joining_date")
       .eq("company_id", companyId)
       .eq("is_active", true);
 
     const items: OccasionItem[] = [];
     for (const e of data ?? []) {
       const name = (e.full_name as string) ?? "Employee";
-      const dob = e.date_of_birth as string | null;
+      const dobDay = e.dob_day as number | null;
+      const dobMonth = e.dob_month as number | null;
       const doj = e.joining_date as string | null;
-      if (dob) {
-        const d = new Date(dob);
-        if (!Number.isNaN(d.getTime()) && d.getMonth() === month) {
-          items.push({
-            id: `bday-${e.id}`,
-            title: `${name}'s Birthday`,
-            date: `${year}-${String(month + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`,
-            occasion_type: "birthday",
-            employee_name: name,
-          });
-        }
+      if (dobMonth && dobDay && dobMonth === month + 1) {
+        items.push({
+          id: `bday-${e.id}`,
+          title: `${name}'s Birthday`,
+          date: `${year}-${String(month + 1).padStart(2, "0")}-${String(dobDay).padStart(2, "0")}`,
+          occasion_type: "birthday",
+          employee_name: name,
+        });
       }
       if (doj) {
         const d = new Date(doj);
         if (!Number.isNaN(d.getTime()) && d.getMonth() === month) {
           items.push({
             id: `anniv-${e.id}`,
-            title: `${name} — Work Anniversary`,
+            title: `${name} - Work Anniversary`,
             date: `${year}-${String(month + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`,
             occasion_type: "work_anniversary",
             employee_name: name,

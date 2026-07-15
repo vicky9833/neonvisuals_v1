@@ -1,36 +1,57 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Neon Visuals - Premium Gifting Studio
+
+**Crafted with Intention. Remembered with Pride.**
+
+Premium personalized gifting platform for corporates, colleges, events, startups,
+and institutions across India. Occasion-first gifting, a visual kit builder, an
+employee memory engine, and quote-based enterprise selling.
+
+## Tech Stack
+
+- Next.js 16 (App Router, TypeScript strict, Turbopack)
+- React 19
+- Tailwind CSS v4 + shadcn/ui
+- Supabase (PostgreSQL, Auth, Storage, Realtime)
+- Razorpay (Payments)
+- Resend (Email)
+- Zustand, React Hook Form + Zod, Recharts, @react-pdf/renderer
 
 ## Getting Started
 
-First, run the development server:
+1. Clone the repo
+2. Copy `.env.example` to `.env.local` and fill in the values
+3. `npm install`
+4. `npm run dev`
 
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
-```
+Open http://localhost:3000 to view the app.
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+## Scripts
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+- `npm run dev` - Start the development server
+- `npm run build` - Production build
+- `npm start` - Serve the production build
+- `npm run lint` - Run ESLint
+- `npm test` - Run the test suite (Vitest + fast-check)
+- `npm run restructure-images` - Rebuild `product-images/` from `neonvisualsfinal/`
+- `npm run upload-images` - Upload images to Supabase Storage
+- `npm run generate-catalog` - Regenerate the product catalog from the image manifest
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+## Architecture
 
-## Learn More
+- `src/app/(marketing)/` - Public marketing pages (SEO, server components)
+- `src/app/(auth)/` - Login, register, password reset
+- `src/app/(dashboard)/` - Client portal (auth-protected)
+- `src/app/(admin)/` - Internal admin panel (super_admin only)
+- `src/lib/engines/` - Business logic (pricing, quotes, orders, billing, leads, blog)
+- `src/lib/services/` - External integrations (Razorpay, Resend, storage)
+- `src/lib/supabase/` - Supabase clients (browser, server, admin)
+- `src/data/` - Generated static catalog + seed content
 
-To learn more about Next.js, take a look at the following resources:
+Route protection is enforced in `proxy.ts` (Next.js 16 replaces middleware with
+proxy). Multi-tenancy is enforced at the database level via Supabase RLS.
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+## Deployment
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
-
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+Deployed on Vercel at [neonvisuals.in](https://neonvisuals.in). Set the required
+environment variables (see `.env.example`) in the Vercel project settings before
+deploying.

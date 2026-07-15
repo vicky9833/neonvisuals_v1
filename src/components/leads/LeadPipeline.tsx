@@ -16,7 +16,7 @@ function compactRs(n: number): string {
 }
 
 /** Horizontal Kanban board. Click a card to open the detail drawer (where the
- * status can be changed — no drag-and-drop required). */
+ * status can be changed - no drag-and-drop required). */
 export function LeadPipeline({ stages, onSelect }: LeadPipelineProps) {
   return (
     <div className="flex gap-3 overflow-x-auto pb-4">

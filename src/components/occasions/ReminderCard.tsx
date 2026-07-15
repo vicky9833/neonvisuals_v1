@@ -57,7 +57,7 @@ export function ReminderCard({
           {overdue ? (
             <span className="font-semibold text-amber-700">OVERDUE: </span>
           ) : null}
-          {reminder.title} — {text}
+          {reminder.title} - {text}
         </p>
         <p className="text-xs text-[#6B7280]">
           {format(parseISO(reminder.occasion_date), "d MMM")}

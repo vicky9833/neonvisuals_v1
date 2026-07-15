@@ -7,7 +7,7 @@ import { isRazorpayConfigured } from "@/lib/services/razorpay";
 
 export const runtime = "nodejs";
 
-// POST — create a Razorpay payment link for this invoice (super_admin only).
+// POST - create a Razorpay payment link for this invoice (super_admin only).
 export async function POST(
   _request: Request,
   { params }: { params: Promise<{ id: string }> },
@@ -27,8 +27,9 @@ export async function POST(
     const { id } = await params;
     const result = await createInvoicePaymentLink(id);
 
-    // Fire-and-forget branded invoice email with PDF + payment link.
-    void (async () => {
+    // Awaited (serverless-safe) branded invoice email with PDF + payment link.
+    // Wrapped so a send failure can't fail the payment-link creation.
+    await (async () => {
       const invoice = await getInvoice(id);
       if (!invoice || !invoice.buyer_email) return;
       let pdfBuffer: Buffer | undefined;
@@ -53,7 +54,10 @@ export async function POST(
   } catch (err) {
     const authResponse = apiAuthErrorResponse(err);
     if (authResponse) return authResponse;
-    const message = err instanceof Error ? err.message : "Unknown error";
-    return NextResponse.json({ error: "link_failed", message }, { status: 500 });
+    console.error("[invoices/[id]/payment-link]", err);
+    return NextResponse.json(
+      { error: "server_error", message: "Failed to create payment link." },
+      { status: 500 },
+    );
   }
 }

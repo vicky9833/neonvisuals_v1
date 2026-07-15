@@ -15,7 +15,10 @@ export async function GET(_request: Request, { params }: Ctx) {
   } catch (err) {
     const authResponse = apiAuthErrorResponse(err);
     if (authResponse) return authResponse;
-    const message = err instanceof Error ? err.message : "Unknown error";
-    return NextResponse.json({ error: "gifts_failed", message }, { status: 500 });
+    console.error("[employees/[id]/gifts]", err);
+    return NextResponse.json(
+      { error: "server_error", message: "Failed to load employee gift stats." },
+      { status: 500 },
+    );
   }
 }

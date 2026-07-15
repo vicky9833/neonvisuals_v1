@@ -1,5 +1,5 @@
 /**
- * CollectionCard — reusable collection card (collections directory + related).
+ * CollectionCard - reusable collection card (collections directory + related).
  * Entire card links to the collection page. NO prices.
  */
 import Link from "next/link";

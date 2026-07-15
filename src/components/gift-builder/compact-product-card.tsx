@@ -19,13 +19,13 @@ export function CompactProductCard({
   const collection = getBucketByCode(product.bucket);
   return (
     <div className="flex flex-col overflow-hidden rounded-2xl border border-[#EDE9E3] bg-white shadow-sm transition-all duration-300 hover:-translate-y-0.5 hover:shadow-md">
-      <div className="relative aspect-square overflow-hidden rounded-t-2xl bg-secondary">
+      <div className="relative aspect-square overflow-hidden rounded-t-2xl border-b border-[#EDE9E3] bg-[#FAFAF8]">
         {product.imageUrl ? (
           <Image
             src={product.imageUrl}
             alt={product.name}
             fill
-            className="object-cover"
+            className="object-contain p-3"
             sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
           />
         ) : (

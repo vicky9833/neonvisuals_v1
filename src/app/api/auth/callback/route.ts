@@ -7,13 +7,17 @@ export async function GET(request: NextRequest) {
   const code = searchParams.get("code");
   const next = searchParams.get("next") ?? "/dashboard";
 
-  if (code) {
-    const supabase = await createClient();
-    const { error } = await supabase.auth.exchangeCodeForSession(code);
-    if (!error) {
-      return NextResponse.redirect(`${origin}${next}`);
+  try {
+    if (code) {
+      const supabase = await createClient();
+      const { error } = await supabase.auth.exchangeCodeForSession(code);
+      if (!error) {
+        return NextResponse.redirect(`${origin}${next}`);
+      }
     }
+    return NextResponse.redirect(`${origin}/login?error=auth`);
+  } catch (err) {
+    console.error("[auth/callback]", err);
+    return NextResponse.redirect(`${origin}/login?error=auth`);
   }
-
-  return NextResponse.redirect(`${origin}/login?error=auth`);
 }

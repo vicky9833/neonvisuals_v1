@@ -11,7 +11,7 @@ const TABS = [
     icon: Award,
     heading: "Recognition That Feels Personal",
     description:
-      "Turn onboarding, anniversaries, and spot awards into moments employees remember — each gift carries their name and a message from leadership.",
+      "Turn onboarding, anniversaries, and spot awards into moments employees remember - each gift carries their name and a message from leadership.",
     points: [
       "Name-first personalisation on every piece",
       "Automated work-anniversary reminders",
@@ -25,7 +25,7 @@ const TABS = [
     icon: Handshake,
     heading: "Clients Remember How You Made Them Feel",
     description:
-      "Strengthen business relationships with gifts that reflect your brand's taste and values — not a generic experience kit from a catalogue.",
+      "Strengthen business relationships with gifts that reflect your brand's taste and values - not a generic experience kit from a catalogue.",
     points: [
       "Custom gift selection based on client profiles",
       "Branded packaging with your company identity",
@@ -39,7 +39,7 @@ const TABS = [
     icon: Sparkles,
     heading: "Festivals Done Right, Finally",
     description:
-      "Diwali, Holi, Christmas, Pongal — every festival is a chance to show your team you thought about them specifically, not just ordered in bulk.",
+      "Diwali, Holi, Christmas, Pongal - every festival is a chance to show your team you thought about them specifically, not just ordered in bulk.",
     points: [
       "Curated festival-specific collections",
       "Individual personalisation at scale",

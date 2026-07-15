@@ -20,7 +20,7 @@ export interface UseAuthProfile {
 
 /**
  * Client-side auth state for nav UI. Reads the session via the browser client
- * and keeps in sync with auth changes. Keeps marketing pages static — the
+ * and keeps in sync with auth changes. Keeps marketing pages static - the
  * session is resolved after hydration rather than at request time.
  */
 export function useAuthProfile(): UseAuthProfile {

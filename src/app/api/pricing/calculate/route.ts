@@ -3,7 +3,7 @@ import { z } from "zod";
 import { calculatePricing } from "@/lib/engines/pricing";
 import { requireApiRole, apiAuthErrorResponse } from "@/lib/api-auth";
 
-// Internal pricing — super_admin only.
+// Internal pricing - super_admin only.
 export const runtime = "nodejs";
 
 const schema = z.object({
@@ -19,7 +19,10 @@ const schema = z.object({
 export async function POST(request: Request) {
   try {
     await requireApiRole(["super_admin"]);
-    const body = await request.json();
+    const body = await request.json().catch(() => null);
+    if (body === null) {
+      return NextResponse.json({ error: "invalid_input", message: "Invalid or missing request body." }, { status: 400 });
+    }
     const parsed = schema.safeParse(body);
     if (!parsed.success) {
       return NextResponse.json({ error: "invalid_input", message: parsed.error.message }, { status: 400 });
@@ -29,7 +32,10 @@ export async function POST(request: Request) {
   } catch (err) {
     const authResponse = apiAuthErrorResponse(err);
     if (authResponse) return authResponse;
-    const message = err instanceof Error ? err.message : "Unknown error";
-    return NextResponse.json({ error: "calculation_failed", message }, { status: 500 });
+    console.error("[pricing/calculate]", err);
+    return NextResponse.json(
+      { error: "server_error", message: "Could not calculate pricing. Please try again." },
+      { status: 500 },
+    );
   }
 }

@@ -45,12 +45,15 @@ export async function GET(
   } catch (err) {
     const authResponse = apiAuthErrorResponse(err);
     if (authResponse) return authResponse;
-    const message = err instanceof Error ? err.message : "Unknown error";
-    return NextResponse.json({ error: "list_failed", message }, { status: 500 });
+    console.error("[invoices/[id]/payments]", err);
+    return NextResponse.json(
+      { error: "server_error", message: "Failed to load payments." },
+      { status: 500 },
+    );
   }
 }
 
-// POST — record a manual payment (super_admin only).
+// POST - record a manual payment (super_admin only).
 export async function POST(
   request: Request,
   { params }: { params: Promise<{ id: string }> },
@@ -58,7 +61,13 @@ export async function POST(
   try {
     const profile = await requireApiRole(["super_admin"]);
     const { id } = await params;
-    const body = await request.json();
+    const body = await request.json().catch(() => null);
+    if (body === null) {
+      return NextResponse.json(
+        { error: "invalid_input", message: "Invalid JSON body." },
+        { status: 400 },
+      );
+    }
     const parsed = schema.safeParse(body);
     if (!parsed.success) {
       return NextResponse.json(
@@ -71,7 +80,10 @@ export async function POST(
   } catch (err) {
     const authResponse = apiAuthErrorResponse(err);
     if (authResponse) return authResponse;
-    const message = err instanceof Error ? err.message : "Unknown error";
-    return NextResponse.json({ error: "record_failed", message }, { status: 500 });
+    console.error("[invoices/[id]/payments]", err);
+    return NextResponse.json(
+      { error: "server_error", message: "Failed to record payment." },
+      { status: 500 },
+    );
   }
 }

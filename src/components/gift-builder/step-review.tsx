@@ -38,7 +38,7 @@ export function StepReview({
     /\S+@\S+\.\S+/.test(state.contactEmail) &&
     state.contactPhone.trim().length >= 6;
 
-  /** Fire-and-forget lead capture — never blocks the WhatsApp/email handoff. */
+  /** Fire-and-forget lead capture - never blocks the WhatsApp/email handoff. */
   function captureLead() {
     try {
       const payload = {
@@ -60,7 +60,7 @@ export function StepReview({
         keepalive: true,
       }).catch(() => {});
     } catch {
-      // ignore — capture is best-effort
+      // ignore - capture is best-effort
     }
   }
 
@@ -70,7 +70,7 @@ export function StepReview({
   return (
     <div>
       <h2 className="text-3xl font-bold tracking-tight text-[#1A1A1A]">
-        Your Experience Kit — Ready to Enquire
+        Your Experience Kit - Ready to Enquire
       </h2>
       <p className="mt-2 text-[#666666]">
         Review your selections below. Our team will respond within 2 hours with a custom quote.
@@ -138,7 +138,7 @@ export function StepReview({
 
           <div className="border-t border-[#EDE9E3] pt-4">
             <p className="font-numbers text-sm text-[#555555]">
-              {state.selectedProducts.length} products × {state.quantity} kits ={" "}
+              {state.selectedProducts.length} products �- {state.quantity} kits ={" "}
               <span className="font-semibold text-navy">{total} total personalised items</span>
             </p>
           </div>

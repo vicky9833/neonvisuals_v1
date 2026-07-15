@@ -47,7 +47,7 @@ export function GiftCard({
       <p className="text-xs text-[#6B7280]">
         {[gift.packaging_tier, gift.personalisation_level]
           .filter(Boolean)
-          .join(" · ") || "—"}
+          .join(" · ") || "-"}
       </p>
       <div className="mt-1.5 flex flex-wrap items-center gap-2">
         <span

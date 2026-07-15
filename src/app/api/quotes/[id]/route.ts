@@ -16,8 +16,11 @@ export async function GET(_request: Request, { params }: Ctx) {
   } catch (err) {
     const authResponse = apiAuthErrorResponse(err);
     if (authResponse) return authResponse;
-    const message = err instanceof Error ? err.message : "Unknown error";
-    return NextResponse.json({ error: "get_failed", message }, { status: 500 });
+    console.error("[quotes/[id]]", err);
+    return NextResponse.json(
+      { error: "server_error", message: "Could not load the quote. Please try again." },
+      { status: 500 },
+    );
   }
 }
 
@@ -25,14 +28,20 @@ export async function PATCH(request: Request, { params }: Ctx) {
   try {
     await requireApiRole(["super_admin"]);
     const { id } = await params;
-    const updates = await request.json();
+    const updates = await request.json().catch(() => null);
+    if (updates === null) {
+      return NextResponse.json({ error: "invalid_input", message: "Invalid or missing request body." }, { status: 400 });
+    }
     const quote = await updateQuote(id, updates);
     return NextResponse.json({ data: quote });
   } catch (err) {
     const authResponse = apiAuthErrorResponse(err);
     if (authResponse) return authResponse;
-    const message = err instanceof Error ? err.message : "Unknown error";
-    return NextResponse.json({ error: "update_failed", message }, { status: 500 });
+    console.error("[quotes/[id]]", err);
+    return NextResponse.json(
+      { error: "server_error", message: "Could not save the quote. Please try again." },
+      { status: 500 },
+    );
   }
 }
 
@@ -45,7 +54,10 @@ export async function DELETE(_request: Request, { params }: Ctx) {
   } catch (err) {
     const authResponse = apiAuthErrorResponse(err);
     if (authResponse) return authResponse;
-    const message = err instanceof Error ? err.message : "Unknown error";
-    return NextResponse.json({ error: "delete_failed", message }, { status: 500 });
+    console.error("[quotes/[id]]", err);
+    return NextResponse.json(
+      { error: "server_error", message: "Could not cancel the quote. Please try again." },
+      { status: 500 },
+    );
   }
 }

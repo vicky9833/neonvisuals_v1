@@ -145,7 +145,7 @@ export function PaymentCard({ order, onSave }: PaymentCardProps) {
               <dd className="font-numbers text-navy">
                 {order.advance_amount != null
                   ? formatCurrency(Number(order.advance_amount))
-                  : "—"}
+                  : "-"}
                 {order.advance_date
                   ? ` · ${formatDate(order.advance_date)}`
                   : ""}
@@ -156,7 +156,7 @@ export function PaymentCard({ order, onSave }: PaymentCardProps) {
               <dd className="font-numbers text-navy">
                 {order.balance_amount != null
                   ? formatCurrency(Number(order.balance_amount))
-                  : "—"}
+                  : "-"}
               </dd>
             </div>
           </dl>

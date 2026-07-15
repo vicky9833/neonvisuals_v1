@@ -68,7 +68,7 @@ export function CSVPreview({ results }: { results: CSVValidationResult[] }) {
                   {COLUMNS.map((c) => (
                     <td key={c} className="px-3 py-2 whitespace-nowrap">
                       {r.data[c] || (
-                        <span className="text-[#D1D5DB]">—</span>
+                        <span className="text-[#D1D5DB]">-</span>
                       )}
                     </td>
                   ))}

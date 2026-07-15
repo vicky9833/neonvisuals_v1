@@ -5,7 +5,7 @@ import { addProductImage, removeProductImage } from "@/lib/admin/products";
 
 export const runtime = "nodejs";
 
-// POST — upload a new image (multipart form-data with "file").
+// POST - upload a new image (multipart form-data with "file").
 export async function POST(
   request: Request,
   { params }: { params: Promise<{ sku: string }> },
@@ -33,14 +33,17 @@ export async function POST(
   } catch (err) {
     const authResponse = apiAuthErrorResponse(err);
     if (authResponse) return authResponse;
-    const message = err instanceof Error ? err.message : "Unknown error";
-    return NextResponse.json({ error: "upload_failed", message }, { status: 500 });
+    console.error("[admin/products/[sku]/images]", err);
+    return NextResponse.json(
+      { error: "server_error", message: "Could not upload the image. Please try again." },
+      { status: 500 },
+    );
   }
 }
 
 const deleteSchema = z.object({ url: z.string().min(1) });
 
-// DELETE — remove an image (JSON body { url }).
+// DELETE - remove an image (JSON body { url }).
 export async function DELETE(
   request: Request,
   { params }: { params: Promise<{ sku: string }> },
@@ -48,7 +51,7 @@ export async function DELETE(
   try {
     await requireApiRole(["super_admin"]);
     const { sku } = await params;
-    const body = await request.json();
+    const body = await request.json().catch(() => null);
     const parsed = deleteSchema.safeParse(body);
     if (!parsed.success) {
       return NextResponse.json(
@@ -61,7 +64,10 @@ export async function DELETE(
   } catch (err) {
     const authResponse = apiAuthErrorResponse(err);
     if (authResponse) return authResponse;
-    const message = err instanceof Error ? err.message : "Unknown error";
-    return NextResponse.json({ error: "delete_failed", message }, { status: 500 });
+    console.error("[admin/products/[sku]/images]", err);
+    return NextResponse.json(
+      { error: "server_error", message: "Could not delete the image. Please try again." },
+      { status: 500 },
+    );
   }
 }

@@ -27,7 +27,13 @@ const createSchema = z.object({
 export async function POST(request: Request) {
   try {
     const profile = await requireApiRole(["super_admin"]);
-    const body = await request.json();
+    const body = await request.json().catch(() => null);
+    if (body === null) {
+      return NextResponse.json(
+        { error: "invalid_input", message: "Invalid JSON body." },
+        { status: 400 },
+      );
+    }
     const parsed = createSchema.safeParse(body);
     if (!parsed.success) {
       return NextResponse.json(
@@ -40,8 +46,11 @@ export async function POST(request: Request) {
   } catch (err) {
     const authResponse = apiAuthErrorResponse(err);
     if (authResponse) return authResponse;
-    const message = err instanceof Error ? err.message : "Unknown error";
-    return NextResponse.json({ error: "create_failed", message }, { status: 500 });
+    console.error("[invoices]", err);
+    return NextResponse.json(
+      { error: "server_error", message: "Failed to create invoice." },
+      { status: 500 },
+    );
   }
 }
 
@@ -76,7 +85,10 @@ export async function GET(request: Request) {
   } catch (err) {
     const authResponse = apiAuthErrorResponse(err);
     if (authResponse) return authResponse;
-    const message = err instanceof Error ? err.message : "Unknown error";
-    return NextResponse.json({ error: "list_failed", message }, { status: 500 });
+    console.error("[invoices]", err);
+    return NextResponse.json(
+      { error: "server_error", message: "Failed to load invoices." },
+      { status: 500 },
+    );
   }
 }

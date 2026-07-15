@@ -36,7 +36,13 @@ export async function POST(request: Request) {
     const profile = await requireApiRole(["super_admin"]);
     const to = profile.email;
     const name = profile.full_name?.split(/\s+/)[0] ?? "there";
-    const body = await request.json();
+    const body = await request.json().catch(() => null);
+    if (body === null) {
+      return NextResponse.json(
+        { error: "invalid_input", message: "Invalid JSON body." },
+        { status: 400 },
+      );
+    }
     const parsed = schema.safeParse(body);
     if (!parsed.success) {
       return NextResponse.json(
@@ -156,7 +162,10 @@ export async function POST(request: Request) {
   } catch (err) {
     const authResponse = apiAuthErrorResponse(err);
     if (authResponse) return authResponse;
-    const message = err instanceof Error ? err.message : "Unknown error";
-    return NextResponse.json({ error: "test_failed", message }, { status: 500 });
+    console.error("[admin/emails/test]", err);
+    return NextResponse.json(
+      { error: "server_error", message: "Failed to send test email." },
+      { status: 500 },
+    );
   }
 }

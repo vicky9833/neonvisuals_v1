@@ -43,7 +43,11 @@ next-env.d.ts
 # product images (stored in Supabase Storage, never committed)
 product-images/
 
+# source image library (large, stored outside git — rebuilds product-images/)
+neonvisualsfinal/
+
+# generated image pipeline artifacts
+scripts/upload-errors.json
+scripts/image-manifest.json
+
 .env.local
-product-images/
-node_modules/
-.next/

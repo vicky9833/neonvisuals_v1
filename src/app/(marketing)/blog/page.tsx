@@ -4,7 +4,7 @@ import { getPublishedPosts } from "@/lib/engines/blog";
 import { BlogGrid } from "@/components/blog/BlogGrid";
 
 export const metadata: Metadata = buildMetadata({
-  title: "Corporate Gifting Blog — Insights & Guides | Neon Visuals",
+  title: "Corporate Gifting Blog - Insights & Guides | Neon Visuals",
   description:
     "Expert insights on corporate gifting, employee recognition, and building workplace culture. Guides, tips, and stories from Bangalore's premium gifting studio.",
   path: "/blog",

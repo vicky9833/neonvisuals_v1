@@ -1,5 +1,5 @@
 /**
- * Tax Invoice PDF generator — @react-pdf/renderer. Server-side only.
+ * Tax Invoice PDF generator - @react-pdf/renderer. Server-side only.
  * Uses built-in Helvetica and "Rs." (the ₹ glyph isn't in base Helvetica).
  */
 import {
@@ -20,7 +20,7 @@ const MUTED = "#6B7280";
 const BORDER = "#EDE9E3";
 const ALT = "#FAFAF8";
 
-/** "Rs. 1,42,957.00" — Indian grouping, two decimals. */
+/** "Rs. 1,42,957.00" - Indian grouping, two decimals. */
 function rs(n: number): string {
   return `Rs. ${Number(n).toLocaleString("en-IN", {
     minimumFractionDigits: 2,
@@ -171,11 +171,11 @@ function InvoiceDocument({ invoice }: { invoice: Invoice }) {
         <View style={styles.headerRow}>
           <View>
             <Text style={styles.brand}>Neon Visuals</Text>
-            <Text style={styles.line}>Where Creativity Sparks</Text>
+            <Text style={styles.line}>Crafted with Intention. Remembered with Pride.</Text>
           </View>
           <View style={styles.metaRight}>
             <Text style={styles.metaLabel}>Invoice No.</Text>
-            <Text style={styles.metaValue}>{invoice.invoice_number ?? "—"}</Text>
+            <Text style={styles.metaValue}>{invoice.invoice_number ?? "-"}</Text>
             <Text style={[styles.metaLabel, { marginTop: 4 }]}>Date</Text>
             <Text style={styles.line}>{invoice.invoice_date}</Text>
             <Text style={[styles.metaLabel, { marginTop: 4 }]}>Due Date</Text>
@@ -218,7 +218,7 @@ function InvoiceDocument({ invoice }: { invoice: Invoice }) {
 
         <View style={styles.refBox}>
           <Text>
-            Order: {invoice.order_number ?? "—"}
+            Order: {invoice.order_number ?? "-"}
           </Text>
           <Text>Type: {TYPE_LABEL[invoice.invoice_type] ?? invoice.invoice_type}</Text>
           <Text>Place of Supply: {invoice.is_intra_state ? "Karnataka (Intra-state)" : "Inter-state"}</Text>
@@ -314,7 +314,7 @@ function InvoiceDocument({ invoice }: { invoice: Invoice }) {
         <View style={styles.footer}>
           <Text>Thank you for choosing Neon Visuals.</Text>
           <Text>
-            This is a computer-generated invoice. contact.neonvisuals@gmail.com · +91 90194 09590
+            This is a computer-generated invoice. contact@neonvisuals.in · +91 90194 09590
           </Text>
         </View>
       </Page>

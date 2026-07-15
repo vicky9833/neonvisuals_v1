@@ -162,7 +162,7 @@ export function LeadForm({ open, onOpenChange, lead, onSaved }: LeadFormProps) {
         <DialogHeader>
           <DialogTitle>{editing ? "Edit Lead" : "New Lead"}</DialogTitle>
           <DialogDescription>
-            Capture every detail — it powers lead scoring and the pipeline.
+            Capture every detail - it powers lead scoring and the pipeline.
           </DialogDescription>
         </DialogHeader>
 

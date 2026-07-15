@@ -3,7 +3,7 @@ import { format, parseISO } from "date-fns";
 import { ArrowRight } from "lucide-react";
 import type { CalendarEvent } from "@/types/occasion";
 
-/** List of events for a single date — rendered inside a calendar popover. */
+/** List of events for a single date - rendered inside a calendar popover. */
 export function EventPopover({
   date,
   events,

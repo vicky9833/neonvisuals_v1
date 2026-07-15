@@ -67,7 +67,7 @@ export function MobileNav({ links }: MobileNavProps) {
       <SheetContent side="right" className="w-72">
         <SheetHeader>
           <SheetTitle asChild>
-            <Logo asLink={false} />
+            <Logo variant="horizontal" theme="dark" asLink={false} />
           </SheetTitle>
         </SheetHeader>
         <nav className="mt-6 flex flex-col gap-1 px-4">

@@ -11,7 +11,7 @@ export const metadata = {
 
 /**
  * Dashboard shell. Middleware (proxy.ts) already guarantees an authenticated,
- * onboarded user — this layout fetches the profile + company once and shares
+ * onboarded user - this layout fetches the profile + company once and shares
  * them with the sidebar/topbar via context.
  */
 export default async function DashboardLayout({

@@ -13,6 +13,8 @@ const createSchema = z.object({
   department: z.string().optional(),
   designation: z.string().optional(),
   date_of_birth: z.string().optional(),
+  dob_day: z.number().int().min(1).max(31).optional(),
+  dob_month: z.number().int().min(1).max(12).optional(),
   joining_date: z.string().optional(),
   manager_name: z.string().optional(),
   manager_email: z.string().email().optional().or(z.literal("")),
@@ -55,7 +57,7 @@ export async function GET(request: Request) {
     });
     return NextResponse.json({ data: result });
   } catch (err) {
-    return errorResponse(err, "list_failed");
+    return errorResponse(err);
   }
 }
 
@@ -63,7 +65,13 @@ export async function POST(request: Request) {
   try {
     const profile = await requireApiAuth();
     const companyId = requireCompany(profile.company_id);
-    const body = await request.json();
+    const body = await request.json().catch(() => null);
+    if (!body) {
+      return NextResponse.json(
+        { error: "invalid_input", message: "Invalid JSON body." },
+        { status: 400 },
+      );
+    }
     const parsed = createSchema.safeParse(body);
     if (!parsed.success) {
       return NextResponse.json(
@@ -74,11 +82,11 @@ export async function POST(request: Request) {
     const employee = await createEmployee(companyId, parsed.data, profile.id);
     return NextResponse.json({ data: employee }, { status: 201 });
   } catch (err) {
-    return errorResponse(err, "create_failed");
+    return errorResponse(err);
   }
 }
 
-function errorResponse(err: unknown, code: string): NextResponse {
+function errorResponse(err: unknown): NextResponse {
   const authResponse = apiAuthErrorResponse(err);
   if (authResponse) return authResponse;
   if (err && typeof err === "object" && "_noCompany" in err) {
@@ -88,6 +96,9 @@ function errorResponse(err: unknown, code: string): NextResponse {
         : "No company linked to this account.";
     return NextResponse.json({ error: "no_company", message }, { status: 400 });
   }
-  const message = err instanceof Error ? err.message : "Unknown error";
-  return NextResponse.json({ error: code, message }, { status: 500 });
+  console.error("[employees]", err);
+  return NextResponse.json(
+    { error: "server_error", message: "Failed to process employee request." },
+    { status: 500 },
+  );
 }

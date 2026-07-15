@@ -15,6 +15,7 @@ import { StepProducts } from "@/components/gift-builder/step-products";
 import { StepPackaging } from "@/components/gift-builder/step-packaging";
 import { StepPersonalisation } from "@/components/gift-builder/step-personalisation";
 import { StepReview } from "@/components/gift-builder/step-review";
+import { ErrorBoundary } from "@/components/shared/error-boundary";
 
 export function GiftBuilder({ buckets }: { buckets: Bucket[] }) {
   const [state, dispatch] = useReducer(kitReducer, initialKitState);
@@ -43,8 +44,9 @@ export function GiftBuilder({ buckets }: { buckets: Bucket[] }) {
   }
 
   function buildOwn() {
+    // Skip occasion selection and go straight to product selection (step 1).
     setStarted(true);
-    goTo(0);
+    goTo(1);
   }
 
   if (!started) {
@@ -60,19 +62,29 @@ export function GiftBuilder({ buckets }: { buckets: Bucket[] }) {
         className="mt-10 duration-300 animate-in fade-in slide-in-from-right-4"
       >
         {step === 0 ? (
-          <StepOccasion state={state} dispatch={dispatch} onContinue={() => goTo(1)} />
+          <ErrorBoundary>
+            <StepOccasion state={state} dispatch={dispatch} onContinue={() => goTo(1)} />
+          </ErrorBoundary>
         ) : null}
         {step === 1 ? (
-          <StepProducts state={state} dispatch={dispatch} buckets={buckets} onContinue={() => goTo(2)} />
+          <ErrorBoundary>
+            <StepProducts state={state} dispatch={dispatch} buckets={buckets} onContinue={() => goTo(2)} />
+          </ErrorBoundary>
         ) : null}
         {step === 2 ? (
-          <StepPackaging state={state} dispatch={dispatch} onContinue={() => goTo(3)} onBack={() => goTo(1)} />
+          <ErrorBoundary>
+            <StepPackaging state={state} dispatch={dispatch} onContinue={() => goTo(3)} onBack={() => goTo(1)} />
+          </ErrorBoundary>
         ) : null}
         {step === 3 ? (
-          <StepPersonalisation state={state} dispatch={dispatch} onContinue={() => goTo(4)} onBack={() => goTo(2)} />
+          <ErrorBoundary>
+            <StepPersonalisation state={state} dispatch={dispatch} onContinue={() => goTo(4)} onBack={() => goTo(2)} />
+          </ErrorBoundary>
         ) : null}
         {step === 4 ? (
-          <StepReview state={state} dispatch={dispatch} onGoToStep={goTo} onBack={() => goTo(3)} />
+          <ErrorBoundary>
+            <StepReview state={state} dispatch={dispatch} onGoToStep={goTo} onBack={() => goTo(3)} />
+          </ErrorBoundary>
         ) : null}
       </div>
     </div>

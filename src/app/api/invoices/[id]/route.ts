@@ -57,8 +57,11 @@ export async function GET(
   } catch (err) {
     const authResponse = apiAuthErrorResponse(err);
     if (authResponse) return authResponse;
-    const message = err instanceof Error ? err.message : "Unknown error";
-    return NextResponse.json({ error: "get_failed", message }, { status: 500 });
+    console.error("[invoices/[id]]", err);
+    return NextResponse.json(
+      { error: "server_error", message: "Failed to load invoice." },
+      { status: 500 },
+    );
   }
 }
 
@@ -69,7 +72,13 @@ export async function PATCH(
   try {
     await requireApiRole(["super_admin"]);
     const { id } = await params;
-    const body = await request.json();
+    const body = await request.json().catch(() => null);
+    if (body === null) {
+      return NextResponse.json(
+        { error: "invalid_input", message: "Invalid JSON body." },
+        { status: 400 },
+      );
+    }
     const parsed = updateSchema.safeParse(body);
     if (!parsed.success) {
       return NextResponse.json(
@@ -82,7 +91,10 @@ export async function PATCH(
   } catch (err) {
     const authResponse = apiAuthErrorResponse(err);
     if (authResponse) return authResponse;
-    const message = err instanceof Error ? err.message : "Unknown error";
-    return NextResponse.json({ error: "update_failed", message }, { status: 500 });
+    console.error("[invoices/[id]]", err);
+    return NextResponse.json(
+      { error: "server_error", message: "Failed to update invoice." },
+      { status: 500 },
+    );
   }
 }

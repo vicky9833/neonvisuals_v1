@@ -1,10 +1,12 @@
 import type { MetadataRoute } from "next";
+import { TAGLINE } from "@/lib/utils/constants";
 
 export default function manifest(): MetadataRoute.Manifest {
   return {
-    name: "Neon Visuals — Where Creativity Sparks",
+    name: `Neon Visuals - ${TAGLINE}`,
     short_name: "Neon Visuals",
-    description: "Premium personalised corporate gifting for Bangalore startups.",
+    description:
+      "Premium personalised corporate gifting for corporates, startups, colleges, events, and institutions across India.",
     start_url: "/",
     display: "standalone",
     background_color: "#FAFAF8",

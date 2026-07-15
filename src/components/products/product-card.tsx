@@ -1,13 +1,12 @@
 /**
- * ProductCard — reusable, server-rendered product card (catalog, collection,
+ * ProductCard - reusable, server-rendered product card (catalog, collection,
  * related, homepage, occasions). Entire card links to the product detail page.
- * NO prices anywhere — the CTA drives to the detail page / enquiry.
+ * NO prices anywhere - the CTA drives to the detail page / enquiry.
  */
-import Image from "next/image";
 import Link from "next/link";
 import type { Product } from "@/lib/types/product";
 import { getBucketByCode } from "@/lib/catalog";
-import { PlaceholderImage } from "@/components/products/placeholder-image";
+import { ProductCardImage } from "@/components/products/product-card-image";
 
 export function ProductCard({ product }: { product: Product }) {
   const collection = getBucketByCode(product.bucket);
@@ -19,21 +18,16 @@ export function ProductCard({ product }: { product: Product }) {
       className="group flex h-full flex-col overflow-hidden rounded-2xl border border-[#EDE9E3] bg-white shadow-sm transition-all duration-300 hover:-translate-y-1 hover:shadow-md focus-visible:-translate-y-1 focus-visible:shadow-md"
     >
       {/* Image */}
-      <div className="relative aspect-3/4 overflow-hidden rounded-t-2xl bg-secondary">
-        {product.imageUrl ? (
-          <Image
-            src={product.imageUrl}
-            alt={`${product.name} — personalised corporate gift`}
-            fill
-            className="object-cover transition-transform duration-500 group-hover:scale-105"
-            sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 25vw"
-          />
-        ) : (
-          <PlaceholderImage name={product.name} />
-        )}
+      <div className="relative aspect-square overflow-hidden rounded-lg border border-[#EDE9E3] bg-[#FAFAF8]">
+        <ProductCardImage imageUrl={product.imageUrl} name={product.name} />
         {collection ? (
           <span className="absolute left-3 top-3 rounded-full bg-navy/80 px-3 py-1 text-[11px] font-medium text-white backdrop-blur-sm">
             {collection.name}
+          </span>
+        ) : null}
+        {(product.galleryImages?.length ?? 0) > 1 ? (
+          <span className="absolute bottom-2 right-2 rounded-full bg-[#1A1A2E]/80 px-2 py-0.5 text-xs text-white">
+            {product.galleryImages!.length} {product.galleryImages!.length === 1 ? "variant" : "variants"}
           </span>
         ) : null}
       </div>
@@ -54,7 +48,11 @@ export function ProductCard({ product }: { product: Product }) {
             {tags.map((tag) => (
               <span
                 key={tag}
-                className="rounded-full border border-[#EDE9E3] px-2 py-0.5 text-xs text-[#777777]"
+                className={
+                  tag === "Best Seller"
+                    ? "rounded-full bg-[#C4A35A] px-2 py-0.5 text-xs font-medium text-white"
+                    : "rounded-full border border-[#C4A35A] bg-transparent px-2 py-0.5 text-xs text-[#1A1A2E]"
+                }
               >
                 {tag}
               </span>

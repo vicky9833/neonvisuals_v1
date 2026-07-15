@@ -56,7 +56,7 @@ export function EmailTestPanel({ configured }: { configured: boolean }) {
       <p className="mb-3 text-sm text-[#6B7280]">
         {configured
           ? "Sends the selected template to your own email address."
-          : "RESEND_API_KEY is not configured — sends will be skipped."}
+          : "RESEND_API_KEY is not configured - sends will be skipped."}
       </p>
       <div className="flex flex-wrap items-center gap-2">
         <Select value={template} onValueChange={setTemplate}>

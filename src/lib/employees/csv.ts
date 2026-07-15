@@ -6,7 +6,7 @@ import type {
 } from "@/types/employee";
 
 /**
- * Client-side CSV/Excel parsing + validation. Runs entirely in the browser —
+ * Client-side CSV/Excel parsing + validation. Runs entirely in the browser -
  * no employee data is sent to the server until the user confirms import.
  */
 
@@ -217,12 +217,12 @@ export function validateCSVRows(rows: CSVRow[]): CSVValidationResult[] {
       if (!valid) {
         errors.push("Date of birth is not a valid date");
       } else if (iso) {
-        data.date_of_birth = iso;
-        const age =
-          (Date.now() - new Date(iso).getTime()) / (365.25 * 86_400_000);
-        if (age < 16 || age > 80) {
-          warnings.push("Date of birth looks unusual (age < 16 or > 80)");
-        }
+        // Keep DAY + MONTH only. The birth YEAR is never parsed into the
+        // payload nor persisted (privacy-by-design, migration 018).
+        const d = new Date(iso);
+        data.dob_day = String(d.getDate());
+        data.dob_month = String(d.getMonth() + 1);
+        delete data.date_of_birth;
       }
     }
     if (row.joining_date) {
@@ -282,7 +282,8 @@ export function rowToFormData(row: CSVRow): EmployeeFormData {
     phone: row.phone,
     department: row.department,
     designation: row.designation,
-    date_of_birth: row.date_of_birth,
+    dob_day: row.dob_day ? Number(row.dob_day) : undefined,
+    dob_month: row.dob_month ? Number(row.dob_month) : undefined,
     joining_date: row.joining_date,
     manager_name: row.manager_name,
     manager_email: row.manager_email,

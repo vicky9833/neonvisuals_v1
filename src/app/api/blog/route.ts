@@ -40,7 +40,7 @@ const createSchema = z.object({
   ctaUrl: z.string().optional(),
 });
 
-// GET — public list of published posts.
+// GET - public list of published posts.
 export async function GET(request: Request) {
   try {
     const { searchParams } = new URL(request.url);
@@ -55,12 +55,15 @@ export async function GET(request: Request) {
     });
     return NextResponse.json({ data: result });
   } catch (err) {
-    const message = err instanceof Error ? err.message : "Unknown error";
-    return NextResponse.json({ error: "list_failed", message }, { status: 500 });
+    console.error("[blog]", err);
+    return NextResponse.json(
+      { error: "list_failed", message: "Failed to load posts." },
+      { status: 500 },
+    );
   }
 }
 
-// POST — create a post (super_admin only).
+// POST - create a post (super_admin only).
 export async function POST(request: Request) {
   try {
     const profile = await requireApiRole(["super_admin"]);
@@ -77,7 +80,10 @@ export async function POST(request: Request) {
   } catch (err) {
     const authResponse = apiAuthErrorResponse(err);
     if (authResponse) return authResponse;
-    const message = err instanceof Error ? err.message : "Unknown error";
-    return NextResponse.json({ error: "create_failed", message }, { status: 500 });
+    console.error("[blog]", err);
+    return NextResponse.json(
+      { error: "create_failed", message: "Failed to create post." },
+      { status: 500 },
+    );
   }
 }

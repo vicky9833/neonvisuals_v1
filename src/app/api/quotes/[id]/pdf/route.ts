@@ -51,7 +51,10 @@ export async function GET(_request: Request, { params }: Ctx) {
   } catch (err) {
     const authResponse = apiAuthErrorResponse(err);
     if (authResponse) return authResponse;
-    const message = err instanceof Error ? err.message : "Unknown error";
-    return NextResponse.json({ error: "pdf_failed", message }, { status: 500 });
+    console.error("[quotes/[id]/pdf]", err);
+    return NextResponse.json(
+      { error: "server_error", message: "Could not generate the PDF. Please try again." },
+      { status: 500 },
+    );
   }
 }

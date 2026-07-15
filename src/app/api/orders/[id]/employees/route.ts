@@ -4,7 +4,7 @@ import { getOrder, listCompanyEmployees } from "@/lib/engines/order";
 
 export const runtime = "nodejs";
 
-// GET — active employees of an order's company, for recipient selection
+// GET - active employees of an order's company, for recipient selection
 // (super_admin only).
 export async function GET(
   _request: Request,
@@ -25,7 +25,10 @@ export async function GET(
   } catch (err) {
     const authResponse = apiAuthErrorResponse(err);
     if (authResponse) return authResponse;
-    const message = err instanceof Error ? err.message : "Unknown error";
-    return NextResponse.json({ error: "list_failed", message }, { status: 500 });
+    console.error("[orders/[id]/employees]", err);
+    return NextResponse.json(
+      { error: "server_error", message: "Could not load employees. Please try again." },
+      { status: 500 },
+    );
   }
 }

@@ -56,7 +56,7 @@ async function resolveId(param: string): Promise<string | null> {
   return bySlug?.id ?? null;
 }
 
-// GET — public, published post by slug.
+// GET - public, published post by slug.
 export async function GET(
   _request: Request,
   { params }: { params: Promise<{ slug: string }> },
@@ -72,12 +72,15 @@ export async function GET(
     }
     return NextResponse.json({ data: post });
   } catch (err) {
-    const message = err instanceof Error ? err.message : "Unknown error";
-    return NextResponse.json({ error: "get_failed", message }, { status: 500 });
+    console.error("[blog/slug]", err);
+    return NextResponse.json(
+      { error: "get_failed", message: "Failed to load post." },
+      { status: 500 },
+    );
   }
 }
 
-// PATCH — update post (super_admin). Param may be id or slug.
+// PATCH - update post (super_admin). Param may be id or slug.
 export async function PATCH(
   request: Request,
   { params }: { params: Promise<{ slug: string }> },
@@ -105,12 +108,15 @@ export async function PATCH(
   } catch (err) {
     const authResponse = apiAuthErrorResponse(err);
     if (authResponse) return authResponse;
-    const message = err instanceof Error ? err.message : "Unknown error";
-    return NextResponse.json({ error: "update_failed", message }, { status: 500 });
+    console.error("[blog/slug]", err);
+    return NextResponse.json(
+      { error: "update_failed", message: "Failed to update post." },
+      { status: 500 },
+    );
   }
 }
 
-// DELETE — archive post (super_admin). Param may be id or slug.
+// DELETE - archive post (super_admin). Param may be id or slug.
 export async function DELETE(
   _request: Request,
   { params }: { params: Promise<{ slug: string }> },
@@ -130,7 +136,10 @@ export async function DELETE(
   } catch (err) {
     const authResponse = apiAuthErrorResponse(err);
     if (authResponse) return authResponse;
-    const message = err instanceof Error ? err.message : "Unknown error";
-    return NextResponse.json({ error: "delete_failed", message }, { status: 500 });
+    console.error("[blog/slug]", err);
+    return NextResponse.json(
+      { error: "delete_failed", message: "Failed to delete post." },
+      { status: 500 },
+    );
   }
 }

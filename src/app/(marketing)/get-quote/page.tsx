@@ -14,7 +14,7 @@ export default function GetQuotePage() {
     <div className="mx-auto max-w-3xl px-4 py-16 sm:px-6 lg:px-8">
       <PageHeader
         title="Request a quote"
-        description="Tell us what you're celebrating and the volume — we'll respond with a tailored proposal."
+        description="Tell us what you're celebrating and the volume - we'll respond with a tailored proposal."
       />
     </div>
   );

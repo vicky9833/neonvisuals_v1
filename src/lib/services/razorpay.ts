@@ -2,12 +2,12 @@ import crypto from "node:crypto";
 import Razorpay from "razorpay";
 
 /**
- * Razorpay integration. Server-only — never import into client components.
+ * Razorpay integration. Server-only - never import into client components.
  * Instantiated lazily so missing env vars don't break module load.
  *
  * Graceful degradation: when RAZORPAY_KEY_ID / RAZORPAY_KEY_SECRET are empty,
  * `isRazorpayConfigured()` returns false and callers hide payment-link UI and
- * skip link creation — no errors are thrown.
+ * skip link creation - no errors are thrown.
  */
 let client: Razorpay | null = null;
 
@@ -43,7 +43,7 @@ export interface PaymentLinkResult {
 }
 
 /**
- * Creates a Razorpay payment link. Throws if Razorpay isn't configured — the
+ * Creates a Razorpay payment link. Throws if Razorpay isn't configured - the
  * caller should guard with `isRazorpayConfigured()` first.
  */
 export async function createPaymentLink(

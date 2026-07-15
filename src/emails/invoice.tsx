@@ -22,7 +22,7 @@ export function InvoiceEmail({
         Invoice <strong>{reference}</strong> for{" "}
         <strong>{formatCurrency(total)}</strong> (incl. GST) is attached.
       </p>
-      <p>— The Neon Visuals team</p>
+      <p>- The Neon Visuals team</p>
     </div>
   );
 }

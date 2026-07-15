@@ -16,7 +16,7 @@ export function KitContents({
   if (products.length === 0) {
     return (
       <p className="rounded-xl border border-dashed border-[#EDE9E3] bg-secondary/40 p-5 text-center text-sm text-[#888888]">
-        Your kit is empty. Browse products below and tap + to add.
+        Your kit is empty. Add 3-7 items for the perfect experience.
       </p>
     );
   }
@@ -29,9 +29,9 @@ export function KitContents({
             key={p.sku}
             className="flex items-center gap-3 rounded-xl border border-[#EDE9E3] bg-white p-2"
           >
-            <span className="relative size-12 shrink-0 overflow-hidden rounded-lg bg-secondary">
+            <span className="relative size-12 shrink-0 overflow-hidden rounded-lg border border-[#EDE9E3] bg-[#FAFAF8]">
               {p.imageUrl ? (
-                <Image src={p.imageUrl} alt="" fill className="object-cover" sizes="48px" />
+                <Image src={p.imageUrl} alt="" fill className="object-contain" sizes="48px" />
               ) : (
                 <span className="flex size-full items-center justify-center bg-navy text-[10px] font-bold text-gold">
                   NV
@@ -68,9 +68,12 @@ export function KitSidebar({
   onContinue: () => void;
 }) {
   return (
-    <aside className="sticky top-24 hidden h-fit rounded-2xl border border-[#EDE9E3] bg-white p-5 shadow-sm lg:block">
+    <aside
+      id="kit-sidebar"
+      className="sticky top-24 hidden h-fit rounded-2xl border border-[#EDE9E3] bg-white p-5 shadow-sm lg:block"
+    >
       <h3 className="text-lg font-bold text-[#1A1A1A]">Your Experience Kit</h3>
-      <p className="mt-1 text-xs text-[#888888]">We recommend 3–7 items for the perfect kit</p>
+      <p className="mt-1 text-xs text-[#888888]">We recommend 3-7 items for the perfect kit</p>
       <div className="mt-4">
         <KitContents products={products} onRemove={onRemove} />
       </div>

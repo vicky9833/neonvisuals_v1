@@ -1,6 +1,5 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import Image from "next/image";
 import { notFound } from "next/navigation";
 import { ChevronRight } from "lucide-react";
 import {
@@ -20,6 +19,7 @@ import { BlogCTA } from "@/components/blog/BlogCTA";
 import { BlogTags } from "@/components/blog/BlogTags";
 import { BlogShare } from "@/components/blog/BlogShare";
 import { RelatedPosts } from "@/components/blog/RelatedPosts";
+import { BlogHeroImage } from "@/components/blog/BlogHeroImage";
 import { ProductCard } from "@/components/products/product-card";
 import { CATEGORY_LABEL } from "@/components/blog/blog-meta";
 
@@ -108,19 +108,12 @@ export default async function BlogPostPage({ params }: Params) {
         </p>
       </header>
 
-      {/* Hero image */}
-      {post.hero_image_url && (
-        <div className="relative mt-8 aspect-video w-full overflow-hidden rounded-2xl bg-secondary">
-          <Image
-            src={post.hero_image_url}
-            alt={post.hero_image_alt ?? post.title}
-            fill
-            priority
-            sizes="(max-width: 768px) 100vw, 768px"
-            className="object-cover"
-          />
-        </div>
-      )}
+      {/* Hero image - DB image when present, else a varied product photo. */}
+      <BlogHeroImage
+        src={post.hero_image_url}
+        alt={post.hero_image_alt ?? post.title}
+        slug={post.slug}
+      />
 
       {/* Content */}
       <div className="mt-10">

@@ -1,4 +1,5 @@
 import "server-only";
+import type { SupabaseClient } from "@supabase/supabase-js";
 import { createClient } from "@/lib/supabase/server";
 import {
   EVENT_COLORS,
@@ -9,7 +10,13 @@ import {
 } from "@/types/occasion";
 
 /**
- * Occasion engine — aggregates employee birthdays, work anniversaries,
+ * Most functions accept an optional Supabase client. Default = request-scoped
+ * cookie client (RLS-enforced, used on dashboard load). The cron passes a
+ * service-role client so it can process EVERY company cross-tenant.
+ */
+
+/**
+ * Occasion engine - aggregates employee birthdays, work anniversaries,
  * company-tracked festivals, and custom occasions into a unified calendar,
  * and generates dashboard reminders. Company-scoped via the RLS client.
  */
@@ -97,8 +104,9 @@ export async function getCalendarEvents(
   companyId: string,
   startDate: string,
   endDate: string,
+  client?: SupabaseClient,
 ): Promise<CalendarEvent[]> {
-  const supabase = await createClient();
+  const supabase = client ?? (await createClient());
   const start = parse(startDate);
   const end = parse(endDate);
   const events: CalendarEvent[] = [];
@@ -106,28 +114,30 @@ export async function getCalendarEvents(
   // 1 + 2. Employee birthdays + anniversaries.
   const { data: employees } = await supabase
     .from("employees")
-    .select("id, full_name, department, date_of_birth, joining_date")
+    .select("id, full_name, department, dob_day, dob_month, joining_date")
     .eq("company_id", companyId)
     .eq("is_active", true);
 
   for (const e of employees ?? []) {
     const name = (e.full_name as string) ?? "Employee";
     const dept = (e.department as string | null) ?? undefined;
-    const dob = e.date_of_birth as string | null;
+    const dobDay = e.dob_day as number | null;
+    const dobMonth = e.dob_month as number | null;
     const doj = e.joining_date as string | null;
 
-    if (dob) {
-      const baseDob = parse(dob);
+    if (dobMonth && dobDay) {
+      // Birth YEAR is not stored; anchor on a fixed year purely to expand the
+      // recurring month/day. Age (yearsCount) is intentionally omitted.
+      const baseDob = new Date(2000, dobMonth - 1, dobDay);
       for (const iso of occurrencesInRange(baseDob, 12, start, end)) {
-        const age = new Date(iso).getFullYear() - baseDob.getFullYear();
         events.push({
           id: `bday-${e.id}-${iso}`,
           type: "birthday",
           title: `${name}'s Birthday`,
           description: dept ? `${dept}` : undefined,
           date: iso,
-          originalDate: dob,
-          yearsCount: age,
+          originalDate: `${String(dobMonth).padStart(2, "0")}-${String(dobDay).padStart(2, "0")}`,
+          yearsCount: undefined,
           employeeId: e.id as string,
           employeeName: name,
           employeeDepartment: dept,
@@ -149,7 +159,7 @@ export async function getCalendarEvents(
         events.push({
           id: `anniv-${e.id}-${iso}`,
           type: "work_anniversary",
-          title: `${name} — ${years} Year Work Anniversary`,
+          title: `${name} - ${years} Year Work Anniversary`,
           description: dept ? `${dept}` : undefined,
           date: iso,
           originalDate: doj,
@@ -263,9 +273,15 @@ export async function getCalendarEvents(
 export async function getUpcomingEvents(
   companyId: string,
   days: number,
+  client?: SupabaseClient,
 ): Promise<CalendarEvent[]> {
   const start = today();
-  return getCalendarEvents(companyId, toISO(start), toISO(addDays(start, days)));
+  return getCalendarEvents(
+    companyId,
+    toISO(start),
+    toISO(addDays(start, days)),
+    client,
+  );
 }
 
 export async function getEventsForDate(
@@ -351,8 +367,9 @@ export async function saveFestivalPreferences(
 
 export async function generateReminders(
   companyId: string,
+  client?: SupabaseClient,
 ): Promise<{ created: number; skipped: number }> {
-  const supabase = await createClient();
+  const supabase = client ?? (await createClient());
   const now = today();
   const todayISO = toISO(now);
 
@@ -377,7 +394,7 @@ export async function generateReminders(
     }
   }
 
-  const events = await getUpcomingEvents(companyId, 30);
+  const events = await getUpcomingEvents(companyId, 30, client);
 
   // Existing reminders to dedupe against.
   const { data: existing } = await supabase
@@ -462,8 +479,9 @@ export async function generateReminders(
 
 export async function getActiveReminders(
   companyId: string,
+  client?: SupabaseClient,
 ): Promise<Reminder[]> {
-  const supabase = await createClient();
+  const supabase = client ?? (await createClient());
   const now = todayString();
   const { data } = await supabase
     .from("reminders")

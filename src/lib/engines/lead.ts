@@ -1,5 +1,5 @@
 /**
- * Lead Engine — INTERNAL USE ONLY (admin / super_admin, server-side).
+ * Lead Engine - INTERNAL USE ONLY (admin / super_admin, server-side).
  *
  * Self-contained CRM: every enquiry is a lead, leads carry an activity log and
  * status history, and converting a won lead creates a company (client) record.
@@ -176,7 +176,7 @@ export const PIPELINE_STAGES: { status: LeadStatus; label: string }[] = [
   { status: "lost", label: "Lost" },
 ];
 
-/** Statuses still "in play" — used for pipeline value + overdue follow-ups. */
+/** Statuses still "in play" - used for pipeline value + overdue follow-ups. */
 export const ACTIVE_LEAD_STATUSES: LeadStatus[] = [
   "new",
   "contacted",
@@ -545,7 +545,7 @@ export async function getActivities(leadId: string): Promise<LeadActivity[]> {
 // Lead scoring
 // ---------------------------------------------------------------------------
 
-const LARGE_SIZES = new Set(["200-500", "500-1000", "1000+", "200–500", "500–1,000", "1,000+"]);
+const LARGE_SIZES = new Set(["200-500", "500-1000", "1000+", "200-500", "500-1,000", "1,000+"]);
 
 export async function calculateLeadScore(leadId: string): Promise<number> {
   const supa = createAdminClient();
@@ -788,7 +788,7 @@ export async function getPipelineData(): Promise<{ stages: PipelineStage[] }> {
 }
 
 // ---------------------------------------------------------------------------
-// Capture (gift builder / public enquiries) — dedupes by email
+// Capture (gift builder / public enquiries) - dedupes by email
 // ---------------------------------------------------------------------------
 
 export interface CaptureInput {

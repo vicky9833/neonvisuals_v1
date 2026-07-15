@@ -32,7 +32,7 @@ export async function PATCH(request: Request, { params }: Ctx) {
   try {
     await requireApiAuth();
     const { id } = await params;
-    const body = await request.json();
+    const body = await request.json().catch(() => null);
     const parsed = schema.safeParse(body);
     if (!parsed.success) {
       return NextResponse.json(
@@ -73,6 +73,9 @@ export async function DELETE(_request: Request, { params }: Ctx) {
 function handle(err: unknown, code: string): NextResponse {
   const authResponse = apiAuthErrorResponse(err);
   if (authResponse) return authResponse;
-  const message = err instanceof Error ? err.message : "Unknown error";
-  return NextResponse.json({ error: code, message }, { status: 500 });
+  console.error("[occasions/custom/[id]]", err);
+  return NextResponse.json(
+    { error: code, message: "Something went wrong. Please try again." },
+    { status: 500 },
+  );
 }

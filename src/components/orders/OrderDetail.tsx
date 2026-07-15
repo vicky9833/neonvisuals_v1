@@ -78,7 +78,7 @@ export function OrderDetail({
       }
       await reload();
       if (newStatus === "delivered") {
-        setToast("Delivered — gift records generated for recipients.");
+        setToast("Delivered - gift records generated for recipients.");
       }
     } finally {
       setBusy(false);
@@ -188,7 +188,7 @@ export function OrderDetail({
           <h1 className="font-heading text-2xl font-bold text-navy">
             {order.order_number ?? "Draft Order"}
           </h1>
-          <p className="text-sm text-[#6B7280]">{order.company_name ?? "—"}</p>
+          <p className="text-sm text-[#6B7280]">{order.company_name ?? "-"}</p>
         </div>
         <span
           className={`inline-flex w-fit items-center gap-1.5 rounded-full border px-3 py-1 text-sm font-medium ${meta.badge}`}
@@ -261,7 +261,7 @@ export function OrderDetail({
                     </div>
                     <div className="text-right text-sm">
                       <p className="font-numbers text-navy">
-                        {item.quantity} ×{" "}
+                        {item.quantity} �-{" "}
                         {formatCurrency(Number(item.unit_price ?? 0))}
                       </p>
                       <p className="font-numbers text-xs text-[#6B7280]">
@@ -353,13 +353,13 @@ export function OrderDetail({
                 <p className="text-xs font-medium text-[#9CA3AF]">
                   Internal (admin only)
                 </p>
-                <p className="text-[#2D2D2D]">{order.internal_notes ?? "—"}</p>
+                <p className="text-[#2D2D2D]">{order.internal_notes ?? "-"}</p>
               </div>
               <div className="border-t border-border pt-3">
                 <p className="text-xs font-medium text-[#9CA3AF]">
                   Client-visible
                 </p>
-                <p className="text-[#2D2D2D]">{order.client_notes ?? "—"}</p>
+                <p className="text-[#2D2D2D]">{order.client_notes ?? "-"}</p>
               </div>
               {order.special_instructions && (
                 <div className="border-t border-border pt-3">

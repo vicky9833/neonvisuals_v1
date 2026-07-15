@@ -27,7 +27,13 @@ export async function PATCH(
   try {
     const profile = await requireApiRole(["super_admin"]);
     const { id } = await params;
-    const body = await request.json();
+    const body = await request.json().catch(() => null);
+    if (!body) {
+      return NextResponse.json(
+        { error: "invalid_input", message: "Invalid request body." },
+        { status: 400 },
+      );
+    }
     const parsed = schema.safeParse(body);
     if (!parsed.success) {
       return NextResponse.json(
@@ -48,10 +54,16 @@ export async function PATCH(
     const authResponse = apiAuthErrorResponse(err);
     if (authResponse) return authResponse;
     const message = err instanceof Error ? err.message : "Unknown error";
-    const isClientError = message.includes("loss reason is required");
+    if (message.includes("loss reason is required")) {
+      return NextResponse.json(
+        { error: "loss_reason_required", message },
+        { status: 400 },
+      );
+    }
+    console.error("[leads/[id]/status]", err);
     return NextResponse.json(
-      { error: isClientError ? "loss_reason_required" : "status_failed", message },
-      { status: isClientError ? 400 : 500 },
+      { error: "server_error", message: "Could not update the lead status. Please try again." },
+      { status: 500 },
     );
   }
 }

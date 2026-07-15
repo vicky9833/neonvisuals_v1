@@ -1,5 +1,5 @@
 /**
- * Pricing Engine — INTERNAL USE ONLY.
+ * Pricing Engine - INTERNAL USE ONLY.
  * Never import from public routes or client components. Reads prices ONLY from
  * the Supabase database (service role), never from products.ts.
  */
@@ -177,7 +177,7 @@ export async function calculatePricing(input: PricingInput): Promise<PricingResu
 }
 
 /* ------------------------------------------------------------------ */
-/* Lightweight kit totals (pure) — used by the Gift Builder engine.    */
+/* Lightweight kit totals (pure) - used by the Gift Builder engine.    */
 /* No DB access; safe to compute anywhere.                             */
 /* ------------------------------------------------------------------ */
 
@@ -187,7 +187,7 @@ export interface QuoteTotals {
   subtotal: number;
 }
 
-/** Sums simple unit-price × quantity line items into kit totals. */
+/** Sums simple unit-price �- quantity line items into kit totals. */
 export function computeQuoteTotals(
   items: Array<{ unitPrice: number; quantity: number }>,
 ): QuoteTotals {

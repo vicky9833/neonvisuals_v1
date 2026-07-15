@@ -13,7 +13,7 @@ export function GiftStats({
     { value: totalGifts.toLocaleString("en-IN"), label: "Total Gifts" },
     { value: employeesGifted.toLocaleString("en-IN"), label: "Employees Gifted" },
     { value: `${deskTestScore}%`, label: "Desk Test Score" },
-    { value: avgReaction > 0 ? `${avgReaction}/4` : "—", label: "Avg Reaction" },
+    { value: avgReaction > 0 ? `${avgReaction}/4` : "-", label: "Avg Reaction" },
   ];
   return (
     <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">

@@ -43,10 +43,10 @@ export function PaymentHistory({
           {payments.map((p) => (
             <TableRow key={p.id}>
               <TableCell className="text-sm">
-                {p.payment_date ? formatDate(p.payment_date) : "—"}
+                {p.payment_date ? formatDate(p.payment_date) : "-"}
               </TableCell>
               <TableCell className="font-numbers text-sm text-navy">
-                {p.invoice_number ?? "—"}
+                {p.invoice_number ?? "-"}
               </TableCell>
               <TableCell className="font-numbers text-right text-sm text-navy">
                 {formatCurrency(p.amount)}
@@ -56,7 +56,7 @@ export function PaymentHistory({
               </TableCell>
               {showReference && (
                 <TableCell className="hidden sm:table-cell text-sm text-[#6B7280]">
-                  {p.bank_reference ?? p.razorpay_payment_id ?? "—"}
+                  {p.bank_reference ?? p.razorpay_payment_id ?? "-"}
                 </TableCell>
               )}
               <TableCell>

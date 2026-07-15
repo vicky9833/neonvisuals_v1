@@ -21,7 +21,7 @@ export function StepProgress({
     <div>
       {/* Mobile */}
       <p className="text-center text-sm font-semibold text-navy md:hidden">
-        Step {current + 1} of {STEPS.length} — {STEPS[current]}
+        Step {current + 1} of {STEPS.length} - {STEPS[current]}
       </p>
 
       {/* Desktop */}

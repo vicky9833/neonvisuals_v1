@@ -11,7 +11,7 @@ function scoreColor(score: number): string {
   return "bg-gray-400";
 }
 
-/** Compact 0–100 lead score with a progress bar. */
+/** Compact 0-100 lead score with a progress bar. */
 export function LeadScoreIndicator({
   score,
   size = "sm",

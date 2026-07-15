@@ -31,7 +31,12 @@ import {
   type EmployeeFormData,
 } from "@/types/employee";
 
-type FormState = Record<keyof EmployeeFormData, string>;
+// dob_day/dob_month are numeric and set by the data layer (year discarded);
+// the form keeps a single `date_of_birth` date input for now.
+type FormState = Record<
+  keyof Omit<EmployeeFormData, "dob_day" | "dob_month">,
+  string
+>;
 
 const EMPTY: FormState = {
   name: "",
@@ -147,7 +152,7 @@ export function EmployeeForm({
             {mode === "edit" ? "Edit Employee" : "Add Employee"}
           </SheetTitle>
           <SheetDescription>
-            We only collect what helps personalise gifting — no sensitive HR
+            We only collect what helps personalise gifting - no sensitive HR
             data.
           </SheetDescription>
         </SheetHeader>
@@ -293,7 +298,7 @@ export function EmployeeForm({
                   rows={2}
                 />
               </Field>
-              <Field label="Notes" hint="Internal only — not visible to the employee">
+              <Field label="Notes" hint="Internal only - not visible to the employee">
                 <Textarea
                   value={form.interests}
                   onChange={(e) => set("interests", e.target.value)}

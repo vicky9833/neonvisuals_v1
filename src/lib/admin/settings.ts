@@ -32,9 +32,9 @@ export interface SystemSettings {
 export const DEFAULT_SETTINGS: SystemSettings = {
   company: {
     businessName: "Neon Visuals",
-    address: "Bangalore, Karnataka, India",
-    phone: "9019409590",
-    email: "contact.neonvisuals@gmail.com",
+    address: "Bengaluru, Karnataka & Mumbai, Maharashtra",
+    phone: "+91 90194 09590",
+    email: "contact@neonvisuals.in",
     whatsapp: "9019409590",
     website: "neonvisuals.in",
     gstin: "",
@@ -53,7 +53,7 @@ export const DEFAULT_SETTINGS: SystemSettings = {
     logoUrl: "",
     primaryColor: "#1A1A2E",
     secondaryColor: "#C4A35A",
-    tagline: "Where Creativity Sparks",
+    tagline: "Crafted with Intention. Remembered with Pride.",
   },
 };
 

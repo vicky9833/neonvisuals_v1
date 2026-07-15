@@ -7,7 +7,7 @@ import { GiftBuilder } from "@/components/gift-builder/gift-builder";
 const SITE_URL = "https://neonvisuals.in";
 
 export const metadata: Metadata = buildMetadata({
-  title: "Curate Your Experience Kit — Custom Corporate Gifting | Neon Visuals",
+  title: "Curate Your Experience Kit - Custom Corporate Gifting | Neon Visuals",
   description:
     "Build a personalised corporate gift kit for your team. Choose from 120+ products, select premium packaging, and submit your enquiry. Response within 2 hours.",
   path: "/gift-builder",
@@ -25,7 +25,7 @@ export default function GiftBuilderPage() {
       name: "Curate Your Experience Kit",
       url: `${SITE_URL}/gift-builder`,
       description:
-        "Interactive kit builder — choose products, packaging, and personalisation, then submit an enquiry.",
+        "Interactive kit builder - choose products, packaging, and personalisation, then submit an enquiry.",
     },
   ];
 
@@ -49,7 +49,7 @@ export default function GiftBuilderPage() {
             Curate Your Experience Kit
           </h1>
           <p className="mt-4 max-w-2xl text-lg leading-[1.7] text-[#9CA3AF]">
-            Select products, choose packaging, add your personal touch — we&apos;ll handle the
+            Select products, choose packaging, add your personal touch - we&apos;ll handle the
             rest. Your custom quote in 2 hours.
           </p>
         </div>

@@ -20,7 +20,7 @@ export function StepOccasion({
     <div>
       <h2 className="text-3xl font-bold tracking-tight text-[#1A1A1A]">What&apos;s the Occasion?</h2>
       <p className="mt-2 text-[#666666]">
-        Tell us what you&apos;re celebrating — we&apos;ll recommend the perfect products.
+        Tell us what you&apos;re celebrating - we&apos;ll recommend the perfect products.
       </p>
 
       <div className="mt-8 grid grid-cols-2 gap-4 md:grid-cols-3 lg:grid-cols-4">
@@ -64,7 +64,7 @@ export function StepOccasion({
             </button>
           ))}
         </div>
-        <p className="mt-2 text-xs text-[#999999]">For your quote request — no pricing is calculated.</p>
+        <p className="mt-2 text-xs text-[#999999]">For your quote request - no pricing is calculated.</p>
       </div>
 
       <div className="mt-10">

@@ -22,7 +22,7 @@ export function OccasionReminderEmail({
         <strong>{employeeName}</strong>&apos;s {occasion} is on{" "}
         <strong>{date}</strong>. Want us to prepare something memorable?
       </p>
-      <p>— The Neon Visuals team</p>
+      <p>- The Neon Visuals team</p>
     </div>
   );
 }

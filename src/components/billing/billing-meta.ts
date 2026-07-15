@@ -35,7 +35,7 @@ export const PAYMENT_METHOD_LABEL: Record<string, string> = {
   other: "Other",
 };
 
-/** Compact ₹ — ₹12.4L / ₹89K. */
+/** Compact ₹ - ₹12.4L / ₹89K. */
 export function compactRs(n: number): string {
   if (n >= 10_000_000) return `₹${(n / 10_000_000).toFixed(1)}Cr`;
   if (n >= 100_000) return `₹${(n / 100_000).toFixed(1)}L`;

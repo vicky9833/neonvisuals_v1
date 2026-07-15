@@ -1,7 +1,7 @@
 import type { Bucket } from "@/lib/types/product";
 
 /**
- * The 11 collections (A–K). Matches supabase/seed.sql. Used for static
+ * The 11 collections (A-K). Matches supabase/seed.sql. Used for static
  * generation and client-side filtering without database calls.
  */
 export const BUCKETS: readonly Bucket[] = [
