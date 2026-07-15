@@ -28,7 +28,7 @@ import type {
   Lead,
   LeadStatus,
 } from "@/lib/engines/lead";
-import { PIPELINE_STAGES } from "@/lib/engines/lead";
+import { PIPELINE_STAGES } from "@/lib/engines/lead-constants";
 import { PriorityDot } from "./LeadStatusBadge";
 import { LeadScoreIndicator } from "./LeadScoreIndicator";
 import { LeadActivityForm } from "./LeadActivityForm";

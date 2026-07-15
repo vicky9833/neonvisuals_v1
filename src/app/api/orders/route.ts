@@ -2,7 +2,8 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 import {
   requireApiAuth,
-  requireApiRole,
+  requirePlatform,
+  auditCrossTenantAccess,
   apiAuthErrorResponse,
 } from "@/lib/api-auth";
 import {
@@ -46,7 +47,10 @@ const createSchema = z.object({
 // POST - create an order (super_admin only).
 export async function POST(request: Request) {
   try {
-    const profile = await requireApiRole(["super_admin"]);
+    const profile = await requirePlatform("platform.orders.manage", {
+      entity: "order",
+      action: "order.create",
+    });
     const body = await request.json().catch(() => null);
     if (!body) {
       return NextResponse.json(
@@ -79,10 +83,18 @@ export async function GET(request: Request) {
   try {
     const profile = await requireApiAuth();
     const { searchParams } = new URL(request.url);
-    const isAdmin = profile.role === "super_admin";
+    const isAdmin = profile.isPlatformStaff;
 
     if (!isAdmin && !profile.company_id) {
       return NextResponse.json({ data: { orders: [], total: 0 } });
+    }
+    if (isAdmin) {
+      // Former super_admin cross-tenant override → platform authorize() + audit.
+      await auditCrossTenantAccess(profile, "platform.orders.manage", {
+        entity: "order",
+        action: "order.list",
+        companyId: searchParams.get("companyId"),
+      });
     }
 
     const from = searchParams.get("from");

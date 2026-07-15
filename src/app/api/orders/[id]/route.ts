@@ -2,7 +2,8 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 import {
   requireApiAuth,
-  requireApiRole,
+  requirePlatform,
+  auditCrossTenantAccess,
   apiAuthErrorResponse,
 } from "@/lib/api-auth";
 import { getOrder, updateOrder, toClientOrder } from "@/lib/engines/order";
@@ -54,7 +55,13 @@ export async function GET(
       );
     }
 
-    if (profile.role === "super_admin") {
+    if (profile.isPlatformStaff) {
+      await auditCrossTenantAccess(profile, "platform.orders.manage", {
+        entity: "order",
+        entityId: id,
+        action: "order.read",
+        companyId: order.company_id,
+      });
       return NextResponse.json({ data: order });
     }
     // Client: enforce company scoping + strip pricing.
@@ -82,8 +89,8 @@ export async function PATCH(
   { params }: { params: Promise<{ id: string }> },
 ) {
   try {
-    await requireApiRole(["super_admin"]);
     const { id } = await params;
+    await requirePlatform("platform.orders.manage", { entity: "order", entityId: id, action: "order.update" });
     const body = await request.json().catch(() => null);
     if (!body) {
       return NextResponse.json(

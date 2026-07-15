@@ -39,9 +39,16 @@
  * RLS applies, AND MUST additionally perform an API-layer company_id check.
  * Belt AND braces.
  *
- * KNOWN VIOLATIONS to be fixed in Prompt 2 (they use createAdminClient for
- * tenant-plane work and therefore bypass RLS today):
- *   src/lib/engines/billing.ts, order.ts, quote.ts, lead.ts, memory.ts
+ * MIGRATED IN PROMPT 2 (item 6): billing.ts, order.ts, quote.ts, and lead.ts
+ * now use this request-scoped RLS client for tenant-plane work; role gating is
+ * done by authorize() (src/lib/authz/matrix.ts) and RLS is the backstop.
+ * memory.ts ALWAYS used the RLS client — it was never a violation; the earlier
+ * note was incorrect and has been removed.
+ * STILL ELEVATED (justified system callers, service-role by design):
+ *   - Razorpay webhook (billing.handleRazorpayWebhook + threaded helpers),
+ *   - reminder cron (/api/reminders/cron), /api/admin/team,
+ *   - public lead capture (lead.captureLead), lead→client company insert
+ *     (lead.convertLeadToClient), onboarding company insert, PDF storage upload.
  * ============================================================================
  */
 import { createServerClient } from "@supabase/ssr";

@@ -1,9 +1,7 @@
 import { Check } from "lucide-react";
 import { cn } from "@/lib/utils";
-import {
-  ORDER_STATUS_FLOW,
-  type OrderStatus,
-} from "@/lib/engines/order";
+import { ORDER_STATUS_FLOW } from "@/lib/engines/order-constants";
+import type { OrderStatus } from "@/lib/engines/order";
 import { ORDER_STATUS_META } from "./order-status";
 
 interface OrderStatusPipelineProps {

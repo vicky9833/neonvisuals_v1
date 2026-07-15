@@ -64,6 +64,7 @@ export async function createCompanyAndCompleteOnboarding(
       primary_contact_email: profile?.email ?? user.email ?? null,
       primary_contact_phone: profile?.phone ?? null,
       created_by: user.id,
+      owner_id: user.id,
     })
     .select("id, name")
     .single();
@@ -75,7 +76,22 @@ export async function createCompanyAndCompleteOnboarding(
     };
   }
 
-  // 4. Link profile to the company and mark onboarded.
+  // 4. Write the TENANT-PLANE membership (source of truth for authz + scoping,
+  //    Prompt 2 item 5): the creator is the org_owner. Elevated client is
+  //    justified — the membership does not exist yet, so RLS can't authorise it.
+  const { error: memberError } = await admin.from("company_members").insert({
+    company_id: company.id,
+    user_id: user.id,
+    role: "org_owner",
+    status: "active",
+  });
+  if (memberError) {
+    return { ok: false, error: memberError.message };
+  }
+
+  // 5. Mark onboarded. profiles.company_id is retained ONLY for the
+  //    getProfile() company-display join; all tenant-scoping READS now key on
+  //    company_members (see src/lib/api-auth.ts requireApiAuth).
   const { error: profileError } = await admin
     .from("profiles")
     .update({ company_id: company.id, is_onboarded: true })

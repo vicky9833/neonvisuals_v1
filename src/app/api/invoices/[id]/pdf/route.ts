@@ -1,5 +1,9 @@
 import { NextResponse } from "next/server";
-import { requireApiAuth, apiAuthErrorResponse } from "@/lib/api-auth";
+import {
+  requireApiAuth,
+  auditCrossTenantAccess,
+  apiAuthErrorResponse,
+} from "@/lib/api-auth";
 import { getInvoice } from "@/lib/engines/billing";
 import { generateInvoicePDF } from "@/lib/engines/invoice-pdf";
 
@@ -20,10 +24,14 @@ export async function GET(
         { status: 404 },
       );
     }
-    if (
-      profile.role !== "super_admin" &&
-      invoice.company_id !== profile.company_id
-    ) {
+    if (profile.isPlatformStaff) {
+      await auditCrossTenantAccess(profile, "platform.billing.manage", {
+        entity: "invoice",
+        entityId: id,
+        action: "invoice.pdf",
+        companyId: invoice.company_id,
+      });
+    } else if (invoice.company_id !== profile.company_id) {
       return NextResponse.json(
         { error: "forbidden", message: "No access to this invoice." },
         { status: 403 },

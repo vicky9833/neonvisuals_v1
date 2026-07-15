@@ -147,3 +147,31 @@ describe("Feature: image-catalog-rebuild, Property 15 — copy never contains pr
     );
   });
 });
+
+// ---------------------------------------------------------------------------
+// Regression (Prompt 2, item 9): humaniseName must not crash on undefined name.
+// Before the fix, buildFallbackCopy(undefined) → humaniseName(undefined) →
+// undefined.replace(...) → TypeError. It must now yield safe generic copy.
+// ---------------------------------------------------------------------------
+describe("Item 9 — undefined/null name no longer crashes", () => {
+  it("buildFallbackCopy(undefined) returns safe, non-empty, price-free copy", () => {
+    const copy = buildFallbackCopy(undefined as unknown as string);
+    expect(copy.tagline.trim().length).toBeGreaterThan(0);
+    expect(copy.description.trim().length).toBeGreaterThan(0);
+    expect(containsPriceToken(copy.tagline)).toBe(false);
+    expect(containsPriceToken(copy.description)).toBe(false);
+  });
+
+  it("buildFallbackCopy(null) does not throw", () => {
+    expect(() => buildFallbackCopy(null as unknown as string)).not.toThrow();
+  });
+
+  it("getProductCopy with an undefined name for an unauthored SKU falls back safely", () => {
+    const { copy, usedFallback } = getProductCopy(
+      "NV-Z-999",
+      undefined as unknown as string,
+    );
+    expect(usedFallback).toBe(true);
+    expect(copy.tagline.trim().length).toBeGreaterThan(0);
+  });
+});

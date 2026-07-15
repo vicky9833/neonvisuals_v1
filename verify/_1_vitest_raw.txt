@@ -1,0 +1,175 @@
+﻿
+ RUN  v4.1.10 C:/neonvisuals_v1
+
+ Γ£ô src/lib/authz/matrix.test.ts > TENANT PLANE (┬º6A) ΓÇö every role ├ù every capability > settings.manage / org_owner (cell=Y) 2ms
+ Γ£ô src/lib/authz/matrix.test.ts > TENANT PLANE (┬º6A) ΓÇö every role ├ù every capability > settings.manage / org_admin (cell=Y) 0ms
+ Γ£ô src/lib/authz/matrix.test.ts > TENANT PLANE (┬º6A) ΓÇö every role ├ù every capability > settings.manage / hr (cell=N) 0ms
+ Γ£ô src/lib/authz/matrix.test.ts > TENANT PLANE (┬º6A) ΓÇö every role ├ù every capability > settings.manage / finance (cell=N) 0ms
+ Γ£ô src/lib/authz/matrix.test.ts > TENANT PLANE (┬º6A) ΓÇö every role ├ù every capability > settings.manage / manager (cell=N) 0ms
+ Γ£ô src/lib/authz/matrix.test.ts > TENANT PLANE (┬º6A) ΓÇö every role ├ù every capability > settings.manage / viewer (cell=N) 0ms
+ Γ£ô src/lib/authz/matrix.test.ts > TENANT PLANE (┬º6A) ΓÇö every role ├ù every capability > members.invite / org_owner (cell=Y) 0ms
+ Γ£ô src/lib/authz/matrix.test.ts > TENANT PLANE (┬º6A) ΓÇö every role ├ù every capability > members.invite / org_admin (cell=Y) 0ms
+ Γ£ô src/lib/authz/matrix.test.ts > TENANT PLANE (┬º6A) ΓÇö every role ├ù every capability > members.invite / hr (cell=N) 0ms
+ Γ£ô src/lib/authz/matrix.test.ts > TENANT PLANE (┬º6A) ΓÇö every role ├ù every capability > members.invite / finance (cell=N) 0ms
+ Γ£ô src/lib/authz/matrix.test.ts > TENANT PLANE (┬º6A) ΓÇö every role ├ù every capability > members.invite / manager (cell=N) 0ms
+ Γ£ô src/lib/authz/matrix.test.ts > TENANT PLANE (┬º6A) ΓÇö every role ├ù every capability > members.invite / viewer (cell=N) 0ms
+ Γ£ô src/lib/authz/matrix.test.ts > TENANT PLANE (┬º6A) ΓÇö every role ├ù every capability > members.change_role / org_owner (cell=Y) 0ms
+ Γ£ô src/lib/authz/matrix.test.ts > TENANT PLANE (┬º6A) ΓÇö every role ├ù every capability > members.change_role / org_admin (cell=Y) 0ms
+ Γ£ô src/lib/authz/matrix.test.ts > TENANT PLANE (┬º6A) ΓÇö every role ├ù every capability > members.change_role / hr (cell=N) 0ms
+ Γ£ô src/lib/authz/matrix.test.ts > TENANT PLANE (┬º6A) ΓÇö every role ├ù every capability > members.change_role / finance (cell=N) 0ms
+ Γ£ô src/lib/authz/matrix.test.ts > TENANT PLANE (┬º6A) ΓÇö every role ├ù every capability > members.change_role / manager (cell=N) 0ms
+ Γ£ô src/lib/authz/matrix.test.ts > TENANT PLANE (┬º6A) ΓÇö every role ├ù every capability > members.change_role / viewer (cell=N) 0ms
+ Γ£ô src/lib/authz/matrix.test.ts > TENANT PLANE (┬º6A) ΓÇö every role ├ù every capability > org.delete / org_owner (cell=Y) 0ms
+ Γ£ô src/lib/authz/matrix.test.ts > TENANT PLANE (┬º6A) ΓÇö every role ├ù every capability > org.delete / org_admin (cell=N) 0ms
+ Γ£ô src/lib/authz/matrix.test.ts > TENANT PLANE (┬º6A) ΓÇö every role ├ù every capability > org.delete / hr (cell=N) 0ms
+ Γ£ô src/lib/authz/matrix.test.ts > TENANT PLANE (┬º6A) ΓÇö every role ├ù every capability > org.delete / finance (cell=N) 0ms
+ Γ£ô src/lib/authz/matrix.test.ts > TENANT PLANE (┬º6A) ΓÇö every role ├ù every capability > org.delete / manager (cell=N) 0ms
+ Γ£ô src/lib/authz/matrix.test.ts > TENANT PLANE (┬º6A) ΓÇö every role ├ù every capability > org.delete / viewer (cell=N) 0ms
+ Γ£ô src/lib/authz/matrix.test.ts > TENANT PLANE (┬º6A) ΓÇö every role ├ù every capability > employees.edit / org_owner (cell=Y) 0ms
+ Γ£ô src/lib/authz/matrix.test.ts > TENANT PLANE (┬º6A) ΓÇö every role ├ù every capability > employees.edit / org_admin (cell=Y) 0ms
+ Γ£ô src/lib/authz/matrix.test.ts > TENANT PLANE (┬º6A) ΓÇö every role ├ù every capability > employees.edit / hr (cell=Y) 0ms
+ Γ£ô src/lib/authz/matrix.test.ts > TENANT PLANE (┬º6A) ΓÇö every role ├ù every capability > employees.edit / finance (cell=N) 0ms
+ Γ£ô src/lib/authz/matrix.test.ts > TENANT PLANE (┬º6A) ΓÇö every role ├ù every capability > employees.edit / manager (cell=own-dept) 0ms
+ Γ£ô src/lib/authz/matrix.test.ts > TENANT PLANE (┬º6A) ΓÇö every role ├ù every capability > employees.edit / viewer (cell=N) 0ms
+ Γ£ô src/lib/authz/matrix.test.ts > TENANT PLANE (┬º6A) ΓÇö every role ├ù every capability > employees.bulk_import / org_owner (cell=Y) 0ms
+ Γ£ô src/lib/authz/matrix.test.ts > TENANT PLANE (┬º6A) ΓÇö every role ├ù every capability > employees.bulk_import / org_admin (cell=Y) 0ms
+ Γ£ô src/lib/authz/matrix.test.ts > TENANT PLANE (┬º6A) ΓÇö every role ├ù every capability > employees.bulk_import / hr (cell=Y) 0ms
+ Γ£ô src/lib/authz/matrix.test.ts > TENANT PLANE (┬º6A) ΓÇö every role ├ù every capability > employees.bulk_import / finance (cell=N) 0ms
+ Γ£ô src/lib/authz/matrix.test.ts > TENANT PLANE (┬º6A) ΓÇö every role ├ù every capability > employees.bulk_import / manager (cell=N) 0ms
+ Γ£ô src/lib/authz/matrix.test.ts > TENANT PLANE (┬º6A) ΓÇö every role ├ù every capability > employees.bulk_import / viewer (cell=N) 0ms
+ Γ£ô src/lib/authz/matrix.test.ts > TENANT PLANE (┬º6A) ΓÇö every role ├ù every capability > employees.view_pii / org_owner (cell=Y) 0ms
+ Γ£ô src/lib/authz/matrix.test.ts > TENANT PLANE (┬º6A) ΓÇö every role ├ù every capability > employees.view_pii / org_admin (cell=Y) 0ms
+ Γ£ô src/lib/authz/matrix.test.ts > TENANT PLANE (┬º6A) ΓÇö every role ├ù every capability > employees.view_pii / hr (cell=Y) 0ms
+ Γ£ô src/lib/authz/matrix.test.ts > TENANT PLANE (┬º6A) ΓÇö every role ├ù every capability > employees.view_pii / finance (cell=N) 0ms
+ Γ£ô src/lib/authz/matrix.test.ts > TENANT PLANE (┬º6A) ΓÇö every role ├ù every capability > employees.view_pii / manager (cell=N) 0ms
+ Γ£ô src/lib/authz/matrix.test.ts > TENANT PLANE (┬º6A) ΓÇö every role ├ù every capability > employees.view_pii / viewer (cell=N) 0ms
+ Γ£ô src/lib/authz/matrix.test.ts > TENANT PLANE (┬º6A) ΓÇö every role ├ù every capability > occasions.manage / org_owner (cell=Y) 0ms
+ Γ£ô src/lib/authz/matrix.test.ts > TENANT PLANE (┬º6A) ΓÇö every role ├ù every capability > occasions.manage / org_admin (cell=Y) 0ms
+ Γ£ô src/lib/authz/matrix.test.ts > TENANT PLANE (┬º6A) ΓÇö every role ├ù every capability > occasions.manage / hr (cell=Y) 0ms
+ Γ£ô src/lib/authz/matrix.test.ts > TENANT PLANE (┬º6A) ΓÇö every role ├ù every capability > occasions.manage / finance (cell=N) 0ms
+ Γ£ô src/lib/authz/matrix.test.ts > TENANT PLANE (┬º6A) ΓÇö every role ├ù every capability > occasions.manage / manager (cell=own-dept) 0ms
+ Γ£ô src/lib/authz/matrix.test.ts > TENANT PLANE (┬º6A) ΓÇö every role ├ù every capability > occasions.manage / viewer (cell=N) 0ms
+ Γ£ô src/lib/authz/matrix.test.ts > TENANT PLANE (┬º6A) ΓÇö every role ├ù every capability > gifts.assign / org_owner (cell=Y) 0ms
+ Γ£ô src/lib/authz/matrix.test.ts > TENANT PLANE (┬º6A) ΓÇö every role ├ù every capability > gifts.assign / org_admin (cell=Y) 0ms
+ Γ£ô src/lib/authz/matrix.test.ts > TENANT PLANE (┬º6A) ΓÇö every role ├ù every capability > gifts.assign / hr (cell=Y) 0ms
+ Γ£ô src/lib/authz/matrix.test.ts > TENANT PLANE (┬º6A) ΓÇö every role ├ù every capability > gifts.assign / finance (cell=N) 0ms
+ Γ£ô src/lib/authz/matrix.test.ts > TENANT PLANE (┬º6A) ΓÇö every role ├ù every capability > gifts.assign / manager (cell=own-dept) 0ms
+ Γ£ô src/lib/authz/matrix.test.ts > TENANT PLANE (┬º6A) ΓÇö every role ├ù every capability > gifts.assign / viewer (cell=N) 0ms
+ Γ£ô src/lib/authz/matrix.test.ts > TENANT PLANE (┬º6A) ΓÇö every role ├ù every capability > quote.request / org_owner (cell=Y) 0ms
+ Γ£ô src/lib/authz/matrix.test.ts > TENANT PLANE (┬º6A) ΓÇö every role ├ù every capability > quote.request / org_admin (cell=Y) 0ms
+ Γ£ô src/lib/authz/matrix.test.ts > TENANT PLANE (┬º6A) ΓÇö every role ├ù every capability > quote.request / hr (cell=Y) 0ms
+ Γ£ô src/lib/authz/matrix.test.ts > TENANT PLANE (┬º6A) ΓÇö every role ├ù every capability > quote.request / finance (cell=N) 0ms
+ Γ£ô src/lib/authz/matrix.test.ts > TENANT PLANE (┬º6A) ΓÇö every role ├ù every capability > quote.request / manager (cell=Y) 0ms
+ Γ£ô src/lib/authz/matrix.test.ts > TENANT PLANE (┬º6A) ΓÇö every role ├ù every capability > quote.request / viewer (cell=N) 0ms
+ Γ£ô src/lib/authz/matrix.test.ts > TENANT PLANE (┬º6A) ΓÇö every role ├ù every capability > quote.approve / org_owner (cell=Y) 0ms
+ Γ£ô src/lib/authz/matrix.test.ts > TENANT PLANE (┬º6A) ΓÇö every role ├ù every capability > quote.approve / org_admin (cell=Y) 0ms
+ Γ£ô src/lib/authz/matrix.test.ts > TENANT PLANE (┬º6A) ΓÇö every role ├ù every capability > quote.approve / hr (cell=limit) 0ms
+ Γ£ô src/lib/authz/matrix.test.ts > TENANT PLANE (┬º6A) ΓÇö every role ├ù every capability > quote.approve / finance (cell=Y) 0ms
+ Γ£ô src/lib/authz/matrix.test.ts > TENANT PLANE (┬º6A) ΓÇö every role ├ù every capability > quote.approve / manager (cell=limit) 0ms
+ Γ£ô src/lib/authz/matrix.test.ts > TENANT PLANE (┬º6A) ΓÇö every role ├ù every capability > quote.approve / viewer (cell=N) 0ms
+ Γ£ô src/lib/authz/matrix.test.ts > TENANT PLANE (┬º6A) ΓÇö every role ├ù every capability > billing.manage / org_owner (cell=Y) 0ms
+ Γ£ô src/lib/authz/matrix.test.ts > TENANT PLANE (┬º6A) ΓÇö every role ├ù every capability > billing.manage / org_admin (cell=Y) 0ms
+ Γ£ô src/lib/authz/matrix.test.ts > TENANT PLANE (┬º6A) ΓÇö every role ├ù every capability > billing.manage / hr (cell=N) 0ms
+ Γ£ô src/lib/authz/matrix.test.ts > TENANT PLANE (┬º6A) ΓÇö every role ├ù every capability > billing.manage / finance (cell=Y) 0ms
+ Γ£ô src/lib/authz/matrix.test.ts > TENANT PLANE (┬º6A) ΓÇö every role ├ù every capability > billing.manage / manager (cell=N) 0ms
+ Γ£ô src/lib/authz/matrix.test.ts > TENANT PLANE (┬º6A) ΓÇö every role ├ù every capability > billing.manage / viewer (cell=N) 0ms
+ Γ£ô src/lib/authz/matrix.test.ts > TENANT PLANE (┬º6A) ΓÇö every role ├ù every capability > dashboards.view / org_owner (cell=Y) 0ms
+ Γ£ô src/lib/authz/matrix.test.ts > TENANT PLANE (┬º6A) ΓÇö every role ├ù every capability > dashboards.view / org_admin (cell=Y) 0ms
+ Γ£ô src/lib/authz/matrix.test.ts > TENANT PLANE (┬º6A) ΓÇö every role ├ù every capability > dashboards.view / hr (cell=Y) 0ms
+ Γ£ô src/lib/authz/matrix.test.ts > TENANT PLANE (┬º6A) ΓÇö every role ├ù every capability > dashboards.view / finance (cell=Y) 0ms
+ Γ£ô src/lib/authz/matrix.test.ts > TENANT PLANE (┬º6A) ΓÇö every role ├ù every capability > dashboards.view / manager (cell=own-dept) 0ms
+ Γ£ô src/lib/authz/matrix.test.ts > TENANT PLANE (┬º6A) ΓÇö every role ├ù every capability > dashboards.view / viewer (cell=Y) 0ms
+ Γ£ô src/lib/authz/matrix.test.ts > TENANT PLANE (┬º6A) ΓÇö every role ├ù every capability > employees.export / org_owner (cell=Y) 0ms
+ Γ£ô src/lib/authz/matrix.test.ts > TENANT PLANE (┬º6A) ΓÇö every role ├ù every capability > employees.export / org_admin (cell=Y) 0ms
+ Γ£ô src/lib/authz/matrix.test.ts > TENANT PLANE (┬º6A) ΓÇö every role ├ù every capability > employees.export / hr (cell=Y) 0ms
+ Γ£ô src/lib/authz/matrix.test.ts > TENANT PLANE (┬º6A) ΓÇö every role ├ù every capability > employees.export / finance (cell=N) 2ms
+ Γ£ô src/lib/authz/matrix.test.ts > TENANT PLANE (┬º6A) ΓÇö every role ├ù every capability > employees.export / manager (cell=N) 0ms
+ Γ£ô src/lib/authz/matrix.test.ts > TENANT PLANE (┬º6A) ΓÇö every role ├ù every capability > employees.export / viewer (cell=N) 0ms
+ Γ£ô src/lib/authz/matrix.test.ts > TENANT PLANE (┬º6A) ΓÇö every role ├ù every capability > concierge.raise / org_owner (cell=Y) 0ms
+ Γ£ô src/lib/authz/matrix.test.ts > TENANT PLANE (┬º6A) ΓÇö every role ├ù every capability > concierge.raise / org_admin (cell=Y) 0ms
+ Γ£ô src/lib/authz/matrix.test.ts > TENANT PLANE (┬º6A) ΓÇö every role ├ù every capability > concierge.raise / hr (cell=Y) 0ms
+ Γ£ô src/lib/authz/matrix.test.ts > TENANT PLANE (┬º6A) ΓÇö every role ├ù every capability > concierge.raise / finance (cell=Y) 0ms
+ Γ£ô src/lib/authz/matrix.test.ts > TENANT PLANE (┬º6A) ΓÇö every role ├ù every capability > concierge.raise / manager (cell=Y) 0ms
+ Γ£ô src/lib/authz/matrix.test.ts > TENANT PLANE (┬º6A) ΓÇö every role ├ù every capability > concierge.raise / viewer (cell=N) 0ms
+ Γ£ô src/lib/authz/matrix.test.ts > PLATFORM PLANE (┬º6B) ΓÇö every role ├ù every capability > platform.staff.manage / owner (cell=Y) 0ms
+ Γ£ô src/lib/authz/matrix.test.ts > PLATFORM PLANE (┬º6B) ΓÇö every role ├ù every capability > platform.staff.manage / admin (cell=N) 0ms
+ Γ£ô src/lib/authz/matrix.test.ts > PLATFORM PLANE (┬º6B) ΓÇö every role ├ù every capability > platform.staff.manage / ops (cell=N) 0ms
+ Γ£ô src/lib/authz/matrix.test.ts > PLATFORM PLANE (┬º6B) ΓÇö every role ├ù every capability > platform.staff.manage / finance (cell=N) 0ms
+ Γ£ô src/lib/authz/matrix.test.ts > PLATFORM PLANE (┬º6B) ΓÇö every role ├ù every capability > platform.staff.manage / support (cell=N) 0ms
+ Γ£ô src/lib/authz/matrix.test.ts > PLATFORM PLANE (┬º6B) ΓÇö every role ├ù every capability > platform.orgs.view_all / owner (cell=Y) 0ms
+ Γ£ô src/lib/authz/matrix.test.ts > PLATFORM PLANE (┬º6B) ΓÇö every role ├ù every capability > platform.orgs.view_all / admin (cell=Y) 0ms
+ Γ£ô src/lib/authz/matrix.test.ts > PLATFORM PLANE (┬º6B) ΓÇö every role ├ù every capability > platform.orgs.view_all / ops (cell=Y) 0ms
+ Γ£ô src/lib/authz/matrix.test.ts > PLATFORM PLANE (┬º6B) ΓÇö every role ├ù every capability > platform.orgs.view_all / finance (cell=Y) 0ms
+ Γ£ô src/lib/authz/matrix.test.ts > PLATFORM PLANE (┬º6B) ΓÇö every role ├ù every capability > platform.orgs.view_all / support (cell=Y) 0ms
+ Γ£ô src/lib/authz/matrix.test.ts > PLATFORM PLANE (┬º6B) ΓÇö every role ├ù every capability > platform.all_features / owner (cell=Y) 0ms
+ Γ£ô src/lib/authz/matrix.test.ts > PLATFORM PLANE (┬º6B) ΓÇö every role ├ù every capability > platform.all_features / admin (cell=Y) 0ms
+ Γ£ô src/lib/authz/matrix.test.ts > PLATFORM PLANE (┬º6B) ΓÇö every role ├ù every capability > platform.all_features / ops (cell=Y) 0ms
+ Γ£ô src/lib/authz/matrix.test.ts > PLATFORM PLANE (┬º6B) ΓÇö every role ├ù every capability > platform.all_features / finance (cell=Y) 0ms
+ Γ£ô src/lib/authz/matrix.test.ts > PLATFORM PLANE (┬º6B) ΓÇö every role ├ù every capability > platform.all_features / support (cell=Y) 0ms
+ Γ£ô src/lib/authz/matrix.test.ts > PLATFORM PLANE (┬º6B) ΓÇö every role ├ù every capability > platform.plan_override / owner (cell=Y) 0ms
+ Γ£ô src/lib/authz/matrix.test.ts > PLATFORM PLANE (┬º6B) ΓÇö every role ├ù every capability > platform.plan_override / admin (cell=Y) 0ms
+ Γ£ô src/lib/authz/matrix.test.ts > PLATFORM PLANE (┬º6B) ΓÇö every role ├ù every capability > platform.plan_override / ops (cell=N) 0ms
+ Γ£ô src/lib/authz/matrix.test.ts > PLATFORM PLANE (┬º6B) ΓÇö every role ├ù every capability > platform.plan_override / finance (cell=N) 0ms
+ Γ£ô src/lib/authz/matrix.test.ts > PLATFORM PLANE (┬º6B) ΓÇö every role ├ù every capability > platform.plan_override / support (cell=N) 0ms
+ Γ£ô src/lib/authz/matrix.test.ts > PLATFORM PLANE (┬º6B) ΓÇö every role ├ù every capability > platform.catalog.manage / owner (cell=Y) 0ms
+ Γ£ô src/lib/authz/matrix.test.ts > PLATFORM PLANE (┬º6B) ΓÇö every role ├ù every capability > platform.catalog.manage / admin (cell=Y) 0ms
+ Γ£ô src/lib/authz/matrix.test.ts > PLATFORM PLANE (┬º6B) ΓÇö every role ├ù every capability > platform.catalog.manage / ops (cell=N) 0ms
+ Γ£ô src/lib/authz/matrix.test.ts > PLATFORM PLANE (┬º6B) ΓÇö every role ├ù every capability > platform.catalog.manage / finance (cell=Y) 0ms
+ Γ£ô src/lib/authz/matrix.test.ts > PLATFORM PLANE (┬º6B) ΓÇö every role ├ù every capability > platform.catalog.manage / support (cell=N) 0ms
+ Γ£ô src/lib/authz/matrix.test.ts > PLATFORM PLANE (┬º6B) ΓÇö every role ├ù every capability > platform.orders.manage / owner (cell=Y) 0ms
+ Γ£ô src/lib/authz/matrix.test.ts > PLATFORM PLANE (┬º6B) ΓÇö every role ├ù every capability > platform.orders.manage / admin (cell=Y) 0ms
+ Γ£ô src/lib/authz/matrix.test.ts > PLATFORM PLANE (┬º6B) ΓÇö every role ├ù every capability > platform.orders.manage / ops (cell=Y) 0ms
+ Γ£ô src/lib/authz/matrix.test.ts > PLATFORM PLANE (┬º6B) ΓÇö every role ├ù every capability > platform.orders.manage / finance (cell=N) 0ms
+ Γ£ô src/lib/authz/matrix.test.ts > PLATFORM PLANE (┬º6B) ΓÇö every role ├ù every capability > platform.orders.manage / support (cell=N) 0ms
+ Γ£ô src/lib/authz/matrix.test.ts > PLATFORM PLANE (┬º6B) ΓÇö every role ├ù every capability > platform.billing.manage / owner (cell=Y) 0ms
+ Γ£ô src/lib/authz/matrix.test.ts > PLATFORM PLANE (┬º6B) ΓÇö every role ├ù every capability > platform.billing.manage / admin (cell=Y) 0ms
+ Γ£ô src/lib/authz/matrix.test.ts > PLATFORM PLANE (┬º6B) ΓÇö every role ├ù every capability > platform.billing.manage / ops (cell=N) 0ms
+ Γ£ô src/lib/authz/matrix.test.ts > PLATFORM PLANE (┬º6B) ΓÇö every role ├ù every capability > platform.billing.manage / finance (cell=Y) 0ms
+ Γ£ô src/lib/authz/matrix.test.ts > PLATFORM PLANE (┬º6B) ΓÇö every role ├ù every capability > platform.billing.manage / support (cell=N) 0ms
+ Γ£ô src/lib/authz/matrix.test.ts > PLATFORM PLANE (┬º6B) ΓÇö every role ├ù every capability > platform.concierge.inbox / owner (cell=Y) 0ms
+ Γ£ô src/lib/authz/matrix.test.ts > PLATFORM PLANE (┬º6B) ΓÇö every role ├ù every capability > platform.concierge.inbox / admin (cell=Y) 0ms
+ Γ£ô src/lib/authz/matrix.test.ts > PLATFORM PLANE (┬º6B) ΓÇö every role ├ù every capability > platform.concierge.inbox / ops (cell=Y) 0ms
+ Γ£ô src/lib/authz/matrix.test.ts > PLATFORM PLANE (┬º6B) ΓÇö every role ├ù every capability > platform.concierge.inbox / finance (cell=N) 0ms
+ Γ£ô src/lib/authz/matrix.test.ts > PLATFORM PLANE (┬º6B) ΓÇö every role ├ù every capability > platform.concierge.inbox / support (cell=Y) 0ms
+ Γ£ô src/lib/authz/matrix.test.ts > PLATFORM PLANE (┬º6B) ΓÇö every role ├ù every capability > platform.pii.read / owner (cell=Y) 0ms
+ Γ£ô src/lib/authz/matrix.test.ts > PLATFORM PLANE (┬º6B) ΓÇö every role ├ù every capability > platform.pii.read / admin (cell=Y) 0ms
+ Γ£ô src/lib/authz/matrix.test.ts > PLATFORM PLANE (┬º6B) ΓÇö every role ├ù every capability > platform.pii.read / ops (cell=shipping-only) 0ms
+ Γ£ô src/lib/authz/matrix.test.ts > PLATFORM PLANE (┬º6B) ΓÇö every role ├ù every capability > platform.pii.read / finance (cell=N) 0ms
+ Γ£ô src/lib/authz/matrix.test.ts > PLATFORM PLANE (┬º6B) ΓÇö every role ├ù every capability > platform.pii.read / support (cell=N) 0ms
+ Γ£ô src/lib/authz/matrix.test.ts > PLATFORM PLANE (┬º6B) ΓÇö every role ├ù every capability > platform.impersonate / owner (cell=Y) 0ms
+ Γ£ô src/lib/authz/matrix.test.ts > PLATFORM PLANE (┬º6B) ΓÇö every role ├ù every capability > platform.impersonate / admin (cell=Y) 0ms
+ Γ£ô src/lib/authz/matrix.test.ts > PLATFORM PLANE (┬º6B) ΓÇö every role ├ù every capability > platform.impersonate / ops (cell=N) 0ms
+ Γ£ô src/lib/authz/matrix.test.ts > PLATFORM PLANE (┬º6B) ΓÇö every role ├ù every capability > platform.impersonate / finance (cell=N) 0ms
+ Γ£ô src/lib/authz/matrix.test.ts > PLATFORM PLANE (┬º6B) ΓÇö every role ├ù every capability > platform.impersonate / support (cell=Y) 0ms
+ Γ£ô src/lib/authz/matrix.test.ts > PLATFORM PLANE (┬º6B) ΓÇö every role ├ù every capability > platform.demo_sandbox / owner (cell=Y) 0ms
+ Γ£ô src/lib/authz/matrix.test.ts > PLATFORM PLANE (┬º6B) ΓÇö every role ├ù every capability > platform.demo_sandbox / admin (cell=Y) 0ms
+ Γ£ô src/lib/authz/matrix.test.ts > PLATFORM PLANE (┬º6B) ΓÇö every role ├ù every capability > platform.demo_sandbox / ops (cell=N) 0ms
+ Γ£ô src/lib/authz/matrix.test.ts > PLATFORM PLANE (┬º6B) ΓÇö every role ├ù every capability > platform.demo_sandbox / finance (cell=N) 0ms
+ Γ£ô src/lib/authz/matrix.test.ts > PLATFORM PLANE (┬º6B) ΓÇö every role ├ù every capability > platform.demo_sandbox / support (cell=Y) 0ms
+ Γ£ô src/lib/authz/matrix.test.ts > Plane isolation (default-deny across planes) > tenant principal cannot use a platform capability 0ms
+ Γ£ô src/lib/authz/matrix.test.ts > Plane isolation (default-deny across planes) > platform principal cannot use a tenant capability 0ms
+ Γ£ô src/lib/authz/matrix.test.ts > Conditional class: own-dept (manager) > PASS ΓÇö resource in manager's own department 1ms
+ Γ£ô src/lib/authz/matrix.test.ts > Conditional class: own-dept (manager) > FAIL ΓÇö resource outside manager's department 0ms
+ Γ£ô src/lib/authz/matrix.test.ts > Conditional class: own-dept (manager) > FAIL ΓÇö manager has no department 0ms
+ Γ£ô src/lib/authz/matrix.test.ts > Conditional class: own-dept (manager) > FAIL ΓÇö resource department not supplied 0ms
+ Γ£ô src/lib/authz/matrix.test.ts > Conditional class: at-most-limit (quote approval) > PASS ΓÇö hr amount at the limit 0ms
+ Γ£ô src/lib/authz/matrix.test.ts > Conditional class: at-most-limit (quote approval) > PASS ΓÇö manager amount below the limit 0ms
+ Γ£ô src/lib/authz/matrix.test.ts > Conditional class: at-most-limit (quote approval) > FAIL ΓÇö amount exceeds the limit 0ms
+ Γ£ô src/lib/authz/matrix.test.ts > Conditional class: at-most-limit (quote approval) > FAIL ΓÇö NULL approval_limit denies 0ms
+ Γ£ô src/lib/authz/matrix.test.ts > Conditional class: at-most-limit (quote approval) > owner/admin/finance bypass the limit compare (unlimited) 0ms
+ Γ£ô src/lib/authz/matrix.test.ts > Conditional class: shipping-only (platform ops PII) > PASS ΓÇö ops requesting only shipping fields 0ms
+ Γ£ô src/lib/authz/matrix.test.ts > Conditional class: shipping-only (platform ops PII) > PASS ΓÇö no explicit request returns the shipping allowlist 0ms
+ Γ£ô src/lib/authz/matrix.test.ts > Conditional class: shipping-only (platform ops PII) > FAIL ΓÇö ops requesting a sensitive field (dob/phone) 0ms
+ Γ£ô src/lib/authz/matrix.test.ts > ┬º6A HARD RULE ΓÇö finance/manager-outside-dept/viewer NEVER see DOB/phone/address > finance denied employees.view_pii 0ms
+ Γ£ô src/lib/authz/matrix.test.ts > ┬º6A HARD RULE ΓÇö finance/manager-outside-dept/viewer NEVER see DOB/phone/address > viewer denied employees.view_pii 0ms
+ Γ£ô src/lib/authz/matrix.test.ts > ┬º6A HARD RULE ΓÇö finance/manager-outside-dept/viewer NEVER see DOB/phone/address > manager denied employees.view_pii (not own-dept ΓÇö a flat N in the matrix) 0ms
+ Γ£ô src/lib/authz/matrix.test.ts > Audit obligation (cross-tenant / impersonation) > platform owner cross-tenant order manage is audited 0ms
+ Γ£ô src/lib/authz/matrix.test.ts > Audit obligation (cross-tenant / impersonation) > platform admin PII read is audited (Y*) 0ms
+ Γ£ô src/lib/authz/matrix.test.ts > Audit obligation (cross-tenant / impersonation) > support impersonation is audited (Y*) 0ms
+ Γ£ô src/lib/authz/matrix.test.ts > Audit obligation (cross-tenant / impersonation) > non-cross-tenant platform capability is not audited 0ms
+
+ Test Files  1 passed (1)
+      Tests  166 passed (166)
+   Start at  12:42:09
+   Duration  378ms (transform 66ms, setup 0ms, import 93ms, tests 22ms, environment 0ms)
+

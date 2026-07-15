@@ -19,7 +19,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { LOSS_REASONS } from "@/lib/engines/lead";
+import { LOSS_REASONS } from "@/lib/engines/lead-constants";
 
 interface LeadLossDialogProps {
   open: boolean;

@@ -16,13 +16,13 @@ import {
 } from "@/components/ui/dialog";
 import { formatCurrency } from "@/lib/utils/format";
 import { getProductBySku } from "@/lib/catalog";
-import {
-  ORDER_TRANSITIONS,
-  type Order,
-  type OrderStatus,
-  type OrderUpdate,
-  type RecipientDeliveryStatus,
-  type RecipientInput,
+import { ORDER_TRANSITIONS } from "@/lib/engines/order-constants";
+import type {
+  Order,
+  OrderStatus,
+  OrderUpdate,
+  RecipientDeliveryStatus,
+  RecipientInput,
 } from "@/lib/engines/order";
 import { ORDER_STATUS_META } from "./order-status";
 import { OrderStatusPipeline } from "./OrderStatusPipeline";

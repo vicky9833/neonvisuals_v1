@@ -300,8 +300,12 @@ const GENERIC_LABEL = "This piece";
  * Indian `/-` notation), and any residual price/currency vocabulary word is
  * removed. If nothing safe remains, a {@link GENERIC_LABEL} is used.
  */
-function humaniseName(name: string): string {
-  const cleaned = name
+function humaniseName(name: string | null | undefined): string {
+  // Guard: `name` is typed `string` but folder-/DB-derived names can arrive
+  // undefined/null at runtime (Prompt 2, item 9). Coerce to "" so the
+  // .replace().replace().trim() chain can never throw on a missing name — the
+  // empty result falls through to GENERIC_LABEL below.
+  const cleaned = (name ?? "")
     .replace(/[^A-Za-z0-9 ]+/g, " ") // drop currency symbols, slashes, punctuation
     .replace(/\s+/g, " ")
     .trim();
@@ -330,7 +334,10 @@ function humaniseName(name: string): string {
  * back to a fully generic, name-free copy if any price token still slips
  * through, so the output is price-free by construction for ANY input.
  */
-export function buildFallbackCopy(name: string, collectionDisplayName?: string): ProductCopy {
+export function buildFallbackCopy(
+  name: string | null | undefined,
+  collectionDisplayName?: string,
+): ProductCopy {
   const rawCollection = collectionDisplayName?.trim() ?? "";
   const collection = containsPriceToken(rawCollection) ? "" : rawCollection;
   const label = humaniseName(name);
@@ -372,7 +379,7 @@ export function buildFallbackCopy(name: string, collectionDisplayName?: string):
  */
 export function getProductCopy(
   sku: string,
-  name: string,
+  name: string | null | undefined,
   collectionDisplayName?: string,
 ): { copy: ProductCopy; usedFallback: boolean } {
   const authored = PRODUCT_COPY[sku];

@@ -3,7 +3,7 @@ import { z } from "zod";
 import { createClient } from "@/lib/supabase/server";
 import {
   requireApiAuth,
-  requireApiRole,
+  requireTenant,
   apiAuthErrorResponse,
 } from "@/lib/api-auth";
 
@@ -51,7 +51,8 @@ export async function GET() {
 
 export async function PATCH(request: Request) {
   try {
-    const profile = await requireApiRole(["admin", "super_admin"]);
+    // Company settings update is a TENANT capability (org_owner/org_admin).
+    const profile = await requireTenant("settings.manage", null);
     if (!profile.company_id) {
       return NextResponse.json(
         { error: "no_company", message: "No company linked to this account." },

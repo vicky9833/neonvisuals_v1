@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { createQuote, listQuotes, type QuoteStatus } from "@/lib/engines/quote";
-import { requireApiRole, apiAuthErrorResponse } from "@/lib/api-auth";
+import { requirePlatform, apiAuthErrorResponse } from "@/lib/api-auth";
 
 // Quotes are internal - super_admin only (Neon Visuals team).
 export const runtime = "nodejs";
@@ -30,7 +30,7 @@ const quoteSchema = z.object({
 
 export async function POST(request: Request) {
   try {
-    await requireApiRole(["super_admin"]);
+    await requirePlatform("platform.billing.manage", { entity: "quote", action: "quote.create" });
     const body = await request.json().catch(() => null);
     if (body === null) {
       return NextResponse.json({ error: "invalid_input", message: "Invalid or missing request body." }, { status: 400 });
@@ -54,7 +54,7 @@ export async function POST(request: Request) {
 
 export async function GET(request: Request) {
   try {
-    await requireApiRole(["super_admin"]);
+    await requirePlatform("platform.billing.manage", { entity: "quote", action: "quote.list" });
     const { searchParams } = new URL(request.url);
     const quotes = await listQuotes({
       status: (searchParams.get("status") as QuoteStatus) ?? undefined,

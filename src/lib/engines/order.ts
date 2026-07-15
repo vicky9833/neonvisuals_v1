@@ -10,8 +10,17 @@
  * NEVER exposed to clients (the API strips financial fields by role).
  *
  * All business logic lives here - never in Supabase functions.
+ *
+ * Prompt 2 (item 6): switched from the service-role client to the request-scoped
+ * RLS client (`createClient`). All callers are authenticated platform staff
+ * (the /ops order screens); RLS `orders_*` / `order_*_write_*` policies scope
+ * access and `authorize()` at the route layer is the role gate. Order
+ * fulfilment writes to gift_records/employee_preferences rely on the
+ * `*_platform_write` policies (migration 020). The request-scoped client is
+ * imported DYNAMICALLY (see `userDb`) so this server engine stays import-safe
+ * from client components that use its exported constants/types.
  */
-import { createAdminClient } from "@/lib/supabase/admin";
+import type { SupabaseClient } from "@supabase/supabase-js";
 import {
   calculatePricing,
   type PackagingTierId,
@@ -186,34 +195,14 @@ export interface Order {
 // Status machine
 // ---------------------------------------------------------------------------
 
-/** Valid forward transitions. Any status may move to "cancelled". */
-export const ORDER_TRANSITIONS: Record<OrderStatus, OrderStatus[]> = {
-  draft: ["confirmed", "cancelled"],
-  confirmed: ["in_production", "cancelled"],
-  in_production: ["quality_check", "cancelled"],
-  quality_check: ["packed", "in_production", "cancelled"],
-  packed: ["shipped", "cancelled"],
-  shipped: ["delivered", "cancelled"],
-  delivered: ["completed", "cancelled"],
-  completed: [],
-  cancelled: [],
-};
-
-export function canTransition(from: OrderStatus, to: OrderStatus): boolean {
-  if (from === to) return false;
-  return (ORDER_TRANSITIONS[from] ?? []).includes(to);
-}
-
-export const ORDER_STATUS_FLOW: OrderStatus[] = [
-  "draft",
-  "confirmed",
-  "in_production",
-  "quality_check",
-  "packed",
-  "shipped",
-  "delivered",
-  "completed",
-];
+// Pure lifecycle constants live in ./order-constants (client-safe). Imported
+// for internal use here and re-exported for server callers.
+import {
+  ORDER_TRANSITIONS,
+  canTransition,
+  ORDER_STATUS_FLOW,
+} from "./order-constants";
+export { ORDER_TRANSITIONS, canTransition, ORDER_STATUS_FLOW };
 
 // ---------------------------------------------------------------------------
 // Row mapping
@@ -333,7 +322,7 @@ export async function createOrder(
   input: OrderInput,
   createdBy?: string,
 ): Promise<Order> {
-  const supa = createAdminClient();
+  const supa = await userDb();
 
   const pricing = await calculatePricing({
     products: input.products.map((p) => ({ sku: p.sku, quantity: p.quantity })),
@@ -471,7 +460,7 @@ export async function updateOrder(
   id: string,
   updates: OrderUpdate,
 ): Promise<Order> {
-  const supa = createAdminClient();
+  const supa = await userDb();
   const payload: Record<string, unknown> = {};
   for (const [key, value] of Object.entries(updates)) {
     const col = UPDATABLE_COLUMNS[key];
@@ -491,7 +480,7 @@ export async function updateOrder(
 // ---------------------------------------------------------------------------
 
 export async function getOrder(id: string): Promise<Order | null> {
-  const supa = createAdminClient();
+  const supa = await userDb();
   const { data, error } = await supa
     .from("orders")
     .select(ORDER_SELECT)
@@ -514,7 +503,7 @@ export async function listOrders(
   options: ListOrdersOptions = {},
 ): Promise<{ orders: Order[]; total: number }> {
   const { page = 1, pageSize = 25 } = options;
-  const supa = createAdminClient();
+  const supa = await userDb();
   let query = supa
     .from("orders")
     .select(ORDER_SELECT, { count: "exact" })
@@ -544,7 +533,7 @@ export async function listOrders(
 export async function getOrderStatusHistory(
   orderId: string,
 ): Promise<StatusEntry[]> {
-  const supa = createAdminClient();
+  const supa = await userDb();
   const { data, error } = await supa
     .from("order_status_history")
     .select("*")
@@ -564,7 +553,7 @@ export async function updateOrderStatus(
   notes?: string,
   changedBy?: string,
 ): Promise<void> {
-  const supa = createAdminClient();
+  const supa = await userDb();
   const { data: current, error: readErr } = await supa
     .from("orders")
     .select("status")
@@ -625,7 +614,7 @@ export async function getOrderEmailContext(
 ): Promise<OrderEmailContext | null> {
   const order = await getOrder(orderId);
   if (!order) return null;
-  const supa = createAdminClient();
+  const supa = await userDb();
   const { data: company } = await supa
     .from("companies")
     .select("name, primary_contact_name, primary_contact_email")
@@ -656,7 +645,7 @@ export async function addRecipients(
   recipients: RecipientInput[],
 ): Promise<void> {
   if (recipients.length === 0) return;
-  const supa = createAdminClient();
+  const supa = await userDb();
   const rows = recipients.map((r) => ({
     order_id: orderId,
     employee_id: r.employeeId ?? null,
@@ -676,7 +665,7 @@ export async function updateRecipientStatus(
   recipientId: string,
   status: RecipientDeliveryStatus,
 ): Promise<void> {
-  const supa = createAdminClient();
+  const supa = await userDb();
   const patch: Record<string, unknown> = { delivery_status: status };
   if (status === "delivered") {
     patch.delivered_date = new Date().toISOString().slice(0, 10);
@@ -689,7 +678,7 @@ export async function updateRecipientStatus(
 }
 
 export async function removeRecipient(recipientId: string): Promise<void> {
-  const supa = createAdminClient();
+  const supa = await userDb();
   const { error } = await supa
     .from("order_recipients")
     .delete()
@@ -700,7 +689,7 @@ export async function removeRecipient(recipientId: string): Promise<void> {
 export async function getOrderRecipients(
   orderId: string,
 ): Promise<OrderRecipient[]> {
-  const supa = createAdminClient();
+  const supa = await userDb();
   const { data, error } = await supa
     .from("order_recipients")
     .select("*")
@@ -724,7 +713,7 @@ export async function convertQuoteToOrder(
   companyId?: string,
   createdBy?: string,
 ): Promise<Order> {
-  const supa = createAdminClient();
+  const supa = await userDb();
   const { data: quote, error } = await supa
     .from("quotes")
     .select("*")
@@ -795,7 +784,7 @@ export async function convertQuoteToOrder(
 export async function generateGiftRecords(
   orderId: string,
 ): Promise<{ created: number; errors: string[] }> {
-  const supa = createAdminClient();
+  const supa = await userDb();
   const errors: string[] = [];
 
   const order = await getOrder(orderId);
@@ -868,7 +857,7 @@ export async function generateGiftRecords(
 
 /** Ensures an employee_preferences row exists and increments gift counters. */
 async function bumpPreferences(
-  supa: ReturnType<typeof createAdminClient>,
+  supa: SupabaseClient,
   companyId: string,
   employeeId: string,
   giftedDate: string,
@@ -911,7 +900,7 @@ export interface OrderEmployeeOption {
 export async function listCompanyEmployees(
   companyId: string,
 ): Promise<OrderEmployeeOption[]> {
-  const supa = createAdminClient();
+  const supa = await userDb();
   const { data, error } = await supa
     .from("employees")
     .select("id, full_name, email, department")
@@ -933,7 +922,7 @@ export interface CompanyOption {
 }
 
 export async function listCompaniesForOrders(): Promise<CompanyOption[]> {
-  const supa = createAdminClient();
+  const supa = await userDb();
   const { data, error } = await supa
     .from("companies")
     .select("id, name")
@@ -956,7 +945,7 @@ export interface OrderStats {
 }
 
 export async function getOrderStats(companyId?: string): Promise<OrderStats> {
-  const supa = createAdminClient();
+  const supa = await userDb();
   let query = supa
     .from("orders")
     .select("status, grand_total, created_at");
@@ -1072,4 +1061,12 @@ export function toClientOrder(order: Order): ClientOrder {
       notes: s.notes,
     })),
   };
+}
+
+// Request-scoped RLS client, imported dynamically so this server-only engine
+// can be imported by client components (for its exported constants/types)
+// without pulling `next/headers` into the client bundle.
+async function userDb() {
+  const { createClient } = await import("@/lib/supabase/server");
+  return createClient();
 }

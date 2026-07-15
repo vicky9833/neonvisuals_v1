@@ -3,7 +3,7 @@ import { getQuote, updateQuoteStatus } from "@/lib/engines/quote";
 import { generateQuotePDF } from "@/lib/engines/pdf";
 import { sendQuoteEmail } from "@/lib/services/email";
 import { WHATSAPP_NUMBER, SUPPORT_EMAIL } from "@/lib/utils/constants";
-import { requireApiRole, apiAuthErrorResponse } from "@/lib/api-auth";
+import { requirePlatform, apiAuthErrorResponse } from "@/lib/api-auth";
 
 export const runtime = "nodejs";
 
@@ -11,8 +11,8 @@ type Ctx = { params: Promise<{ id: string }> };
 
 export async function POST(_request: Request, { params }: Ctx) {
   try {
-    await requireApiRole(["super_admin"]);
     const { id } = await params;
+    await requirePlatform("platform.billing.manage", { entity: "quote", entityId: id, action: "quote.send" });
     const quote = await getQuote(id);
     if (!quote) return NextResponse.json({ error: "not_found", message: "Quote not found" }, { status: 404 });
 

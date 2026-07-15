@@ -6,11 +6,10 @@ import { createAdminClient } from "@/lib/supabase/admin";
  *
  * Cron/dispatch code MUST call this and nothing else — do not scatter recipient
  * look-ups across files. Uses the service-role client because this runs in the
- * cron (cross-tenant, no user session).
+ * cron (cross-tenant, no user session — KEPT ELEVATED, item 6).
  *
- * TODO(P2): switch the recipient source from companies.primary_contact_email +
- * profiles.company_id to company_members (profiles.company_id is retired in
- * Prompt 2). This one function is the only line that changes.
+ * Prompt 2 (item 5): recipients now come from companies.primary_contact_email +
+ * `company_members` (active) → `profiles.email`, NOT profiles.company_id.
  */
 export interface CompanyRecipients {
   clientName: string;
@@ -28,18 +27,31 @@ export async function resolveCompanyRecipients(
     .eq("id", companyId)
     .maybeSingle();
 
-  // TODO(P2): replace this profiles.company_id lookup with company_members.
-  const { data: profiles } = await supa
-    .from("profiles")
-    .select("email")
-    .eq("company_id", companyId);
+  // Tenant scoping via company_members (active), then resolve member emails
+  // from profiles by user id. Replaces the retired profiles.company_id lookup.
+  const { data: members } = await supa
+    .from("company_members")
+    .select("user_id")
+    .eq("company_id", companyId)
+    .eq("status", "active");
+
+  const memberIds = (members ?? [])
+    .map((m) => m.user_id as string | null)
+    .filter((id): id is string => Boolean(id));
 
   const emails = new Set<string>();
   const primary = (company?.primary_contact_email as string | null) ?? null;
   if (primary) emails.add(primary.trim().toLowerCase());
-  for (const row of profiles ?? []) {
-    const e = (row.email as string | null)?.trim().toLowerCase();
-    if (e) emails.add(e);
+
+  if (memberIds.length > 0) {
+    const { data: profiles } = await supa
+      .from("profiles")
+      .select("email")
+      .in("id", memberIds);
+    for (const row of profiles ?? []) {
+      const e = (row.email as string | null)?.trim().toLowerCase();
+      if (e) emails.add(e);
+    }
   }
 
   return {

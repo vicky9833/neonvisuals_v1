@@ -35,7 +35,7 @@ export async function POST(request: Request) {
   try {
     const profile = await requireApiRole(["super_admin"]);
     const to = profile.email;
-    const name = profile.full_name?.split(/\s+/)[0] ?? "there";
+    const name = profile.email?.split("@")[0] ?? "there";
     const body = await request.json().catch(() => null);
     if (body === null) {
       return NextResponse.json(

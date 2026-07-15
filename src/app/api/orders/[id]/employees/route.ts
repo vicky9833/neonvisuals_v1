@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { requireApiRole, apiAuthErrorResponse } from "@/lib/api-auth";
+import { requirePlatform, apiAuthErrorResponse } from "@/lib/api-auth";
 import { getOrder, listCompanyEmployees } from "@/lib/engines/order";
 
 export const runtime = "nodejs";
@@ -11,8 +11,8 @@ export async function GET(
   { params }: { params: Promise<{ id: string }> },
 ) {
   try {
-    await requireApiRole(["super_admin"]);
     const { id } = await params;
+    await requirePlatform("platform.orders.manage", { entity: "order", entityId: id, action: "order.employees.read" });
     const order = await getOrder(id);
     if (!order) {
       return NextResponse.json(
