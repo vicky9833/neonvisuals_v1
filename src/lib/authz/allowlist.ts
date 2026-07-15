@@ -55,6 +55,8 @@ const ALLOWLIST: readonly Entry[] = [
   { path: "/dashboard", access: "tenant" },
 
   // --- Auth flow ---
+  // NB: registration lives at /register (there is NO /signup route). Any
+  // /signup URL is off-allowlist and therefore default-denied (403).
   { path: "/onboarding", exact: true, access: "onboarding" },
   { path: "/login", exact: true, access: "auth" },
   { path: "/register", exact: true, access: "auth" },
