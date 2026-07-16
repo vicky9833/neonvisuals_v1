@@ -101,7 +101,7 @@ export type Database = {
           industry: string | null
           logo_url: string | null
           name: string
-          observed_festivals: string[] | null
+          _deprecated_observed_festivals: string[] | null
           onboarding_completed: boolean | null
           owner_id: string | null
           plan: string
