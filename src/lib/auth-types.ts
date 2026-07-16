@@ -5,14 +5,11 @@
  * never import `next/headers`, server-only Supabase clients, or any runtime.
  */
 
-export type Role = "super_admin" | "admin" | "client";
-
 export interface Profile {
   id: string;
   email: string;
   full_name: string;
   phone: string | null;
-  role: Role;
   company_id: string | null;
   avatar_url: string | null;
   is_onboarded: boolean;
@@ -64,6 +61,8 @@ export interface OnboardingData {
   website?: string;
   giftingOccasions: string[];
   giftingBudget?: string;
+  /** §10 DPA attestation — must be true or org creation is refused. */
+  dpaAccepted: boolean;
 }
 
 /** Result of completing onboarding. */
