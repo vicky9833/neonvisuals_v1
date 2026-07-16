@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { generateReminders, getUpcomingEvents } from "@/lib/engines/occasions";
+import { generateOccasions } from "@/lib/engines/occasion-generator";
 import { resolveCompanyRecipients } from "@/lib/services/recipients";
 import {
   opsAlertRecipients,
@@ -58,11 +59,13 @@ export async function GET(request: Request) {
       const companyId = c.id as string;
       companiesProcessed += 1;
 
-      // 1. Ensure reminder rows exist (service-role client => cross-tenant).
+      // 1. (Re)generate occasion instances, THEN derive reminders from them (Prompt 5b:
+      // reminders is a downstream consumer of occasions; no on-the-fly recompute).
       try {
+        await generateOccasions(companyId, supa);
         await generateReminders(companyId, supa);
       } catch (err) {
-        console.error(`[CRON] generateReminders failed for ${companyId}:`, err);
+        console.error(`[CRON] occasion/reminder gen failed for ${companyId}:`, err);
       }
 
       // 2. Email occasion reminders whose reminder_date is today.
