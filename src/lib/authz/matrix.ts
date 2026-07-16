@@ -135,7 +135,10 @@ export const TENANT_MATRIX: Record<TenantCapability, Record<CompanyRole, TenantC
   "org.delete":          { org_owner: "Y", org_admin: "N", hr: "N",     finance: "N", manager: "N",        viewer: "N" },
   "employees.edit":      { org_owner: "Y", org_admin: "Y", hr: "Y",     finance: "N", manager: "own-dept", viewer: "N" },
   "employees.bulk_import":{ org_owner: "Y", org_admin: "Y", hr: "Y",    finance: "N", manager: "N",        viewer: "N" },
-  "employees.view_pii":  { org_owner: "Y", org_admin: "Y", hr: "Y",     finance: "N", manager: "N",        viewer: "N" },
+  // Prompt 4a §6A: full-PII visibility = owner/admin/hr + manager (OWN dept).
+  // (Was manager:"N"; realigned to "own-dept" so manager-own-dept can read PII
+  // and manager-outside-dept is denied — matching the employee_pii RLS.)
+  "employees.view_pii":  { org_owner: "Y", org_admin: "Y", hr: "Y",     finance: "N", manager: "own-dept", viewer: "N" },
   "occasions.manage":    { org_owner: "Y", org_admin: "Y", hr: "Y",     finance: "N", manager: "own-dept", viewer: "N" },
   "gifts.assign":        { org_owner: "Y", org_admin: "Y", hr: "Y",     finance: "N", manager: "own-dept", viewer: "N" },
   "quote.request":       { org_owner: "Y", org_admin: "Y", hr: "Y",     finance: "N", manager: "Y",        viewer: "N" },

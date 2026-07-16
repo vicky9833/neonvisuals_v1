@@ -34,7 +34,7 @@ import {
 // dob_day/dob_month are numeric and set by the data layer (year discarded);
 // the form keeps a single `date_of_birth` date input for now.
 type FormState = Record<
-  keyof Omit<EmployeeFormData, "dob_day" | "dob_month">,
+  keyof Omit<EmployeeFormData, "dob_day" | "dob_month" | "department_id">,
   string
 >;
 

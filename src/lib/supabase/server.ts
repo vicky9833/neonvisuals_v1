@@ -14,11 +14,14 @@
  * Base tenant rule on every company-owned table:
  *     company_id IN (SELECT user_company_ids())   [+ is_platform_staff() for reads]
  *
- * employees — PRIVACY SPLIT (real, DB-enforced):
- *   Base table SELECT (incl. phone/dob_day/dob_month/delivery_address) is
- *   granted ONLY to org_owner/org_admin/hr (all rows) and manager (own dept).
- *   finance/viewer are DENIED base rows. They read `employees_safe`, a
- *   SECURITY DEFINER view that omits those four PII columns. Writes: owner/admin/hr.
+ * employees — PRIVACY SPLIT (real, DB-enforced; Prompt 4a):
+ *   Identity/work columns live on `employees` and are readable by ANY company
+ *   member (+ platform staff). PII lives in `employee_pii`: phone/delivery_address
+ *   are app-encrypted (AES-256-GCM envelopes); city/pincode/dob/notes are
+ *   plaintext. employee_pii SELECT is §6A-gated (org_owner/org_admin/hr + manager
+ *   of that employee's department + platform); finance/viewer/other-dept-manager
+ *   get NO PII rows. Writes: owner/admin/hr. The old employees_safe SECURITY
+ *   DEFINER view was DROPPED (it leaked city/pincode/notes to all members).
  *
  * audit_log — APPEND-ONLY. Read by own company + platform staff. There is NO
  *   UPDATE/DELETE policy for anyone, and a trigger (audit_log_is_append_only)

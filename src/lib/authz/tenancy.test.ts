@@ -156,43 +156,29 @@ beforeAll(async () => {
     .from("platform_staff")
     .insert({ user_id: S.platform.id, role: "ops" });
 
-  // Employees (PII on base table).
+  // Employees — Prompt 4a split: identity on `employees` (department_id FK),
+  // PII on `employee_pii`. phone_enc/delivery_address_enc hold app-encrypted
+  // envelopes in production; here (RLS visibility test, seeded via service role)
+  // dummy markers suffice since we assert row VISIBILITY, not decryption.
   const { data: emps, error: eErr } = await admin
     .from("employees")
     .insert([
-      {
-        company_id: S.companyA,
-        full_name: "Eng Person A",
-        department: "Engineering",
-        phone: "9990001111",
-        dob_day: 12,
-        dob_month: 6,
-        delivery_address: "1 Eng Road",
-      },
-      {
-        company_id: S.companyA,
-        full_name: "Design Person A",
-        department: "Design",
-        phone: "9990002222",
-        dob_day: 3,
-        dob_month: 9,
-        delivery_address: "2 Design Ave",
-      },
-      {
-        company_id: S.companyB,
-        full_name: "Person B",
-        department: "Ops",
-        phone: "9990003333",
-        dob_day: 1,
-        dob_month: 1,
-        delivery_address: "3 B Street",
-      },
+      { company_id: S.companyA, full_name: "Eng Person A", department_id: S.deptEng },
+      { company_id: S.companyA, full_name: "Design Person A", department_id: S.deptDesign },
+      { company_id: S.companyB, full_name: "Person B" },
     ])
     .select("id, full_name");
   if (eErr || !emps) throw new Error(`employees: ${eErr?.message}`);
   S.empEngA = emps.find((e) => e.full_name === "Eng Person A")!.id;
   S.empDesignA = emps.find((e) => e.full_name === "Design Person A")!.id;
   S.empB = emps.find((e) => e.full_name === "Person B")!.id;
+
+  const { error: piiErr } = await admin.from("employee_pii").insert([
+    { employee_id: S.empEngA, company_id: S.companyA, phone_enc: "enc:eng", dob_day: 12, dob_month: 6, delivery_address_enc: "enc:addr-eng", city: "Bengaluru", pincode: "560001" },
+    { employee_id: S.empDesignA, company_id: S.companyA, phone_enc: "enc:design", dob_day: 3, dob_month: 9 },
+    { employee_id: S.empB, company_id: S.companyB, phone_enc: "enc:b", dob_day: 1, dob_month: 1 },
+  ]);
+  if (piiErr) throw new Error(`employee_pii: ${piiErr.message}`);
 
   // A couple of tenant rows for cross-tenant read checks.
   await admin.from("reminders").insert([
@@ -215,6 +201,7 @@ afterAll(async () => {
   // Children first (FKs without cascade), then companies, then auth users.
   await admin.from("audit_log").delete().in("company_id", [S.companyA, S.companyB]);
   await admin.from("reminders").delete().in("company_id", [S.companyA, S.companyB]);
+  await admin.from("employee_pii").delete().in("company_id", [S.companyA, S.companyB]);
   await admin.from("employees").delete().in("company_id", [S.companyA, S.companyB]);
   await admin.from("company_members").delete().in("company_id", [S.companyA, S.companyB]);
   await admin.from("departments").delete().in("company_id", [S.companyA, S.companyB]);
@@ -282,15 +269,23 @@ d("migration 018 — tenant isolation (RLS, cookie client)", () => {
     expect(error).not.toBeNull(); // RLS with_check violation
   }, 60_000);
 
-  it("finance is DENIED employee PII (base rows) but reads employees_safe", async () => {
+  it("finance reads employee IDENTITY but is DENIED employee_pii rows (Prompt 4a)", async () => {
     const f = await asUser(S.finance.email!);
-    const base = await f.from("employees").select("id, phone").eq("company_id", S.companyA);
-    expect(base.data ?? []).toHaveLength(0); // base table denied for finance
-    const safe = await f.from("employees_safe").select("id, full_name").eq("company_id", S.companyA);
-    expect((safe.data ?? []).length).toBeGreaterThan(0); // safe view visible
-    // The safe view must NOT expose the PII columns.
-    const pii = await f.from("employees_safe").select("phone");
-    expect(pii.error).not.toBeNull();
+    // Identity is all-member readable (this is what employees_safe used to serve).
+    const ident = await f.from("employees").select("id, full_name").eq("company_id", S.companyA);
+    expect((ident.data ?? []).length).toBeGreaterThan(0);
+    // §6A: finance gets ZERO employee_pii rows — the leak (city/pincode/notes) is closed.
+    const pii = await f
+      .from("employee_pii")
+      .select("employee_id, phone_enc, city, pincode")
+      .eq("company_id", S.companyA);
+    expect(pii.data ?? []).toHaveLength(0);
+  }, 60_000);
+
+  it("owner/hr CAN read employee_pii rows for their company", async () => {
+    const a = await asUser(S.ownerA.email!);
+    const pii = await a.from("employee_pii").select("employee_id").eq("company_id", S.companyA);
+    expect((pii.data ?? []).length).toBeGreaterThan(0);
   }, 60_000);
 
   it("viewer cannot write anything", async () => {
@@ -307,15 +302,16 @@ d("migration 018 — tenant isolation (RLS, cookie client)", () => {
     expect(upd.data ?? []).toHaveLength(0);
   }, 60_000);
 
-  it("manager sees only their department's employees", async () => {
+  it("manager reads own-dept PII only (identity roster is all-member)", async () => {
     const m = await asUser(S.managerEng.email!);
-    const { data } = await m
-      .from("employees")
-      .select("id, department")
-      .eq("company_id", S.companyA);
-    const depts = new Set((data ?? []).map((r) => r.department));
-    expect(depts.has("Engineering")).toBe(true);
-    expect(depts.has("Design")).toBe(false);
+    // Identity: any member sees the full company roster post-split.
+    const ident = await m.from("employees").select("id").eq("company_id", S.companyA);
+    expect((ident.data ?? []).length).toBeGreaterThan(0);
+    // PII: manager (Engineering) sees ONLY their department's employee_pii rows.
+    const pii = await m.from("employee_pii").select("employee_id").eq("company_id", S.companyA);
+    const ids = new Set((pii.data ?? []).map((r) => r.employee_id));
+    expect(ids.has(S.empEngA)).toBe(true); // own dept
+    expect(ids.has(S.empDesignA)).toBe(false); // other dept — denied
   }, 60_000);
 
   it("platform staff can read across companies", async () => {

@@ -125,43 +125,9 @@ export type Database = {
       }
     }
     Views: {
-      employees_safe: {
-        Row: {
-          archetype: Database["public"]["Enums"]["employee_archetype"] | null
-          avatar_url: string | null
-          city: string | null
-          company_id: string | null
-          consent_status: string | null
-          created_at: string | null
-          created_by: string | null
-          department: string | null
-          designation: string | null
-          dietary_preference: string | null
-          dietary_restrictions: string | null
-          email: string | null
-          employee_code: string | null
-          full_name: string | null
-          gift_preferences: string | null
-          hobbies: string | null
-          hometown: string | null
-          id: string | null
-          interests: string | null
-          is_active: boolean | null
-          joining_date: string | null
-          linkedin_url: string | null
-          manager_email: string | null
-          manager_name: string | null
-          notes: string | null
-          offboarded_at: string | null
-          pincode: string | null
-          purge_after: string | null
-          reporting_manager: string | null
-          tier: string | null
-          tshirt_size: string | null
-          type: string | null
-          updated_at: string | null
-        }
-      }
+      // employees_safe was DROPPED in Prompt 4a (SECURITY DEFINER leak view).
+      // PII now lives in employee_pii behind §6A RLS.
+      [_ in never]: never
     }
     Functions: {
       accept_invite: {
@@ -170,6 +136,10 @@ export type Database = {
       }
       transfer_ownership: {
         Args: { target_user_id: string }
+        Returns: string
+      }
+      get_pii_dek: {
+        Args: { p_version: number }
         Returns: string
       }
       has_company_role: {

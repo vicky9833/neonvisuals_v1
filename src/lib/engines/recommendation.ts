@@ -66,17 +66,17 @@ export async function getRecommendations(params: {
   const supabase = await createClient();
   const { data: emp } = await supabase
     .from("employees")
-    .select("company_id, department")
+    .select("company_id, department_id")
     .eq("id", employeeId)
     .maybeSingle();
   const recentDeptSkus = new Set<string>();
-  if (emp?.department && emp.company_id) {
+  if (emp?.department_id && emp.company_id) {
     const { data: recent } = await supabase
       .from("gift_records")
-      .select("product_sku, employees!inner(department)")
+      .select("product_sku, employees!inner(department_id)")
       .eq("company_id", emp.company_id)
       .gte("gifted_date", monthsAgo(2))
-      .eq("employees.department", emp.department);
+      .eq("employees.department_id", emp.department_id);
     for (const r of recent ?? []) recentDeptSkus.add(r.product_sku as string);
   }
 

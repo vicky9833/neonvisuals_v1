@@ -8,6 +8,7 @@ import {
 import {
   authorize,
   type Capability,
+  type Decision,
   type PlatformRole,
   type ResourceContext,
 } from "@/lib/authz/matrix";
@@ -165,6 +166,35 @@ export async function requireTenant(
     throw new ApiAuthError(403, "forbidden", decision.reason ?? "Not permitted.");
   }
   return principal;
+}
+
+/**
+ * NON-throwing tenant capability check. Returns the {@link Decision} so callers
+ * can branch (e.g. include vs strip PII in a response) rather than 403. The
+ * throwing gate is {@link requireTenant}. Denies if the principal has no
+ * membership in the target company.
+ */
+export function tenantCapability(
+  principal: ApiPrincipal,
+  capability: Capability,
+  companyId?: string | null,
+  resourceCtx?: ResourceContext,
+): Decision {
+  const cid = companyId ?? principal.company_id;
+  const m = principal.memberships.find((mm) => mm.companyId === cid);
+  if (!m) {
+    return { effect: "deny", audit: false, reason: "No membership in this company." };
+  }
+  return authorize(
+    {
+      plane: "tenant",
+      role: m.role,
+      departmentId: m.departmentId,
+      approvalLimit: m.approvalLimit,
+    },
+    capability,
+    resourceCtx,
+  );
 }
 
 /**

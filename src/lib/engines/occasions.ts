@@ -111,18 +111,24 @@ export async function getCalendarEvents(
   const end = parse(endDate);
   const events: CalendarEvent[] = [];
 
-  // 1 + 2. Employee birthdays + anniversaries.
+  // 1 + 2. Employee birthdays + anniversaries. dob now lives in employee_pii
+  // (RLS-gated; the cron's service-role client sees all, a user client sees only
+  // §6A-permitted rows). department name resolves via the departments FK.
   const { data: employees } = await supabase
     .from("employees")
-    .select("id, full_name, department, dob_day, dob_month, joining_date")
+    .select(
+      "id, full_name, joining_date, department:departments(name), pii:employee_pii(dob_day, dob_month)",
+    )
     .eq("company_id", companyId)
     .eq("is_active", true);
 
   for (const e of employees ?? []) {
     const name = (e.full_name as string) ?? "Employee";
-    const dept = (e.department as string | null) ?? undefined;
-    const dobDay = e.dob_day as number | null;
-    const dobMonth = e.dob_month as number | null;
+    const deptRel = e.department as unknown as { name: string | null } | null;
+    const dept = deptRel?.name ?? undefined;
+    const piiRel = e.pii as unknown as { dob_day: number | null; dob_month: number | null } | null;
+    const dobDay = piiRel?.dob_day ?? null;
+    const dobMonth = piiRel?.dob_month ?? null;
     const doj = e.joining_date as string | null;
 
     if (dobMonth && dobDay) {
