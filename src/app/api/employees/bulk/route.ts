@@ -40,6 +40,10 @@ const bulkSchema = z.object({
 /**
  * JSON bulk import (pre-validated rows). Pro-only (§8); phone/delivery_address
  * encrypted on write; records an import_jobs row. Errors are BY-REFERENCE only.
+ *
+ * DEBT (Prompt 4b): sibling of /upload (multipart). Any change to the import
+ * write/encrypt/gate/error contract MUST be applied to BOTH. Prompt 10 verifies
+ * their equivalence.
  */
 export async function POST(request: Request) {
   try {

@@ -28,6 +28,10 @@ export const runtime = "nodejs";
  * (never persisted), validated, and inserted with phone/delivery_address
  * ENCRYPTED (via bulkCreateEmployees -> encryptPII). Pro-only (§8). All error
  * output is BY-REFERENCE (row/field/code) — NEVER a value (§10.12-13).
+ *
+ * DEBT (Prompt 4b): there are TWO import write paths — this /upload (multipart,
+ * canonical) and /bulk (JSON). Any change to the import write/encrypt/gate/error
+ * contract MUST be applied to BOTH. Prompt 10 verifies their equivalence.
  */
 export async function POST(request: Request) {
   try {

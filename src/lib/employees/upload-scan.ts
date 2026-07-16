@@ -22,5 +22,14 @@ import "server-only";
 export async function scanUploadOrThrow(_bytes: ArrayBuffer, _filename: string): Promise<void> {
   // TODO(scan): integrate a malware scanner here. Until then, see the mitigations
   // above. Do NOT remove this seam — uploads must pass through it.
+  //
+  // ⚠️ HARD ASSERTION (Prompt 4b promote confirmation): the no-op is ONLY tolerable
+  // while uploads are parsed in-memory and NEVER persisted or forwarded. If a future
+  // change persists the raw file (Storage/disk) OR forwards it to another service,
+  // a REAL malware scan becomes REQUIRED here BEFORE that change ships — the no-op
+  // must NOT silently read as "handled".
+  //
+  // TRACKED OBLIGATION: Prompt 10 (security sweep) owns closing this gap
+  // (integrate a scan API / AV pipeline, or an explicit accepted-risk sign-off).
   return;
 }
