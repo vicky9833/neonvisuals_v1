@@ -3,7 +3,16 @@ import type {
   CSVRow,
   CSVValidationResult,
   EmployeeFormData,
+  ImportIssue,
+  ImportRowError,
 } from "@/types/employee";
+
+/** Import limits (§10.12). Enforced client-side AND authoritatively server-side. */
+export const IMPORT_MAX_ROWS = 1000;
+export const IMPORT_MAX_BYTES = 5 * 1024 * 1024; // 5MB
+
+/** Required canonical headers for a valid import file. */
+export const REQUIRED_HEADERS = ["name", "email"] as const;
 
 /**
  * Client-side CSV/Excel parsing + validation. Runs entirely in the browser -
@@ -113,13 +122,61 @@ async function parseExcel(file: File): Promise<CSVRow[]> {
   return rowsFromRecords(records);
 }
 
-/** Detects the file type by extension and parses accordingly. */
+/** Detects the file type by extension and parses accordingly (client, FileReader). */
 export async function parseFile(file: File): Promise<CSVRow[]> {
   const name = file.name.toLowerCase();
   if (name.endsWith(".xlsx") || name.endsWith(".xls")) {
     return parseExcel(file);
   }
   return parseCSV(file);
+}
+
+/** Parses a CSV STRING (server-safe; no FileReader). */
+export function parseCsvText(text: string): CSVRow[] {
+  const result = Papa.parse<Record<string, unknown>>(text, {
+    header: true,
+    skipEmptyLines: "greedy",
+    transformHeader: (h) => h,
+  });
+  return rowsFromRecords(result.data);
+}
+
+/**
+ * SERVER-SIDE parse from raw bytes (Route Handler upload). Uses text parsing for
+ * CSV and xlsx (no formula evaluation) for Excel — no browser FileReader.
+ * Returns the CANONICAL source headers alongside the rows so the route can do
+ * header validation (rowsFromRecords always seeds name/email, so row keys can't
+ * be used to detect a missing header).
+ */
+export async function parseUploadWithMeta(
+  filename: string,
+  bytes: ArrayBuffer,
+): Promise<{ rows: CSVRow[]; headers: string[] }> {
+  const name = filename.toLowerCase();
+  if (name.endsWith(".xlsx") || name.endsWith(".xls")) {
+    const XLSX = await import("xlsx");
+    const wb = XLSX.read(bytes, { type: "array" });
+    const sheet = wb.Sheets[wb.SheetNames[0]];
+    const records = XLSX.utils.sheet_to_json<Record<string, unknown>>(sheet, {
+      defval: "",
+      raw: false,
+    });
+    const rawHeaders = records.length > 0 ? Object.keys(records[0]) : [];
+    return { rows: rowsFromRecords(records), headers: rawHeaders.map(normalizeHeader) };
+  }
+  const text = new TextDecoder().decode(bytes);
+  const result = Papa.parse<Record<string, unknown>>(text, {
+    header: true,
+    skipEmptyLines: "greedy",
+    transformHeader: (h) => h,
+  });
+  const rawHeaders = (result.meta.fields ?? []) as string[];
+  return { rows: rowsFromRecords(result.data), headers: rawHeaders.map(normalizeHeader) };
+}
+
+/** @deprecated Use parseUploadWithMeta (returns headers for validation). */
+export async function parseUpload(filename: string, bytes: ArrayBuffer): Promise<CSVRow[]> {
+  return (await parseUploadWithMeta(filename, bytes)).rows;
 }
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -185,6 +242,25 @@ function normalizeDietary(value: string): string | null {
   return map[v] ?? null;
 }
 
+/**
+ * Validates that the CANONICAL source `headers` (from parseUploadWithMeta) carry
+ * the required columns. Returns by-reference issues (no values). Pass the header
+ * list, NOT row keys (rowsFromRecords always seeds name/email).
+ */
+export function validateHeaders(headers: string[]): ImportIssue[] {
+  if (headers.length === 0) return [{ field: "file", code: "parse_failed" }];
+  const present = new Set(headers);
+  return REQUIRED_HEADERS.filter((h) => !present.has(h)).map((h) => ({
+    field: h,
+    code: "bad_header" as const,
+  }));
+}
+
+/**
+ * Validates rows and produces BY-REFERENCE issues (row/field/code) only — NEVER
+ * the offending value (§10.12-13). The offending values stay in `data` for the
+ * client preview but never enter an error/log/report.
+ */
 export function validateCSVRows(rows: CSVRow[]): CSVValidationResult[] {
   const emailCounts = new Map<string, number>();
   for (const r of rows) {
@@ -193,20 +269,20 @@ export function validateCSVRows(rows: CSVRow[]): CSVValidationResult[] {
   }
 
   return rows.map((row, i) => {
-    const errors: string[] = [];
-    const warnings: string[] = [];
+    const errors: ImportIssue[] = [];
+    const warnings: ImportIssue[] = [];
     const data: CSVRow = { ...row };
 
     const name = (row.name ?? "").trim();
     const email = (row.email ?? "").trim().toLowerCase();
 
-    if (!name) errors.push("Name is required");
+    if (!name) errors.push({ field: "name", code: "required_missing" });
     if (!email) {
-      errors.push("Email is required");
+      errors.push({ field: "email", code: "required_missing" });
     } else if (!EMAIL_RE.test(email)) {
-      errors.push("Email format is invalid");
+      errors.push({ field: "email", code: "invalid_email" });
     } else if ((emailCounts.get(email) ?? 0) > 1) {
-      errors.push("Duplicate email within this file");
+      errors.push({ field: "email", code: "duplicate_email" });
     }
     data.email = email;
     data.name = name;
@@ -215,7 +291,7 @@ export function validateCSVRows(rows: CSVRow[]): CSVValidationResult[] {
     if (row.date_of_birth) {
       const { iso, valid } = parseFlexibleDate(row.date_of_birth);
       if (!valid) {
-        errors.push("Date of birth is not a valid date");
+        errors.push({ field: "date_of_birth", code: "invalid_date" });
       } else if (iso) {
         // Keep DAY + MONTH only. The birth YEAR is never parsed into the
         // payload nor persisted (privacy-by-design, migration 018).
@@ -228,11 +304,11 @@ export function validateCSVRows(rows: CSVRow[]): CSVValidationResult[] {
     if (row.joining_date) {
       const { iso, valid } = parseFlexibleDate(row.joining_date);
       if (!valid) {
-        errors.push("Joining date is not a valid date");
+        errors.push({ field: "joining_date", code: "invalid_date" });
       } else if (iso) {
         data.joining_date = iso;
         if (new Date(iso).getTime() > Date.now()) {
-          warnings.push("Joining date is in the future");
+          warnings.push({ field: "joining_date", code: "future_date" });
         }
       }
     }
@@ -241,7 +317,7 @@ export function validateCSVRows(rows: CSVRow[]): CSVValidationResult[] {
     if (row.tshirt_size) {
       const size = row.tshirt_size.trim().toUpperCase();
       if (!VALID_TSHIRT.includes(size)) {
-        errors.push(`T-shirt size "${row.tshirt_size}" is invalid`);
+        errors.push({ field: "tshirt_size", code: "invalid_enum" });
       } else {
         data.tshirt_size = size;
       }
@@ -249,19 +325,19 @@ export function validateCSVRows(rows: CSVRow[]): CSVValidationResult[] {
     if (row.dietary_preference) {
       const diet = normalizeDietary(row.dietary_preference);
       if (!diet) {
-        errors.push(`Dietary preference "${row.dietary_preference}" is invalid`);
+        errors.push({ field: "dietary_preference", code: "invalid_enum" });
       } else {
         data.dietary_preference = diet;
       }
     }
 
-    // Warnings.
+    // Warnings (by-reference).
     if (row.phone) {
       const digits = row.phone.replace(/\D/g, "");
-      if (digits.length < 10) warnings.push("Phone number looks invalid");
+      if (digits.length < 10) warnings.push({ field: "phone", code: "invalid_phone" });
     }
-    if (!row.department) warnings.push("Department is empty");
-    if (!row.designation) warnings.push("Designation is empty");
+    if (!row.department) warnings.push({ field: "department", code: "empty_field" });
+    if (!row.designation) warnings.push({ field: "designation", code: "empty_field" });
 
     return {
       row: i + 1,
@@ -338,13 +414,11 @@ export function downloadCSVTemplate(): void {
   URL.revokeObjectURL(url);
 }
 
-/** Builds a downloadable error report from failed bulk rows. */
-export function downloadErrorReport(
-  errors: Array<{ row: number; error: string }>,
-): void {
+/** Builds a downloadable error report — BY-REFERENCE (row/field/code), NEVER a value. */
+export function downloadErrorReport(errors: ImportRowError[]): void {
   const csv = Papa.unparse({
-    fields: ["row", "error"],
-    data: errors.map((e) => [e.row, e.error]),
+    fields: ["row", "field", "code"],
+    data: errors.map((e) => [e.row, e.field, e.code]),
   });
   const blob = new Blob(["\uFEFF" + csv], { type: "text/csv;charset=utf-8;" });
   const url = URL.createObjectURL(blob);

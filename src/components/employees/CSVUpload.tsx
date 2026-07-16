@@ -10,20 +10,22 @@ import {
   downloadCSVTemplate,
   downloadErrorReport,
   parseFile,
-  rowToFormData,
   validateCSVRows,
+  IMPORT_MAX_BYTES,
+  IMPORT_MAX_ROWS,
 } from "@/lib/employees/csv";
-import type { CSVValidationResult } from "@/types/employee";
+import type { CSVValidationResult, ImportRowError } from "@/types/employee";
 import { CSVPreview } from "@/components/employees/CSVPreview";
 
-const MAX_BYTES = 5 * 1024 * 1024;
+const MAX_BYTES = IMPORT_MAX_BYTES;
 
 type Step = "upload" | "preview" | "done";
 
 interface ImportResult {
-  created: number;
+  rows_ok: number;
   skipped: number;
-  errors: Array<{ row: number; error: string }>;
+  rows_failed: number;
+  errors: ImportRowError[];
 }
 
 export function CSVUpload() {
@@ -34,27 +36,29 @@ export function CSVUpload() {
   const [parsing, setParsing] = useState(false);
   const [importing, setImporting] = useState(false);
   const [results, setResults] = useState<CSVValidationResult[]>([]);
+  const [file, setFile] = useState<File | null>(null);
   const [importResult, setImportResult] = useState<ImportResult | null>(null);
   const [error, setError] = useState<string | null>(null);
 
-  async function handleFile(file: File) {
+  async function handleFile(selected: File) {
     setError(null);
-    if (file.size > MAX_BYTES) {
+    if (selected.size > MAX_BYTES) {
       setError("File is larger than 5MB.");
       return;
     }
     setParsing(true);
     try {
-      const rows = await parseFile(file);
+      const rows = await parseFile(selected);
       if (rows.length === 0) {
         setError("No rows found in the file.");
         return;
       }
-      if (rows.length > 1000) {
-        setError("Maximum 1,000 employees per upload.");
+      if (rows.length > IMPORT_MAX_ROWS) {
+        setError(`Maximum ${IMPORT_MAX_ROWS.toLocaleString()} employees per upload.`);
         return;
       }
       setResults(validateCSVRows(rows));
+      setFile(selected); // retained so the server re-parses authoritatively on import
       setStep("preview");
     } catch {
       setError("Could not read the file. Please check the format.");
@@ -75,32 +79,30 @@ export function CSVUpload() {
   }
 
   async function importValid() {
-    const validRows = results.filter((r) => r.isValid);
-    if (validRows.length === 0) {
-      toast.error("No valid rows to import.");
+    if (!file) {
+      toast.error("Please choose a file again.");
+      setStep("upload");
       return;
     }
     setImporting(true);
-    const res = await fetch("/api/employees/bulk", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        employees: validRows.map((r) => rowToFormData(r.data)),
-      }),
-    });
+    // Send the raw file — the SERVER re-parses, validates, encrypts, and is the
+    // authoritative import path (/upload). No PII is placed in the URL or logs.
+    const fd = new FormData();
+    fd.append("file", file);
+    const res = await fetch("/api/employees/upload", { method: "POST", body: fd });
     setImporting(false);
+    const body = await res.json().catch(() => ({}));
     if (!res.ok) {
-      const body = await res.json().catch(() => ({}));
       toast.error(body.message ?? "Import failed.");
       return;
     }
-    const body = await res.json();
     setImportResult(body.data as ImportResult);
     setStep("done");
   }
 
   function reset() {
     setResults([]);
+    setFile(null);
     setImportResult(null);
     setError(null);
     setStep("upload");
@@ -208,12 +210,12 @@ export function CSVUpload() {
           <CheckCircle2 className="mx-auto size-12 text-[#2D6A4F]" />
           <div>
             <p className="font-heading text-lg font-semibold text-navy">
-              {importResult.created} employees added successfully
+              {importResult.rows_ok} employees added successfully
             </p>
             <p className="mt-1 text-sm text-[#6B7280]">
               {importResult.skipped} skipped (duplicate emails)
-              {importResult.errors.length > 0
-                ? ` · ${importResult.errors.length} failed`
+              {importResult.rows_failed > 0
+                ? ` · ${importResult.rows_failed} failed`
                 : ""}
             </p>
           </div>

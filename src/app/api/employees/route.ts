@@ -5,7 +5,13 @@ import {
   requireTenant,
   apiAuthErrorResponse,
 } from "@/lib/api-auth";
-import { createEmployee, listEmployees } from "@/lib/employees/queries";
+import {
+  createEmployee,
+  listEmployees,
+  getCompanyPlanContext,
+  getEmployeeCount,
+} from "@/lib/employees/queries";
+import { canManualAdd, gateMessage } from "@/lib/employees/plan-gate";
 
 export const runtime = "nodejs";
 
@@ -89,6 +95,23 @@ export async function POST(request: Request) {
       resourceDepartmentId: parsed.data.department_id ?? undefined,
     });
     const companyId = requireCompany(profile.company_id);
+    // Free-tier manual-add soft cap (§8). Pro/override/platform-staff uncapped.
+    const plan = await getCompanyPlanContext(companyId);
+    const count = await getEmployeeCount(companyId);
+    const gate = canManualAdd({
+      plan: plan.plan,
+      planStatus: plan.planStatus,
+      planOverrideBy: plan.planOverrideBy,
+      isPlatformStaff: profile.isPlatformStaff,
+      activeCount: count,
+      employeeLimit: plan.employeeLimit,
+    });
+    if (!gate.allowed) {
+      return NextResponse.json(
+        { error: "plan_gate", reason: gate.reason, message: gateMessage(gate.reason) },
+        { status: 403 },
+      );
+    }
     const employee = await createEmployee(companyId, parsed.data, profile.id);
     return NextResponse.json({ data: employee }, { status: 201 });
   } catch (err) {

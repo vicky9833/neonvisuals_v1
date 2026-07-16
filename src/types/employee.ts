@@ -86,11 +86,43 @@ export interface CSVRow {
   [key: string]: string | undefined;
 }
 
+/**
+ * BY-REFERENCE import error codes (§10.12-13). Error reports reference row
+ * NUMBER + field NAME + this CODE — NEVER the offending value. No PII/value may
+ * appear in any error, log, or report.
+ */
+export type ImportErrorCode =
+  | "required_missing"
+  | "invalid_email"
+  | "duplicate_email"
+  | "invalid_date"
+  | "future_date"
+  | "invalid_enum"
+  | "invalid_phone"
+  | "empty_field"
+  | "row_limit"
+  | "bad_header"
+  | "parse_failed"
+  | "insert_failed";
+
+/** A field-scoped issue with no value (by-reference). */
+export interface ImportIssue {
+  field: string;
+  code: ImportErrorCode;
+}
+
+/** A row-scoped error for the downloadable/report payload (no value). */
+export interface ImportRowError {
+  row: number;
+  field: string;
+  code: ImportErrorCode;
+}
+
 export interface CSVValidationResult {
   row: number;
   data: CSVRow;
-  errors: string[];
-  warnings: string[];
+  errors: ImportIssue[];
+  warnings: ImportIssue[];
   isValid: boolean;
 }
 

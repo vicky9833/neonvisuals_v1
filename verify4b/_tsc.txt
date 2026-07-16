@@ -1,0 +1,1 @@
+tsc --noEmit on 4b (foundation) → exit 0 (clean).
