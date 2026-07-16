@@ -29,7 +29,10 @@ export interface GateDecision {
     | "pro_plan"
     | "plan_override"
     | "free_plan_import_blocked"
-    | "free_cap_reached";
+    | "free_cap_reached"
+    | "free_departments_blocked"
+    | "free_approvals_blocked"
+    | "free_festival_limit";
 }
 
 /** True when the company's plan (or an override) includes Pro features. */
@@ -60,6 +63,29 @@ export function canManualAdd(
   return { allowed: true, reason: "free_plan_import_blocked" }; // allowed under cap
 }
 
+/**
+ * Departments & managers are Pro-only (§8). Same stub pattern as canImport.
+ */
+export function canUseDepartments(ctx: PlanContext): GateDecision {
+  if (ctx.isPlatformStaff) return { allowed: true, reason: "platform_bypass" };
+  if (isProPlan(ctx)) return { allowed: true, reason: ctx.planOverrideBy ? "plan_override" : "pro_plan" };
+  return { allowed: false, reason: "free_departments_blocked" };
+}
+
+/** Approval workflows are Pro-only (§8). */
+export function canUseApprovals(ctx: PlanContext): GateDecision {
+  if (ctx.isPlatformStaff) return { allowed: true, reason: "platform_bypass" };
+  if (isProPlan(ctx)) return { allowed: true, reason: ctx.planOverrideBy ? "plan_override" : "pro_plan" };
+  return { allowed: false, reason: "free_approvals_blocked" };
+}
+
+/** Festival calendar cap (§8): Free = 3 festivals opted-in, Pro = unlimited. */
+export const FREE_FESTIVAL_LIMIT = 3;
+export function festivalLimit(ctx: PlanContext): number {
+  if (ctx.isPlatformStaff || isProPlan(ctx)) return Number.POSITIVE_INFINITY;
+  return FREE_FESTIVAL_LIMIT;
+}
+
 /** Human-facing message for a denied gate (no user values). */
 export function gateMessage(reason: GateDecision["reason"]): string {
   switch (reason) {
@@ -67,6 +93,12 @@ export function gateMessage(reason: GateDecision["reason"]): string {
       return "CSV/Excel import is a Pro feature. Upgrade your plan to import employees in bulk.";
     case "free_cap_reached":
       return "Your Free plan is limited to 5 employees. Upgrade to Pro to add more.";
+    case "free_departments_blocked":
+      return "Departments & managers are a Pro feature. Upgrade to organise your team.";
+    case "free_approvals_blocked":
+      return "Approval workflows are a Pro feature. Upgrade to enable spend approvals.";
+    case "free_festival_limit":
+      return `Your Free plan can track up to ${FREE_FESTIVAL_LIMIT} festivals. Upgrade to Pro for the full calendar.`;
     default:
       return "Allowed.";
   }
