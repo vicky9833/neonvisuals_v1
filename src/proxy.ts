@@ -63,8 +63,12 @@ export async function proxy(request: NextRequest) {
       return new NextResponse(decision.body, { status: decision.status });
     case "redirect": {
       const url = new URL(decision.to, request.url);
-      // Preserve the intended target when bouncing to /login.
-      if (decision.to === "/login") url.searchParams.set("redirect", pathname);
+      // Preserve the intended target when bouncing to /login — INCLUDING the
+      // query string, so e.g. /invite/accept?token=… survives the login bounce
+      // (LoginForm reads ?redirect and router.replace()s back to it).
+      if (decision.to === "/login") {
+        url.searchParams.set("redirect", pathname + request.nextUrl.search);
+      }
       return NextResponse.redirect(url);
     }
   }

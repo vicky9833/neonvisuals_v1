@@ -26,6 +26,7 @@
 export type PageAccess =
   | "public"
   | "auth"
+  | "authed" // any authenticated user, regardless of membership (e.g. /invite/accept)
   | "onboarding"
   | "tenant"
   | "platform"
@@ -63,6 +64,9 @@ const ALLOWLIST: readonly Entry[] = [
   { path: "/forgot-password", exact: true, access: "auth" },
   { path: "/verify", exact: true, access: "auth" },
   { path: "/auth", access: "public" }, // /auth/callback (OAuth/email confirm)
+  // Invite acceptance: any authenticated user (member or not) may reach it; the
+  // accept_invite RPC is the real gate. Unauthenticated → bounced to /login.
+  { path: "/invite", access: "authed" },
 
   // --- Public marketing + legal + public flows ---
   { path: "/", exact: true, access: "public" },
@@ -136,6 +140,9 @@ export function resolvePageDecision(
   }
 
   switch (access) {
+    case "authed":
+      // Authenticated is sufficient (unauthenticated handled above → /login).
+      return { type: "pass" };
     case "auth":
       return { type: "redirect", to: s.isPlatform ? "/ops" : s.hasMembership ? "/dashboard" : "/onboarding" };
     case "onboarding":

@@ -378,3 +378,45 @@ export function sendOpsDailyDigestEmail(params: {
     metadata: { total, companies: params.companies.length },
   });
 }
+
+// ---------------------------------------------------------------------------
+// 12. Member invited (Prompt 3a) — send the invite link
+// ---------------------------------------------------------------------------
+export function sendMemberInviteEmail(params: {
+  to: string;
+  inviterName: string;
+  role: string;
+  acceptUrl: string;
+}): Promise<EmailResult> {
+  return sendEmail({
+    to: params.to,
+    subject: "You're invited to join a team on Neon Visuals",
+    html: T.memberInviteTemplate({
+      inviterName: params.inviterName,
+      role: params.role,
+      acceptUrl: params.acceptUrl,
+    }),
+    template: "member_invite",
+    metadata: { role: params.role },
+  });
+}
+
+// ---------------------------------------------------------------------------
+// 13. Member joined (Prompt 3a) — notify owner/admins
+// ---------------------------------------------------------------------------
+export function sendMemberJoinedEmail(params: {
+  to: string | string[];
+  companyName: string;
+  memberEmail: string;
+}): Promise<EmailResult> {
+  return sendEmail({
+    to: params.to,
+    subject: `${params.memberEmail} joined ${params.companyName}`,
+    html: T.memberJoinedTemplate({
+      companyName: params.companyName,
+      memberEmail: params.memberEmail,
+    }),
+    template: "member_joined",
+    metadata: { memberEmail: params.memberEmail },
+  });
+}

@@ -164,6 +164,10 @@ export type Database = {
       }
     }
     Functions: {
+      accept_invite: {
+        Args: { raw_token: string }
+        Returns: string
+      }
       has_company_role: {
         Args: {
           allowed: Database["public"]["Enums"]["company_role"][]

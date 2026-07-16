@@ -24,6 +24,7 @@ import {
   INDUSTRIES,
   type OnboardingData,
 } from "@/lib/auth-types";
+import { DPA_ATTESTATION, DPA_DOC_URL } from "@/lib/authz/dpa";
 import { createCompanyAndCompleteOnboarding } from "@/app/(auth)/onboarding/actions";
 
 interface FormState {
@@ -35,6 +36,7 @@ interface FormState {
   giftingOccasions: string[];
   giftingBudget: string;
   giftingFrequency: string;
+  dpaAccepted: boolean;
 }
 
 const INITIAL: FormState = {
@@ -46,6 +48,7 @@ const INITIAL: FormState = {
   giftingOccasions: [],
   giftingBudget: "",
   giftingFrequency: "",
+  dpaAccepted: false,
 };
 
 export function OnboardingWizard() {
@@ -88,6 +91,10 @@ export function OnboardingWizard() {
       setError("Select at least one occasion you gift for.");
       return;
     }
+    if (!form.dpaAccepted) {
+      setError("Please confirm the data-sharing authorisation to continue.");
+      return;
+    }
     setSubmitting(true);
     const payload: OnboardingData = {
       companyName: form.companyName,
@@ -100,6 +107,7 @@ export function OnboardingWizard() {
         form.giftingBudget && form.giftingBudget !== "Prefer not to say"
           ? form.giftingBudget
           : undefined,
+      dpaAccepted: form.dpaAccepted,
     };
     const result = await createCompanyAndCompleteOnboarding(payload);
     setSubmitting(false);
@@ -264,6 +272,27 @@ export function OnboardingWizard() {
                 onSelect={(v) => update("giftingFrequency", v)}
               />
             </div>
+
+            {/* §10 DPA consent — mandatory; org creation is blocked without it. */}
+            <label className="flex cursor-pointer items-start gap-3 rounded-lg border border-[#EDE9E3] bg-secondary/40 px-4 py-3">
+              <Checkbox
+                className="mt-0.5"
+                checked={form.dpaAccepted}
+                onCheckedChange={(v) => update("dpaAccepted", v === true)}
+              />
+              <span className="text-sm text-[#4B5563]">
+                {DPA_ATTESTATION}{" "}
+                <a
+                  href={DPA_DOC_URL}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="font-medium text-navy underline underline-offset-2"
+                >
+                  Data Processing Agreement
+                </a>
+                .
+              </span>
+            </label>
 
             {error ? (
               <p className="text-sm font-medium text-destructive">{error}</p>

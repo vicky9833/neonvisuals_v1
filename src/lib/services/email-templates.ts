@@ -341,3 +341,42 @@ export function opsDailyDigestTemplate(params: {
     ctaUrl: `${APP_URL}/ops`,
   });
 }
+
+// ---------------------------------------------------------------------------
+// 12. Member invited (Prompt 3a) — the invite link
+// ---------------------------------------------------------------------------
+export function memberInviteTemplate(params: {
+  inviterName: string;
+  role: string;
+  acceptUrl: string;
+}): string {
+  const roleLabel = params.role.replace(/^org_/, "").replace(/_/g, " ");
+  return baseTemplate({
+    preheader: `You've been invited to join a team on Neon Visuals as ${roleLabel}.`,
+    headline: "You're invited to join a team",
+    body:
+      p(`<strong>${params.inviterName}</strong> has invited you to join their organisation on Neon Visuals as <strong>${roleLabel}</strong>.`) +
+      p("Click below to accept. Sign in (or create an account) with this email address, then confirm — the link is single-use and expires in 7 days.") +
+      p('<span style="color:#888;font-size:13px;">If you weren\'t expecting this invitation, you can safely ignore this email.</span>'),
+    ctaText: "Accept invitation",
+    ctaUrl: params.acceptUrl,
+  });
+}
+
+// ---------------------------------------------------------------------------
+// 13. Member joined (Prompt 3a) — notify owner/admins
+// ---------------------------------------------------------------------------
+export function memberJoinedTemplate(params: {
+  companyName: string;
+  memberEmail: string;
+}): string {
+  return baseTemplate({
+    preheader: `${params.memberEmail} has joined ${params.companyName}.`,
+    headline: "A new member joined your team",
+    body:
+      p(`<strong>${params.memberEmail}</strong> has accepted their invitation and joined <strong>${params.companyName}</strong> on Neon Visuals.`) +
+      p("You can manage your team's roles and access from your dashboard."),
+    ctaText: "Open dashboard",
+    ctaUrl: `${APP_URL}/dashboard`,
+  });
+}

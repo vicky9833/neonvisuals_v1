@@ -1,8 +1,10 @@
 "use server";
 
+import { headers } from "next/headers";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { sendWelcomeEmail } from "@/lib/services/email";
+import { DPA_VERSION } from "@/lib/authz/dpa";
 import type { OnboardingData, OnboardingResult } from "@/lib/auth-types";
 
 function slugify(name: string): string {
@@ -37,6 +39,21 @@ export async function createCompanyAndCompleteOnboarding(
   if (data.giftingOccasions.length === 0) {
     return { ok: false, error: "Select at least one gifting occasion." };
   }
+  // DPA §10 consent is MANDATORY — no company is created without it.
+  if (!data.dpaAccepted) {
+    return {
+      ok: false,
+      error:
+        "You must confirm you're authorised to share your employees' data before creating your organisation.",
+    };
+  }
+
+  // Capture the accepting IP for the DPA consent record (best-effort).
+  const hdrs = await headers();
+  const dpaIp =
+    hdrs.get("x-forwarded-for")?.split(",")[0]?.trim() ||
+    hdrs.get("x-real-ip") ||
+    null;
 
   const admin = createAdminClient();
 
@@ -65,6 +82,11 @@ export async function createCompanyAndCompleteOnboarding(
       primary_contact_phone: profile?.phone ?? null,
       created_by: user.id,
       owner_id: user.id,
+      // DPA §10 consent record (mandatory; blocked above if not accepted).
+      dpa_accepted_at: new Date().toISOString(),
+      dpa_accepted_by: user.id,
+      dpa_version: DPA_VERSION,
+      dpa_ip: dpaIp,
     })
     .select("id, name")
     .single();
