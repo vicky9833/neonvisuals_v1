@@ -12,7 +12,10 @@ export interface Employee {
   email: string;
   employee_code?: string | null;
   phone?: string | null;
+  /** Human-readable department name, resolved via the department_id FK (read-only). */
   department?: string | null;
+  /** FK to departments (the canonical department reference since Prompt 4a). */
+  department_id?: string | null;
   designation?: string | null;
   /** Day/month of birth only — the birth YEAR is never stored (privacy, migration 018). */
   dob_day?: number | null;
@@ -43,7 +46,10 @@ export interface EmployeeFormData {
   email: string;
   employee_code?: string;
   phone?: string;
+  /** Free-text department name (legacy form field; NOT persisted — Prompt 5 departments CRUD). */
   department?: string;
+  /** Canonical department FK; persisted when supplied. */
+  department_id?: string;
   designation?: string;
   /** Full ISO date accepted from the single-employee form; year discarded on write. */
   date_of_birth?: string;

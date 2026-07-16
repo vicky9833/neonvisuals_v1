@@ -1,6 +1,10 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
-import { requireApiAuth, apiAuthErrorResponse } from "@/lib/api-auth";
+import {
+  requireApiAuth,
+  requireTenant,
+  apiAuthErrorResponse,
+} from "@/lib/api-auth";
 import { createEmployee, listEmployees } from "@/lib/employees/queries";
 
 export const runtime = "nodejs";
@@ -11,6 +15,7 @@ const createSchema = z.object({
   employee_code: z.string().optional(),
   phone: z.string().optional(),
   department: z.string().optional(),
+  department_id: z.string().uuid().optional(),
   designation: z.string().optional(),
   date_of_birth: z.string().optional(),
   dob_day: z.number().int().min(1).max(31).optional(),
@@ -38,13 +43,15 @@ function requireCompany(companyId: string | null): string {
 
 export async function GET(request: Request) {
   try {
+    // Identity roster is baseline member access (post-4a employees_read RLS lets
+    // any company member read identity; PII is gated per-detail via view_pii).
     const profile = await requireApiAuth();
     const companyId = requireCompany(profile.company_id);
     const { searchParams } = new URL(request.url);
 
     const result = await listEmployees(companyId, {
       search: searchParams.get("search") ?? undefined,
-      department: searchParams.get("department") ?? undefined,
+      departmentId: searchParams.get("departmentId") ?? undefined,
       isActive: searchParams.has("isActive")
         ? searchParams.get("isActive") === "true"
         : undefined,
@@ -63,8 +70,6 @@ export async function GET(request: Request) {
 
 export async function POST(request: Request) {
   try {
-    const profile = await requireApiAuth();
-    const companyId = requireCompany(profile.company_id);
     const body = await request.json().catch(() => null);
     if (!body) {
       return NextResponse.json(
@@ -79,6 +84,11 @@ export async function POST(request: Request) {
         { status: 400 },
       );
     }
+    // §6A employees.edit — owner/admin/hr (Y) or manager (own department).
+    const profile = await requireTenant("employees.edit", null, {
+      resourceDepartmentId: parsed.data.department_id ?? undefined,
+    });
+    const companyId = requireCompany(profile.company_id);
     const employee = await createEmployee(companyId, parsed.data, profile.id);
     return NextResponse.json({ data: employee }, { status: 201 });
   } catch (err) {

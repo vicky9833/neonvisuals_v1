@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
-import { requireApiAuth, apiAuthErrorResponse } from "@/lib/api-auth";
+import { requireTenant, apiAuthErrorResponse } from "@/lib/api-auth";
 import { bulkCreateEmployees } from "@/lib/employees/queries";
 
 export const runtime = "nodejs";
@@ -33,7 +33,8 @@ const bulkSchema = z.object({
 
 export async function POST(request: Request) {
   try {
-    const profile = await requireApiAuth();
+    // §6A employees.bulk_import — owner/admin/hr only (Pro-tier gating is Prompt 4b).
+    const profile = await requireTenant("employees.bulk_import", null);
     if (!profile.company_id) {
       return NextResponse.json(
         { error: "no_company", message: "No company linked to this account." },
