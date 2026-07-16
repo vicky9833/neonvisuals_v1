@@ -15,6 +15,7 @@ import {
   Receipt,
   Settings,
   Users,
+  UserCog,
   type LucideIcon,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -34,6 +35,7 @@ interface NavItem {
 const MAIN_NAV: NavItem[] = [
   { label: "Overview", icon: LayoutDashboard, href: "/dashboard" },
   { label: "Employees", icon: Users, href: "/dashboard/employees" },
+  { label: "Team", icon: UserCog, href: "/dashboard/team" },
   { label: "Gift History", icon: Gift, href: "/dashboard/gifts" },
   { label: "Occasions", icon: Calendar, href: "/dashboard/occasions" },
   { label: "My Quotes", icon: FileText, href: "/dashboard/quotes" },

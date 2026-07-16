@@ -380,3 +380,25 @@ export function memberJoinedTemplate(params: {
     ctaUrl: `${APP_URL}/dashboard`,
   });
 }
+
+// ---------------------------------------------------------------------------
+// 14. Member role changed (Prompt 3b) — §7 security notice
+// ---------------------------------------------------------------------------
+export function memberRoleChangedTemplate(params: {
+  companyName: string;
+  memberEmail: string;
+  oldRole: string;
+  newRole: string;
+  changedBy: string;
+}): string {
+  const label = (r: string) => r.replace(/^org_/, "").replace(/_/g, " ");
+  return baseTemplate({
+    preheader: `Role changed to ${label(params.newRole)} in ${params.companyName}.`,
+    headline: "A team role was changed",
+    body:
+      p(`In <strong>${params.companyName}</strong>, the role for <strong>${params.memberEmail}</strong> was changed from <strong>${label(params.oldRole)}</strong> to <strong>${label(params.newRole)}</strong> by ${params.changedBy}.`) +
+      p('<span style="color:#888;font-size:13px;">You\'re receiving this security notice because you\'re the affected member or an owner of this organisation. If this wasn\'t expected, review your team settings.</span>'),
+    ctaText: "Review team",
+    ctaUrl: `${APP_URL}/dashboard/team`,
+  });
+}
