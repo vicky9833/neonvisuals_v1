@@ -168,6 +168,10 @@ export type Database = {
         Args: { raw_token: string }
         Returns: string
       }
+      transfer_ownership: {
+        Args: { target_user_id: string }
+        Returns: string
+      }
       has_company_role: {
         Args: {
           allowed: Database["public"]["Enums"]["company_role"][]

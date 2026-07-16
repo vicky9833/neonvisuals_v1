@@ -420,3 +420,29 @@ export function sendMemberJoinedEmail(params: {
     metadata: { memberEmail: params.memberEmail },
   });
 }
+
+// ---------------------------------------------------------------------------
+// 14. Member role changed (Prompt 3b) — security notice to affected user + owner
+// ---------------------------------------------------------------------------
+export function sendMemberRoleChangedEmail(params: {
+  to: string | string[];
+  companyName: string;
+  memberEmail: string;
+  oldRole: string;
+  newRole: string;
+  changedBy: string;
+}): Promise<EmailResult> {
+  return sendEmail({
+    to: params.to,
+    subject: `Role changed in ${params.companyName}`,
+    html: T.memberRoleChangedTemplate({
+      companyName: params.companyName,
+      memberEmail: params.memberEmail,
+      oldRole: params.oldRole,
+      newRole: params.newRole,
+      changedBy: params.changedBy,
+    }),
+    template: "member_role_changed",
+    metadata: { memberEmail: params.memberEmail, newRole: params.newRole },
+  });
+}
