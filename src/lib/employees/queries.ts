@@ -4,7 +4,7 @@ import {
   encryptPIINullable,
   decryptPIINullable,
 } from "@/lib/services/pii-crypto";
-import type { Employee, EmployeeFormData } from "@/types/employee";
+import type { Employee, EmployeeFormData, ImportRowError } from "@/types/employee";
 
 /**
  * Company-scoped employee data access (Prompt 4a PII split).
@@ -303,6 +303,29 @@ export async function updateEmployee(
   return full;
 }
 
+/**
+ * Offboard (Prompt 4b item 6): stamp offboarded_at (the set_purge_after trigger
+ * stamps purge_after = +90d) and deactivate so the employee drops out of active
+ * rosters + occasion generation. The purge EXECUTOR is deferred to its own prompt.
+ */
+export async function offboardEmployee(
+  id: string,
+): Promise<{ offboarded_at: string | null; purge_after: string | null } | null> {
+  const supabase = await createClient();
+  const { data, error } = await supabase
+    .from("employees")
+    .update({ offboarded_at: new Date().toISOString(), is_active: false })
+    .eq("id", id)
+    .select("offboarded_at, purge_after")
+    .maybeSingle();
+  if (error) throw new Error(error.message);
+  if (!data) return null;
+  return {
+    offboarded_at: (data.offboarded_at as string) ?? null,
+    purge_after: (data.purge_after as string) ?? null,
+  };
+}
+
 /** Soft delete — deactivate. (PII purge is handled by offboarding — Prompt 4b.) */
 export async function deleteEmployee(id: string): Promise<void> {
   const supabase = await createClient();
@@ -320,10 +343,10 @@ export async function bulkCreateEmployees(
 ): Promise<{
   created: number;
   skipped: number;
-  errors: Array<{ row: number; error: string }>;
+  errors: ImportRowError[];
 }> {
   const supabase = await createClient();
-  const errors: Array<{ row: number; error: string }> = [];
+  const errors: ImportRowError[] = [];
 
   const { data: existing } = await supabase
     .from("employees")
@@ -340,7 +363,7 @@ export async function bulkCreateEmployees(
   employees.forEach((emp, index) => {
     const email = emp.email?.trim().toLowerCase();
     if (!email) {
-      errors.push({ row: index + 1, error: "Missing email" });
+      errors.push({ row: index + 1, field: "email", code: "required_missing" });
       return;
     }
     if (existingEmails.has(email) || seen.has(email)) {
@@ -361,7 +384,8 @@ export async function bulkCreateEmployees(
       .insert(toInsert.map((t) => t.identity))
       .select("id, email");
     if (error) {
-      errors.push({ row: 0, error: error.message });
+      // BY-REFERENCE only — never surface the DB message (may echo a value).
+      errors.push({ row: 0, field: "_batch", code: "insert_failed" });
     } else {
       created = insertedRows?.length ?? 0;
       // Build PII rows keyed by the returned ids (matched on email).
@@ -380,7 +404,7 @@ export async function bulkCreateEmployees(
       }
       if (piiRows.length > 0) {
         const { error: piiErr } = await supabase.from("employee_pii").insert(piiRows);
-        if (piiErr) errors.push({ row: 0, error: `PII insert: ${piiErr.message}` });
+        if (piiErr) errors.push({ row: 0, field: "_pii", code: "insert_failed" });
       }
     }
   }
@@ -417,6 +441,58 @@ export async function getDepartmentList(companyId: string): Promise<string[]> {
   return ((data ?? []) as Array<{ name: string | null }>)
     .map((d) => d.name)
     .filter((n): n is string => Boolean(n));
+}
+
+/** Records an import run. errors_json is BY-REFERENCE only (row/field/code) — no PII. */
+export async function recordImportJob(job: {
+  companyId: string;
+  createdBy: string;
+  source: "csv" | "xlsx" | "json";
+  fileSize?: number | null;
+  rowsTotal: number;
+  rowsOk: number;
+  rowsFailed: number;
+  errors: ImportRowError[];
+}): Promise<string | null> {
+  const supabase = await createClient();
+  const status =
+    job.rowsFailed > 0 ? (job.rowsOk > 0 ? "partial" : "failed") : "completed";
+  const { data } = await supabase
+    .from("import_jobs")
+    .insert({
+      company_id: job.companyId,
+      created_by: job.createdBy,
+      source: job.source,
+      file_size: job.fileSize ?? null,
+      rows_total: job.rowsTotal,
+      rows_ok: job.rowsOk,
+      rows_failed: job.rowsFailed,
+      errors_json: job.errors.slice(0, 500),
+      status,
+    })
+    .select("id")
+    .maybeSingle();
+  return (data?.id as string) ?? null;
+}
+
+export async function getCompanyPlanContext(companyId: string): Promise<{
+  plan: string | null;
+  planStatus: string | null;
+  planOverrideBy: string | null;
+  employeeLimit: number;
+}> {
+  const supabase = await createClient();
+  const { data } = await supabase
+    .from("companies")
+    .select("plan, plan_status, plan_override_by, employee_limit")
+    .eq("id", companyId)
+    .maybeSingle();
+  return {
+    plan: (data?.plan as string) ?? null,
+    planStatus: (data?.plan_status as string) ?? null,
+    planOverrideBy: (data?.plan_override_by as string) ?? null,
+    employeeLimit: (data?.employee_limit as number) ?? 5,
+  };
 }
 
 export async function getEmployeeCount(companyId: string): Promise<number> {

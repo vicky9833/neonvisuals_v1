@@ -75,18 +75,18 @@ export function CSVPreview({ results }: { results: CSVValidationResult[] }) {
                   <td className="px-3 py-2">
                     {r.errors.map((e) => (
                       <span
-                        key={e}
+                        key={`e-${e.field}-${e.code}`}
                         className="mr-1 inline-block rounded bg-destructive/10 px-1.5 py-0.5 text-[11px] text-destructive"
                       >
-                        {e}
+                        {e.field}: {e.code.replace(/_/g, " ")}
                       </span>
                     ))}
                     {r.warnings.map((w) => (
                       <span
-                        key={w}
+                        key={`w-${w.field}-${w.code}`}
                         className="mr-1 inline-block rounded bg-amber-100 px-1.5 py-0.5 text-[11px] text-amber-700"
                       >
-                        {w}
+                        {w.field}: {w.code.replace(/_/g, " ")}
                       </span>
                     ))}
                   </td>
