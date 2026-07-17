@@ -29,7 +29,7 @@ export default async function TeamPage() {
   const admin = createAdminClient();
   const { data: members } = await admin
     .from("company_members")
-    .select("user_id, role, department_id, status, joined_at")
+    .select("user_id, role, department_id, status, joined_at, approval_limit")
     .eq("company_id", companyId)
     .order("joined_at", { ascending: true });
 
@@ -48,6 +48,7 @@ export default async function TeamPage() {
     role: m.role as string,
     department: m.department_id ? (deptById.get(m.department_id as string) ?? null) : null,
     status: m.status as string,
+    approvalLimit: m.approval_limit == null ? null : Number(m.approval_limit),
   }));
 
   return (

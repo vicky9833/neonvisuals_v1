@@ -75,6 +75,7 @@ export async function requestQuote(
       client_company: input.clientCompany ?? null,
       client_email: input.clientEmail ?? null,
       notes: input.notes ?? null,
+      budget_hint: input.budgetHint ?? null,
     })
     .select("id, quote_number, status, occasion_key")
     .single();

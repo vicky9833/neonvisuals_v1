@@ -15,7 +15,29 @@ export const runtime = "nodejs";
  * — ownership moves only via /api/team/transfer.
  */
 const ROLE_TARGETS = ["org_admin", "hr", "finance", "manager", "viewer"] as const;
-const patchSchema = z.object({ role: z.enum(ROLE_TARGETS) });
+
+/**
+ * PATCH body (Prompt 7b item 1): change role and/or set approval_limit.
+ *   approvalLimit: non-negative integer rupees, or explicit null (= no approval authority; the
+ *   matrix NULL-denies, so an hr/manager with a null limit cannot approve any spend). This is the
+ *   value the quote.approve ≤limit conditional reads — without it the whole feature is DOA.
+ * At least one field must be present.
+ */
+const APPROVAL_LIMIT_MAX = 999_999_999;
+const patchSchema = z
+  .object({
+    role: z.enum(ROLE_TARGETS).optional(),
+    approvalLimit: z
+      .number()
+      .int()
+      .min(0)
+      .max(APPROVAL_LIMIT_MAX)
+      .nullable()
+      .optional(),
+  })
+  .refine((v) => v.role !== undefined || v.approvalLimit !== undefined, {
+    message: "Provide a role and/or an approvalLimit.",
+  });
 
 function mapGuard(msg: string | undefined): NextResponse | null {
   if (msg && msg.includes("LAST_OWNER")) {
@@ -42,14 +64,20 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ us
     const admin = createAdminClient();
     const { data: existing } = await admin.from("company_members").select("role").eq("company_id", companyId).eq("user_id", userId).maybeSingle();
 
+    // Build the mutation from only the provided fields. approval_limit is the value the
+    // quote.approve ≤limit conditional reads (item 1 — DOA fix); explicit null clears authority.
+    const patch: { role?: string; approval_limit?: number | null } = {};
+    if (parsed.data.role !== undefined) patch.role = parsed.data.role;
+    if (parsed.data.approvalLimit !== undefined) patch.approval_limit = parsed.data.approvalLimit;
+
     // RLS-scoped mutation; the last-owner trigger is the backstop.
     const supabase = await createClient();
     const { data: updated, error } = await supabase
       .from("company_members")
-      .update({ role: parsed.data.role })
+      .update(patch)
       .eq("company_id", companyId)
       .eq("user_id", userId)
-      .select("user_id, role")
+      .select("user_id, role, approval_limit")
       .maybeSingle();
     if (error) {
       const guard = mapGuard(error.message);
@@ -60,10 +88,12 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ us
       return NextResponse.json({ error: "not_found", message: "Member not found in your company." }, { status: 404 });
     }
 
-    // §7 role-changed security notice (affected user + org_owner). Email only.
-    try {
-      await notifyRoleChange(admin, companyId, userId, (existing?.role as string) ?? "?", parsed.data.role, principal.email);
-    } catch (e) { console.error("[team/members] role-change email failed:", e); }
+    // §7 role-changed security notice (affected user + org_owner) — only when the role changed.
+    if (parsed.data.role !== undefined && parsed.data.role !== (existing?.role as string)) {
+      try {
+        await notifyRoleChange(admin, companyId, userId, (existing?.role as string) ?? "?", parsed.data.role, principal.email);
+      } catch (e) { console.error("[team/members] role-change email failed:", e); }
+    }
 
     return NextResponse.json({ data: updated });
   } catch (err) {
