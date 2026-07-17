@@ -36,6 +36,38 @@ export function sniffImageMime(bytes: ArrayBuffer): ProofImageMime | null {
   return null;
 }
 
+// ── Concierge attachments (Prompt 7d): images + PDF ONLY (tenant-uploaded, widest threat) ──
+// Validated by MAGIC BYTES. Office/macro formats (.docx/.xlsx = ZIP `PK`, .doc/.xls = OLE
+// `D0 CF 11 E0`) do NOT match and are therefore REJECTED. This is the highest-priority P10
+// async-scanner path (external customer upload + documents).
+export type ConciergeMime = ProofImageMime | "application/pdf";
+export const CONCIERGE_MAX_BYTES = 15 * 1024 * 1024; // 15 MB per attachment
+export const CONCIERGE_MAX_PER_REQUEST = 5;
+export const CONCIERGE_EXT: Record<ConciergeMime, string> = { ...PROOF_EXT, "application/pdf": "pdf" };
+
+/** Detect image (jpeg/png/webp) OR pdf by content; null for anything else (incl. office/macro). */
+export function sniffConciergeMime(bytes: ArrayBuffer): ConciergeMime | null {
+  const img = sniffImageMime(bytes);
+  if (img) return img;
+  const b = new Uint8Array(bytes);
+  // PDF: 25 50 44 46  ("%PDF")
+  if (b.length >= 5 && b[0] === 0x25 && b[1] === 0x50 && b[2] === 0x44 && b[3] === 0x46) return "application/pdf";
+  return null;
+}
+
+export type ConciergeValidation =
+  | { ok: true; mime: ConciergeMime }
+  | { ok: false; code: "empty" | "too_large" | "not_allowed" };
+
+/** Validate a concierge attachment by content + size. Rejects non-image/non-pdf (incl. office). */
+export function validateConciergeAttachment(bytes: ArrayBuffer): ConciergeValidation {
+  if (bytes.byteLength === 0) return { ok: false, code: "empty" };
+  if (bytes.byteLength > CONCIERGE_MAX_BYTES) return { ok: false, code: "too_large" };
+  const mime = sniffConciergeMime(bytes);
+  if (!mime) return { ok: false, code: "not_allowed" };
+  return { ok: true, mime };
+}
+
 export type ProofValidation =
   | { ok: true; mime: ProofImageMime }
   | { ok: false; code: "empty" | "too_large" | "not_an_image" };

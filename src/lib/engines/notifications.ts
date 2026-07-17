@@ -36,6 +36,9 @@ export const NOTIFICATION_TYPES = {
   ORDER_PROOF_PHOTOS_READY: "order_proof_photos_ready", // tenant: QC proof photos ready (§7, 7c-i seam; fired by 7c-ii) — hr/org_admin, email
   ORDER_DISPATCHED: "order_dispatched", // tenant: order shipped/dispatched (§7, 7c-i) — hr + dept manager, email + tracking
   ORDER_DELIVERED: "order_delivered", // tenant: order delivered (§7, 7c-i) — hr, in-app
+  CONCIERGE_REQUEST_OPS: "concierge_request_ops", // platform: a tenant raised a concierge request (§4G/§7) — ops queue, in-app + email + wa.me
+  CONCIERGE_REQUEST_ACK: "concierge_request_ack", // tenant: your concierge request was received (in-app)
+  CONCIERGE_REPLY: "concierge_reply", // tenant OR ops: a reply was posted to the other party (in-app + email)
   MEMBER_INVITED: "member_invited",
   MEMBER_JOINED: "member_joined",
   MEMBER_REMOVED: "member_removed",
@@ -73,7 +76,8 @@ export type PlatformAudience =
   | "platform_admin" // platform_staff role IN {owner, admin}
   | "platform_ops" // role = ops
   | "platform_owner" // role = owner
-  | "platform_finance"; // role = finance
+  | "platform_finance" // role = finance
+  | "platform_concierge"; // the §6C concierge-inbox roles: owner, admin, ops, support
 
 export type AudienceSpec =
   | { plane: "tenant"; role: TenantRole }
@@ -89,6 +93,8 @@ const PLATFORM_ROLE_MAP: Record<PlatformAudience, string[]> = {
   platform_ops: ["ops"],
   platform_owner: ["owner"],
   platform_finance: ["finance"],
+  // Mirrors the platform.concierge.inbox capability (owner/admin/ops/support; finance denied).
+  platform_concierge: ["owner", "admin", "ops", "support"],
 };
 
 /**
@@ -829,5 +835,92 @@ export async function notifyProofPhotosReady(
       html: `<p>Proof photos for order ${ref} are ready.</p>${imgHtml}<p><a href="${link}">Review proof photos</a></p>`,
       template: "order_proof_photos_ready",
     },
+  });
+}
+
+// ── §4G/§7 concierge notifications (Prompt 7d) ───────────────────────────────
+// PII-SAFE (§10.13): titles/subjects/links carry ONLY org + request reference — NEVER the
+// customer's message body or any employee PII. `client` MUST be service-role. Deduped per request.
+
+/**
+ * A concierge request was RAISED. Notifies the platform ops queue (owner/admin/ops/support) in-app
+ * + email + a wa.me deep link (org context, no PII), and acks the requester in-app.
+ */
+export async function notifyConciergeRaised(
+  client: SupabaseClient,
+  input: { requestId: string; companyId: string; orgName: string; requesterUserId: string; urgency: string; waLink?: string | null },
+): Promise<{ ops: NotifyResult; ack: NotifyResult }> {
+  const opsSubject = `New concierge request — ${input.orgName}`;
+  const opsBody = `${input.orgName} raised a concierge request (urgency: ${input.urgency}). Ref ${input.requestId}.`;
+  const opsLink = `/ops/concierge?request=${input.requestId}`;
+  const ops = await notify(client, {
+    type: NOTIFICATION_TYPES.CONCIERGE_REQUEST_OPS,
+    audience: [{ plane: "platform", role: "platform_concierge" }],
+    companyId: input.companyId,
+    title: opsSubject,
+    body: opsBody,
+    link: input.waLink ?? opsLink,
+    dedupeKey: `concierge:${input.requestId}:raised`,
+    email: {
+      subject: opsSubject,
+      html: `<p>${opsBody}</p>${input.waLink ? `<p><a href="${input.waLink}">Chat on WhatsApp</a></p>` : ""}<p><a href="${opsLink}">Open the concierge inbox</a></p>`,
+      template: "concierge_request_ops",
+    },
+  });
+  const ack = await notify(client, {
+    type: NOTIFICATION_TYPES.CONCIERGE_REQUEST_ACK,
+    recipients: [input.requesterUserId],
+    companyId: input.companyId,
+    title: "Your gifting manager has your request",
+    body: "We'll reply within 2 working hours.",
+    link: `/dashboard/support?request=${input.requestId}`,
+    dedupeKey: `concierge:${input.requestId}:ack:${input.requesterUserId}`,
+  });
+  return { ops, ack };
+}
+
+/**
+ * A reply was posted. Notify the OTHER party: an ops reply → the tenant requester; a tenant reply →
+ * the ops queue (+ the assigned staffer if any). In-app + email, PII-safe.
+ */
+export async function notifyConciergeReply(
+  client: SupabaseClient,
+  input: {
+    requestId: string;
+    companyId: string;
+    orgName: string;
+    senderType: "tenant" | "platform";
+    requesterUserId: string;
+    assignedStaffId?: string | null;
+    messageId: string;
+  },
+): Promise<NotifyResult> {
+  const link = input.senderType === "platform"
+    ? `/dashboard/support?request=${input.requestId}`
+    : `/ops/concierge?request=${input.requestId}`;
+  if (input.senderType === "platform") {
+    // Ops replied → notify the tenant requester.
+    return notify(client, {
+      type: NOTIFICATION_TYPES.CONCIERGE_REPLY,
+      recipients: [input.requesterUserId],
+      companyId: input.companyId,
+      title: "New reply from your gifting manager",
+      body: `There's a new reply on your concierge request. Ref ${input.requestId}.`,
+      link,
+      dedupeKey: `concierge:${input.requestId}:reply:${input.messageId}`,
+      email: { subject: "New reply from your gifting manager", html: `<p>There's a new reply on your concierge request.</p><p><a href="${link}">View the conversation</a></p>`, template: "concierge_reply" },
+    });
+  }
+  // Tenant replied → notify the ops queue (assigned staffer unioned in when present).
+  return notify(client, {
+    type: NOTIFICATION_TYPES.CONCIERGE_REPLY,
+    audience: [{ plane: "platform", role: "platform_concierge" }],
+    recipients: input.assignedStaffId ? [input.assignedStaffId] : [],
+    companyId: input.companyId,
+    title: `New concierge reply — ${input.orgName}`,
+    body: `${input.orgName} replied to a concierge request. Ref ${input.requestId}.`,
+    link,
+    dedupeKey: `concierge:${input.requestId}:reply:${input.messageId}`,
+    email: { subject: `New concierge reply — ${input.orgName}`, html: `<p>${input.orgName} replied on a concierge request.</p><p><a href="${link}">Open the concierge inbox</a></p>`, template: "concierge_reply" },
   });
 }

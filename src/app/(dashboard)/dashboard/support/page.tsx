@@ -1,14 +1,21 @@
-import { HelpCircle } from "lucide-react";
-import { PagePlaceholder } from "@/components/dashboard/PagePlaceholder";
+import type { Metadata } from "next";
+import { PageHeader } from "@/components/shared/page-header";
+import { ConciergeWidget } from "@/components/concierge/ConciergeWidget";
+
+export const metadata: Metadata = {
+  title: "Help & Support",
+  description: "Talk to your dedicated gifting manager.",
+  robots: { index: false, follow: false },
+};
 
 export default function SupportPage() {
   return (
-    <PagePlaceholder
-      title="Help & Support"
-      icon={<HelpCircle className="size-8" />}
-      description="Reach our team on WhatsApp or email for any help with your gifting. Coming soon - this feature is being built."
-      ctaLabel="Chat with us on WhatsApp"
-      ctaHref="https://wa.me/919019409590"
-    />
+    <div className="space-y-6">
+      <PageHeader
+        title="Help & Support"
+        description="Your dedicated gifting concierge — ask anything, attach references, and we'll take it from there."
+      />
+      <ConciergeWidget />
+    </div>
   );
 }
