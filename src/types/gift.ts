@@ -26,6 +26,8 @@ export interface GiftRecord {
   collection_code: string | null;
   occasion_type: string;
   occasion_label: string | null;
+  /** Stable occasion key (7a pattern) — links a delivered gift to its occasion instance. */
+  occasion_key: string | null;
   gifted_date: string;
   packaging_tier: string | null;
   personalisation_level: string | null;

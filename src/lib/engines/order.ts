@@ -69,6 +69,8 @@ export interface OrderProductInput {
 export interface OrderInput {
   companyId: string;
   quoteId?: string;
+  /** Stable occasion key (7a pattern) copied from the source quote. */
+  occasionKey?: string | null;
   occasionType?: string;
   occasionLabel?: string;
   products: OrderProductInput[];
@@ -148,6 +150,8 @@ export interface Order {
   company_name?: string | null;
   quote_id: string | null;
   status: OrderStatus;
+  /** Stable occasion key (7a pattern) carried from the source quote; null for ad-hoc orders. */
+  occasion_key: string | null;
   occasion_type: string | null;
   occasion_label: string | null;
   kit_count: number;
@@ -264,6 +268,7 @@ function mapOrder(row: any): Order {
     company_name: row.companies?.name ?? row.company_name ?? null,
     quote_id: row.quote_id ?? null,
     status: row.status as OrderStatus,
+    occasion_key: row.occasion_key ?? null,
     occasion_type: row.occasion_type ?? null,
     occasion_label: row.occasion_label ?? null,
     kit_count: Number(row.kit_count ?? 1),
@@ -345,6 +350,7 @@ export async function createOrder(
       company_id: input.companyId,
       quote_id: input.quoteId ?? null,
       status: "draft",
+      occasion_key: input.occasionKey ?? null,
       occasion_type: input.occasionType ?? null,
       occasion_label: input.occasionLabel ?? null,
       kit_count: input.kitCount,
@@ -590,6 +596,33 @@ export async function updateOrderStatus(
   if (newStatus === "delivered") {
     await generateGiftRecords(id);
   }
+
+  // §7 transition notifications via the 6a engine (Prompt 7c-i). Non-fatal, service-role, deduped.
+  // in_production → hr (in-app); shipped → hr + dept managers (email + tracking); delivered → hr.
+  if (newStatus === "in_production" || newStatus === "shipped" || newStatus === "delivered") {
+    try {
+      const { createAdminClient } = await import("@/lib/supabase/admin");
+      const { notifyOrderStatusChange } = await import("@/lib/engines/notifications");
+      const admin = createAdminClient();
+      const { data: ord } = await admin
+        .from("orders")
+        .select("company_id, order_number, tracking_number, courier_partner")
+        .eq("id", id)
+        .maybeSingle();
+      if (ord?.company_id) {
+        await notifyOrderStatusChange(admin, {
+          orderId: id,
+          companyId: ord.company_id as string,
+          orderNumber: (ord.order_number as string | null) ?? null,
+          status: newStatus,
+          trackingNumber: (ord.tracking_number as string | null) ?? null,
+          courierPartner: (ord.courier_partner as string | null) ?? null,
+        });
+      }
+    } catch (e) {
+      console.error("[order.updateOrderStatus] §7 transition notify failed:", e);
+    }
+  }
 }
 
 /**
@@ -746,6 +779,7 @@ export async function convertQuoteToOrder(
     {
       companyId: resolvedCompanyId,
       quoteId: quote.id as string,
+      occasionKey: (quote.occasion_key as string | null) ?? null,
       occasionLabel: (quote.occasion as string) ?? undefined,
       occasionType: (quote.occasion as string) ?? undefined,
       products,
@@ -822,6 +856,9 @@ export async function generateGiftRecords(
           collection_code: item.collection_code,
           occasion_type: order.occasion_type ?? "custom",
           occasion_label: order.occasion_label,
+          // Stable occasion key (7a pattern) so history answers "what did we give Priya AND for
+          // which occasion" and joins order↔quote↔occasion by a regen-stable string.
+          occasion_key: order.occasion_key,
           gifted_date: giftedDate,
           packaging_tier: order.packaging_tier,
           personalisation_level: order.personalisation_level,
