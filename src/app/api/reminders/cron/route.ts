@@ -2,7 +2,12 @@ import { NextResponse } from "next/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { generateReminders, getUpcomingEvents } from "@/lib/engines/occasions";
 import { generateOccasions } from "@/lib/engines/occasion-generator";
-import { notifyOccasionAtLeadTime } from "@/lib/engines/notifications";
+import {
+  notifyOccasionAtLeadTime,
+  runOccasionEscalation,
+  runPlatformDigest,
+  runUserDigests,
+} from "@/lib/engines/notifications";
 import { resolveCompanyRecipients } from "@/lib/services/recipients";
 import {
   opsAlertRecipients,
@@ -90,6 +95,27 @@ export async function GET(request: Request) {
         console.error(`[CRON] in-app occasion notify failed for ${companyId}:`, err);
       }
 
+      // 1c. §7 ESCALATION LADDER (Prompt 6b): scan upcoming occasions, fire stages 2/3
+      // when no gift is chosen (occasion_gift_state), suppress when one is. Per-stage
+      // dedupe makes it idempotent; reads occasion.lead_days + occasion_type_key (precise).
+      try {
+        const { data: upcoming } = await supa
+          .from("occasions")
+          .select("id, company_id, employee_id, occasion_type_key, title, date, lead_days")
+          .eq("company_id", companyId)
+          .gte("date", today);
+        for (const occ of upcoming ?? []) {
+          await runOccasionEscalation(supa, occ as never, {
+            name: (c.name as string) ?? "Company",
+            plan: (c.plan as string | null) ?? null,
+            primary_contact_name: (c.primary_contact_name as string | null) ?? null,
+            primary_contact_phone: (c.primary_contact_phone as string | null) ?? null,
+          }, today);
+        }
+      } catch (err) {
+        console.error(`[CRON] escalation scan failed for ${companyId}:`, err);
+      }
+
       // 2. Email occasion reminders whose reminder_date is today.
       const { data: due } = await supa
         .from("reminders")
@@ -130,6 +156,17 @@ export async function GET(request: Request) {
       } catch (err) {
         console.error(`[CRON] digest events failed for ${companyId}:`, err);
       }
+    }
+
+    // 3b. §7 DIGESTS (Prompt 6b): in-app platform daily digest (aggregate, PII-safe) +
+    // per-user rollups for users on digest_frequency=daily (weekly on Mondays). Idempotent
+    // per day/window via dedupe keys + email_log.
+    try {
+      await runPlatformDigest(supa, today);
+      await runUserDigests(supa, "daily");
+      if (new Date(today).getUTCDay() === 1) await runUserDigests(supa, "weekly");
+    } catch (err) {
+      console.error("[CRON] digests failed:", err);
     }
 
     // 4. ONE ops digest across all companies (idempotent per day).

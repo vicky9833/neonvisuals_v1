@@ -1,6 +1,7 @@
 import "server-only";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { sendNotificationEmail, wasEmailSentRecently } from "@/lib/services/email";
+import { buildOpsWaLink } from "@/lib/utils/wa";
 
 /**
  * Notification engine (Prompt 6a). Writes the in-app substrate (`notifications`)
@@ -26,6 +27,9 @@ import { sendNotificationEmail, wasEmailSentRecently } from "@/lib/services/emai
 export const NOTIFICATION_TYPES = {
   OCCASION_REMINDER: "occasion_reminder", // tenant: an occasion is at its lead date
   OCCASION_OPS: "occasion_ops", // platform: ops visibility of an upcoming occasion
+  OCCASION_ESCALATION: "occasion_escalation", // tenant: §7 escalation (no gift chosen)
+  OCCASION_ESCALATION_OPS: "occasion_escalation_ops", // platform: §7 escalation
+  PLATFORM_DIGEST: "platform_digest", // platform: daily aggregate across orgs
   MEMBER_INVITED: "member_invited",
   MEMBER_JOINED: "member_joined",
   MEMBER_REMOVED: "member_removed",
@@ -34,6 +38,28 @@ export const NOTIFICATION_TYPES = {
 
 export type NotificationType =
   (typeof NOTIFICATION_TYPES)[keyof typeof NOTIFICATION_TYPES];
+
+// ── Stable occasion identity (survives occasion regeneration) ────────────────
+export interface StableOccasion {
+  company_id: string;
+  employee_id: string | null;
+  occasion_type_key: string;
+  date: string;
+  title?: string | null;
+}
+/**
+ * Stable key for an occasion INSTANCE, independent of the ephemeral occasions.id
+ * (regenerated each cron run). Employee occasions are unique by
+ * (company, employee, type, date). Company-WIDE festival/custom occasions can
+ * share a date, so the title (festival/custom name — NOT employee PII) is
+ * appended to disambiguate. Used for the gift-state key, notification dedupe,
+ * and per-stage escalation dedupe — one source of truth.
+ */
+export function stableOccasionKey(o: StableOccasion): string {
+  return o.employee_id
+    ? `${o.company_id}:${o.employee_id}:${o.occasion_type_key}:${o.date}`
+    : `${o.company_id}:cw:${o.occasion_type_key}:${o.date}:${o.title ?? ""}`;
+}
 
 // ── Audience specs (§7 role queries) ─────────────────────────────────────────
 export type TenantRole = "hr" | "org_admin" | "org_owner" | "dept_manager";
@@ -131,8 +157,9 @@ export async function resolveAudience(
 interface Pref {
   in_app: boolean;
   email: boolean;
+  digest_frequency: string; // immediate | daily | weekly | off
 }
-const DEFAULT_PREF: Pref = { in_app: true, email: true };
+const DEFAULT_PREF: Pref = { in_app: true, email: true, digest_frequency: "immediate" };
 
 async function prefsFor(
   client: SupabaseClient,
@@ -143,11 +170,15 @@ async function prefsFor(
   if (userIds.length === 0) return map;
   const { data } = await client
     .from("notification_prefs")
-    .select("user_id, in_app, email")
+    .select("user_id, in_app, email, digest_frequency")
     .in("user_id", userIds)
     .eq("type", type);
   for (const r of data ?? []) {
-    map.set(r.user_id as string, { in_app: r.in_app as boolean, email: r.email as boolean });
+    map.set(r.user_id as string, {
+      in_app: r.in_app as boolean,
+      email: r.email as boolean,
+      digest_frequency: (r.digest_frequency as string) ?? "immediate",
+    });
   }
   return map;
 }
@@ -164,7 +195,8 @@ export interface NotifyEmail {
 
 export interface NotifyInput {
   type: NotificationType;
-  audience: AudienceSpec[];
+  /** Role-audience specs (§7). Optional when `recipients` is given explicitly. */
+  audience?: AudienceSpec[];
   /** Explicit recipient user_ids, unioned with the resolved role audience. */
   recipients?: string[];
   companyId?: string | null; // stamped on notifications.company_id + tenant resolution
@@ -190,6 +222,7 @@ export interface NotifyResult {
   inApp: number;
   emailed: number;
   suppressedEmail: number;
+  deferredDigest: number; // email deferred to a digest (digest_frequency != immediate)
 }
 
 /**
@@ -201,12 +234,12 @@ export async function notify(
   client: SupabaseClient,
   input: NotifyInput,
 ): Promise<NotifyResult> {
-  const resolved = await resolveAudience(client, input.audience, {
+  const resolved = await resolveAudience(client, input.audience ?? [], {
     companyId: input.companyId,
     departmentId: input.departmentId,
   });
   const recipients = [...new Set([...(input.recipients ?? []), ...resolved])];
-  const result: NotifyResult = { recipients: recipients.length, inApp: 0, emailed: 0, suppressedEmail: 0 };
+  const result: NotifyResult = { recipients: recipients.length, inApp: 0, emailed: 0, suppressedEmail: 0, deferredDigest: 0 };
   if (recipients.length === 0) return result;
 
   const prefs = await prefsFor(client, recipients, input.type);
@@ -220,8 +253,12 @@ export async function notify(
       channels.push("in_app");
     }
     // Email channel (only if an email spec was supplied AND pref allows).
+    // digest_frequency != 'immediate' DEFERS the email to a rollup (runUserDigests);
+    // the in-app row is still written now so the digest can pick it up.
     let willEmail = false;
-    if (input.email && pref.email) {
+    if (input.email && pref.email && pref.digest_frequency !== "immediate") {
+      result.deferredDigest += 1; // rolled up later; no immediate send
+    } else if (input.email && pref.email) {
       const to = emailMap.get(userId);
       if (to) {
         const dh = input.email.dedupeHours ?? 20;
@@ -335,7 +372,7 @@ export async function notifyOccasionAtLeadTime(
   }
 
   // Stable identity across occasion regeneration (occasion.id is NOT stable).
-  const stable = `${occasion.company_id}:${occasion.employee_id ?? "cw"}:${occasion.occasion_type_key}:${occasion.date}`;
+  const stable = stableOccasionKey(occasion);
 
   // TENANT — title reference-style; body may name the person (occasion.title).
   await notify(client, {
@@ -355,7 +392,6 @@ export async function notifyOccasionAtLeadTime(
   });
 
   // PLATFORM — reference-style ONLY (no employee PII); ops wa.me deep link.
-  const { buildOpsWaLink } = await import("@/lib/utils/wa");
   const wa = buildOpsWaLink({
     clientPhone: company.primary_contact_phone,
     orgName: company.name,
@@ -385,4 +421,200 @@ async function emailsFor(
     if (r.email) map.set(r.id as string, r.email as string);
   }
   return map;
+}
+
+function addDaysISO(base: string, n: number): string {
+  const d = new Date(base);
+  d.setDate(d.getDate() + n);
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+}
+
+// ── Gift-state signal (§7 escalation reads this) ─────────────────────────────
+/**
+ * Does a (non-cancelled) gift-state row exist for this occasion's STABLE key?
+ * Survives occasion regeneration (keyed on stable identity, not occasions.id).
+ * The real write is P7 (quote->order); 6b proves the read via synthetic rows.
+ */
+export async function giftChosenFor(
+  client: SupabaseClient,
+  occasion: StableOccasion,
+): Promise<boolean> {
+  const key = stableOccasionKey(occasion);
+  const { count } = await client
+    .from("occasion_gift_state")
+    .select("id", { count: "exact", head: true })
+    .eq("stable_key", key)
+    .neq("status", "cancelled");
+  return (count ?? 0) > 0;
+}
+
+// ── §7 escalation ladder (stages 2 & 3; stage 1 = notifyOccasionAtLeadTime) ──
+export interface OccasionForEscalation extends OccasionForNotify {
+  lead_days: number;
+}
+
+export interface EscalationResult {
+  suppressed: boolean; // gift chosen -> stages 2/3 do not fire
+  stage2Fired: boolean;
+  stage3Fired: boolean;
+}
+
+async function fireEscalationStage(
+  client: SupabaseClient,
+  occasion: OccasionForEscalation,
+  company: CompanyForNotify,
+  stable: string,
+  stage: 2 | 3,
+  tenantRoles: TenantRole[],
+  platformRole: PlatformAudience,
+): Promise<void> {
+  const label = OCCASION_TYPE_LABEL[occasion.occasion_type_key] ?? "gifting occasion";
+  const n = daysUntil(occasion.date);
+  const inDays = n <= 0 ? "soon" : `in ${n} day${n === 1 ? "" : "s"}`;
+  const prefix = stage === 3 ? "URGENT: " : "Action needed: ";
+  // TENANT — reference-style title; body may name the person (authorised).
+  await notify(client, {
+    type: NOTIFICATION_TYPES.OCCASION_ESCALATION,
+    audience: tenantRoles.map((r) => ({ plane: "tenant", role: r }) as AudienceSpec),
+    companyId: occasion.company_id,
+    title: `${prefix}${label} ${inDays} — no gift chosen`,
+    body: occasion.title, // authorised tenant PII viewers only (RLS)
+    link: "/dashboard/occasions",
+    dedupeKey: `occ-esc:${stable}:${stage}`,
+  });
+  // PLATFORM — PII-free; ops wa.me deep link.
+  const wa = buildOpsWaLink({
+    clientPhone: company.primary_contact_phone,
+    orgName: company.name,
+    plan: company.plan,
+    contactName: company.primary_contact_name,
+    occasionType: label,
+  });
+  await notify(client, {
+    type: NOTIFICATION_TYPES.OCCASION_ESCALATION_OPS,
+    audience: [{ plane: "platform", role: platformRole }],
+    companyId: occasion.company_id,
+    title: `${prefix}${company.name}: ${label}`,
+    body: `No gift chosen yet for an upcoming ${label} at ${company.name}${company.plan ? ` (${company.plan})` : ""} ${inDays}.`,
+    link: wa,
+    dedupeKey: `occ-escops:${stable}:${stage}`,
+  });
+}
+
+/**
+ * §7 escalation for one upcoming occasion, evaluated against `today`:
+ *  - Stage 2 at occasion_date - floor(lead_days/2): hr + org_admin + platform_admin.
+ *  - Stage 3 at occasion_date - 3: hr + org_owner + platform_owner (urgent).
+ * SUPPRESSED entirely if a gift has been chosen (giftChosenFor). Each stage is
+ * deduped per-stage (occ-esc:{stable}:{stage}) so a repeated scan never re-fires.
+ * Reads occasion.lead_days + occasion_type_key from the occasion row (NOT the
+ * reminder, whose type collapses milestone/onboarding/probation).
+ */
+export async function runOccasionEscalation(
+  client: SupabaseClient,
+  occasion: OccasionForEscalation,
+  company: CompanyForNotify,
+  today: string,
+): Promise<EscalationResult> {
+  const out: EscalationResult = { suppressed: false, stage2Fired: false, stage3Fired: false };
+  // Only escalate BEFORE the occasion date (a past/today occasion is out of the window).
+  if (today >= occasion.date) return out;
+  if (await giftChosenFor(client, occasion)) {
+    out.suppressed = true;
+    return out; // gift chosen -> stop escalation (the whole point)
+  }
+  const stable = stableOccasionKey(occasion);
+  const half = Math.floor((occasion.lead_days ?? 14) / 2);
+  const stage2Date = addDaysISO(occasion.date, -half);
+  const stage3Date = addDaysISO(occasion.date, -3);
+  if (today >= stage2Date) {
+    await fireEscalationStage(client, occasion, company, stable, 2, ["hr", "org_admin"], "platform_admin");
+    out.stage2Fired = true;
+  }
+  if (today >= stage3Date) {
+    await fireEscalationStage(client, occasion, company, stable, 3, ["hr", "org_owner"], "platform_owner");
+    out.stage3Fired = true;
+  }
+  return out;
+}
+
+// ── Digests (§7) ─────────────────────────────────────────────────────────────
+/**
+ * Platform daily digest — an IN-APP aggregate to platform_admin of ALL orgs'
+ * upcoming occasions (next 45 days). PII-SAFE: counts + types only, never an
+ * employee name. Idempotent per day (dedupeKey platdigest:{today}).
+ */
+export async function runPlatformDigest(
+  client: SupabaseClient,
+  today: string,
+): Promise<NotifyResult> {
+  const horizon = addDaysISO(today, 45);
+  const { data: occ } = await client
+    .from("occasions")
+    .select("occasion_type_key, company_id")
+    .gte("date", today)
+    .lte("date", horizon);
+  const rows = occ ?? [];
+  const total = rows.length;
+  const orgs = new Set(rows.map((o) => o.company_id as string)).size;
+  const byType = rows.reduce((m: Record<string, number>, o) => {
+    const k = OCCASION_TYPE_LABEL[o.occasion_type_key as string] ?? (o.occasion_type_key as string);
+    m[k] = (m[k] ?? 0) + 1;
+    return m;
+  }, {});
+  const breakdown = Object.entries(byType).map(([k, v]) => `${v} ${k}`).join(", ") || "none";
+  return notify(client, {
+    type: NOTIFICATION_TYPES.PLATFORM_DIGEST,
+    audience: [{ plane: "platform", role: "platform_admin" }],
+    companyId: null,
+    title: `Daily digest: ${total} upcoming gifting moment${total === 1 ? "" : "s"} across ${orgs} org${orgs === 1 ? "" : "s"}`,
+    body: `Next 45 days — ${breakdown}.`,
+    link: "/ops",
+    dedupeKey: `platdigest:${today}`,
+  });
+}
+
+/**
+ * Per-user digest rollup: users with notification_prefs.digest_frequency =
+ * `frequency` get ONE email summarising their in-app notifications in the window
+ * (24h daily / 168h weekly) instead of per-event emails. Titles are
+ * reference-style (PII-safe). Deduped per user per window via email_log.
+ */
+export async function runUserDigests(
+  client: SupabaseClient,
+  frequency: "daily" | "weekly",
+): Promise<{ users: number; sent: number }> {
+  const windowH = frequency === "daily" ? 24 : 168;
+  const since = new Date(Date.now() - windowH * 3_600_000).toISOString();
+  const { data: prefs } = await client
+    .from("notification_prefs")
+    .select("user_id")
+    .eq("digest_frequency", frequency);
+  const userIds = [...new Set((prefs ?? []).map((p) => p.user_id as string))];
+  let sent = 0;
+  const template = `user_digest_${frequency}`;
+  for (const uid of userIds) {
+    const { data: notifs } = await client
+      .from("notifications")
+      .select("title, created_at")
+      .eq("recipient_user_id", uid)
+      .gte("created_at", since)
+      .order("created_at", { ascending: false });
+    if (!notifs || notifs.length === 0) continue;
+    const { data: prof } = await client.from("profiles").select("email").eq("id", uid).maybeSingle();
+    const to = prof?.email as string | undefined;
+    if (!to) continue;
+    if (await wasEmailSentRecently(to, template, Math.min(windowH, 20))) continue; // one digest per window
+    const titles = (notifs as Array<{ title: string }>).slice(0, 20).map((n) => n.title);
+    const html = `<p>You have ${notifs.length} update${notifs.length === 1 ? "" : "s"}:</p><ul>${titles.map((t) => `<li>${t}</li>`).join("")}</ul>`;
+    const res = await sendNotificationEmail({
+      to,
+      subject: `Your ${frequency} Neon Visuals digest — ${notifs.length} update${notifs.length === 1 ? "" : "s"}`,
+      html,
+      template,
+      metadata: { count: notifs.length, frequency },
+    });
+    if (res.success) sent += 1;
+  }
+  return { users: userIds.length, sent };
 }
