@@ -30,6 +30,7 @@ export const NOTIFICATION_TYPES = {
   OCCASION_ESCALATION: "occasion_escalation", // tenant: §7 escalation (no gift chosen)
   OCCASION_ESCALATION_OPS: "occasion_escalation_ops", // platform: §7 escalation
   PLATFORM_DIGEST: "platform_digest", // platform: daily aggregate across orgs
+  QUOTE_REQUEST_OPS: "quote_request_ops", // platform: a tenant requested a quote (§9)
   MEMBER_INVITED: "member_invited",
   MEMBER_JOINED: "member_joined",
   MEMBER_REMOVED: "member_removed",
@@ -446,6 +447,70 @@ export async function giftChosenFor(
     .eq("stable_key", key)
     .neq("status", "cancelled");
   return (count ?? 0) > 0;
+}
+
+/**
+ * Write the "gift chosen" signal for an occasion (Prompt 7a — the P6 obligation). Called when a
+ * tenant requests a quote FOR an occasion → escalation stages 2/3 SUPPRESS. Idempotent on the
+ * stable key. `client` MUST be service-role (RLS grants occasion_gift_state write to
+ * owner/admin/hr or service; system writes use service). status='ordered' once an order exists.
+ */
+export async function writeGiftChosen(
+  client: SupabaseClient,
+  occasion: { company_id: string; employee_id: string | null; occasion_type_key: string; date: string; title?: string | null },
+  opts: { quoteId?: string | null; orderId?: string | null; chosenBy?: string | null },
+): Promise<void> {
+  const key = stableOccasionKey(occasion);
+  const { error } = await client.from("occasion_gift_state").upsert(
+    {
+      stable_key: key,
+      company_id: occasion.company_id,
+      employee_id: occasion.employee_id,
+      occasion_type_key: occasion.occasion_type_key,
+      occasion_date: occasion.date,
+      status: opts.orderId ? "ordered" : "chosen",
+      quote_id: opts.quoteId ?? null,
+      order_id: opts.orderId ?? null,
+      chosen_by: opts.chosenBy ?? null,
+    },
+    { onConflict: "stable_key" },
+  );
+  if (error) throw new Error(`writeGiftChosen: ${error.message}`);
+}
+
+/**
+ * REVERSAL (Prompt 7a ruling): when a quote is cancelled/rejected and NO order resulted, CLEAR the
+ * gift-state so giftChosenFor() → false and escalation RESUMES (a fallen-through quote is a
+ * forgotten occasion — exactly what the ladder must catch). Only clears rows with NO order_id
+ * (a converted-to-order gift is committed and persists). Returns how many rows were cleared.
+ */
+export async function clearGiftChosenForQuote(
+  client: SupabaseClient,
+  quoteId: string,
+): Promise<{ cleared: number }> {
+  const { data, error } = await client
+    .from("occasion_gift_state")
+    .delete()
+    .eq("quote_id", quoteId)
+    .is("order_id", null)
+    .select("id");
+  if (error) throw new Error(`clearGiftChosenForQuote: ${error.message}`);
+  return { cleared: (data ?? []).length };
+}
+
+/**
+ * A quote converted to an order → the gift is committed: mark the gift-state 'ordered' + link the
+ * order so the cancel-reversal never clears it. Idempotent.
+ */
+export async function markGiftOrderedForQuote(
+  client: SupabaseClient,
+  quoteId: string,
+  orderId: string,
+): Promise<void> {
+  await client
+    .from("occasion_gift_state")
+    .update({ status: "ordered", order_id: orderId })
+    .eq("quote_id", quoteId);
 }
 
 // ── §7 escalation ladder (stages 2 & 3; stage 1 = notifyOccasionAtLeadTime) ──

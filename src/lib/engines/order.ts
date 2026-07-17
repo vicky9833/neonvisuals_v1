@@ -768,6 +768,18 @@ export async function convertQuoteToOrder(
     .update({ status: "accepted", accepted_at: new Date().toISOString() })
     .eq("id", quoteId);
 
+  // Prompt 7a: a converted quote = a committed gift. Persist occasion_gift_state (status ordered
+  // + order_id) so the cancel-reversal never clears it. Only relevant for occasion-linked quotes.
+  if (quote.occasion_key) {
+    try {
+      const { createAdminClient } = await import("@/lib/supabase/admin");
+      const { markGiftOrderedForQuote } = await import("@/lib/engines/notifications");
+      await markGiftOrderedForQuote(createAdminClient(), quoteId, order.id);
+    } catch (e) {
+      console.error("[convertQuoteToOrder] gift-state persist failed:", e);
+    }
+  }
+
   return order;
 }
 

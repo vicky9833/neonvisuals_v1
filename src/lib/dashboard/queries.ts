@@ -129,7 +129,7 @@ export async function getActiveQuotesCount(companyId: string): Promise<number> {
     const { count } = await supabase
       .from("quotes")
       .select("id", { count: "exact", head: true })
-      .eq("org_id", companyId)
+      .eq("company_id", companyId)
       .in("status", ["draft", "sent"]);
     return count ?? 0;
   } catch {
@@ -168,7 +168,7 @@ export async function getRecentActivity(
       supabase
         .from("quotes")
         .select("id, quote_number, status, created_at")
-        .eq("org_id", companyId)
+        .eq("company_id", companyId)
         .order("created_at", { ascending: false })
         .limit(limit),
       supabase
