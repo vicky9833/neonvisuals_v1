@@ -6,6 +6,9 @@ import { getProfile } from "@/lib/auth";
 import { SetPageTitle } from "@/components/dashboard/DashboardProvider";
 import { ClientOrderDetail } from "@/components/orders/ClientOrderDetail";
 import { getOrder, toClientOrder } from "@/lib/engines/order";
+import { createClient } from "@/lib/supabase/server";
+import { createAdminClient } from "@/lib/supabase/admin";
+import { listProofPhotoRows, signProofUrls } from "@/lib/services/proof-photos";
 
 export const metadata: Metadata = { title: "Order Detail" };
 
@@ -25,6 +28,13 @@ export default async function ClientOrderDetailPage({
     notFound();
   }
 
+  // Proof photos (Prompt 7c-rest item 3): RLS-scoped rows + short-TTL SIGNED URLs (never public).
+  const userClient = await createClient();
+  const proofRows = await listProofPhotoRows(userClient, id);
+  const proofUrls = proofRows.length
+    ? await signProofUrls(createAdminClient(), proofRows.map((r) => r.storage_path))
+    : [];
+
   return (
     <div className="space-y-6">
       <SetPageTitle title="Order Detail" />
@@ -35,6 +45,24 @@ export default async function ClientOrderDetailPage({
         <ArrowLeft className="size-4" /> Back to orders
       </Link>
       <ClientOrderDetail order={toClientOrder(order)} />
+
+      {proofUrls.length > 0 ? (
+        <section className="rounded-xl border border-[#E5E2DC] bg-white p-5">
+          <h2 className="font-heading text-lg font-bold text-navy">Proof photos</h2>
+          <p className="mt-1 text-sm text-[#6B7280]">See your gifts before they ship.</p>
+          <div className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-3">
+            {proofUrls.map((url, i) => (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img
+                key={i}
+                src={url}
+                alt={`Proof photo ${i + 1} for order ${order.order_number ?? ""}`}
+                className="aspect-square w-full rounded-lg border border-[#E5E2DC] object-cover"
+              />
+            ))}
+          </div>
+        </section>
+      ) : null}
     </div>
   );
 }

@@ -17,14 +17,17 @@ import {
 
 export async function getEmployeeGiftHistory(
   employeeId: string,
+  opts: { since?: string | null } = {},
 ): Promise<GiftRecord[]> {
   const supabase = await createClient();
-  const { data } = await supabase
+  let query = supabase
     .from("gift_records")
     .select("*")
     .eq("employee_id", employeeId)
-    .eq("is_archived", false)
-    .order("gifted_date", { ascending: false });
+    .eq("is_archived", false);
+  // §8 plan tiering: Free callers pass a 3-month cutoff; Pro passes null (full history).
+  if (opts.since) query = query.gte("gifted_date", opts.since);
+  const { data } = await query.order("gifted_date", { ascending: false });
   return (data ?? []) as GiftRecord[];
 }
 
@@ -392,7 +395,10 @@ export async function getCompanyGiftStats(companyId: string): Promise<{
   };
 }
 
-export async function getEmployeeGiftStats(employeeId: string): Promise<{
+export async function getEmployeeGiftStats(
+  employeeId: string,
+  opts: { since?: string | null } = {},
+): Promise<{
   totalGifts: number;
   giftTimeline: GiftRecord[];
   deskTestScore: number;
@@ -401,7 +407,7 @@ export async function getEmployeeGiftStats(employeeId: string): Promise<{
   lastGiftedDate: string | null;
   daysSinceLastGift: number | null;
 }> {
-  const timeline = await getEmployeeGiftHistory(employeeId);
+  const timeline = await getEmployeeGiftHistory(employeeId, opts);
   const prefs = await getEmployeePreferences(employeeId);
   const last = timeline[0]?.gifted_date ?? null;
   return {

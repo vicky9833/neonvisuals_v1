@@ -805,10 +805,14 @@ export async function notifyOrderStatusChange(
  */
 export async function notifyProofPhotosReady(
   client: SupabaseClient,
-  input: { orderId: string; companyId: string; orderNumber: string | null },
+  input: { orderId: string; companyId: string; orderNumber: string | null; imageUrls?: string[] },
 ): Promise<NotifyResult> {
   const ref = input.orderNumber ?? input.orderId;
   const link = `/dashboard/orders/${input.orderId}`;
+  // Scoped (signed) image URLs embedded in the email — time-limited, no employee PII, no public
+  // bucket URL. Subject/link stay reference-style.
+  const imgs = (input.imageUrls ?? []).slice(0, 10);
+  const imgHtml = imgs.map((u) => `<p><img src="${u}" alt="Proof photo for order ${ref}" style="max-width:480px" /></p>`).join("");
   return notify(client, {
     type: NOTIFICATION_TYPES.ORDER_PROOF_PHOTOS_READY,
     audience: [
@@ -822,7 +826,7 @@ export async function notifyProofPhotosReady(
     dedupeKey: `order:${input.orderId}:proof_photos_ready`,
     email: {
       subject: `Proof photos ready for order ${ref}`,
-      html: `<p>Proof photos for order ${ref} are ready.</p><p><a href="${link}">Review proof photos</a></p>`,
+      html: `<p>Proof photos for order ${ref} are ready.</p>${imgHtml}<p><a href="${link}">Review proof photos</a></p>`,
       template: "order_proof_photos_ready",
     },
   });
