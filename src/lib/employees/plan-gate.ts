@@ -79,6 +79,19 @@ export function canUseApprovals(ctx: PlanContext): GateDecision {
   return { allowed: false, reason: "free_approvals_blocked" };
 }
 
+/**
+ * Gift-history window (§8): Free sees the last 3 months only; Pro / plan-override / platform staff
+ * see the full history. Returns the ISO cutoff date (gifted_date >= cutoff) for Free, or null for
+ * full history. Enforced at the query (memory.ts), not the UI.
+ */
+export const FREE_GIFT_HISTORY_MONTHS = 3;
+export function giftHistoryWindowStart(ctx: PlanContext): string | null {
+  if (ctx.isPlatformStaff || isProPlan(ctx)) return null; // full history
+  const d = new Date();
+  d.setMonth(d.getMonth() - FREE_GIFT_HISTORY_MONTHS);
+  return d.toISOString().slice(0, 10);
+}
+
 /** Festival calendar cap (§8): Free = 3 festivals opted-in, Pro = unlimited. */
 export const FREE_FESTIVAL_LIMIT = 3;
 export function festivalLimit(ctx: PlanContext): number {
