@@ -5,6 +5,9 @@ import {
   getFestivalPreferences,
   saveFestivalPreferences,
 } from "@/lib/engines/occasions";
+import { createClient } from "@/lib/supabase/server";
+import { getCompanyPlanContext } from "@/lib/employees/queries";
+import { festivalLimit, gateMessage } from "@/lib/employees/plan-gate";
 
 export const runtime = "nodejs";
 
@@ -46,6 +49,32 @@ export async function POST(request: Request) {
         { status: 400 },
       );
     }
+
+    // §8 festival cap: Free = 3 opted-in festivals, Pro/platform = unlimited. Compute the
+    // resulting active set (existing active ∪ submitted-active) − submitted-inactive.
+    const plan = await getCompanyPlanContext(profile.company_id);
+    const limit = festivalLimit({ plan: plan.plan, planStatus: plan.planStatus, planOverrideBy: plan.planOverrideBy, isPlatformStaff: profile.isPlatformStaff });
+    if (Number.isFinite(limit)) {
+      const supabase = await createClient();
+      const { data: existing } = await supabase
+        .from("company_festivals")
+        .select("festival_id, is_active")
+        .eq("company_id", profile.company_id);
+      const active = new Set(
+        (existing ?? []).filter((r) => r.is_active as boolean).map((r) => r.festival_id as string),
+      );
+      for (const p of parsed.data.preferences) {
+        if (p.is_active) active.add(p.festival_id);
+        else active.delete(p.festival_id);
+      }
+      if (active.size > limit) {
+        return NextResponse.json(
+          { error: "plan_gate", reason: "free_festival_limit", message: gateMessage("free_festival_limit") },
+          { status: 403 },
+        );
+      }
+    }
+
     await saveFestivalPreferences(profile.company_id, parsed.data.preferences);
     return NextResponse.json({ data: { saved: parsed.data.preferences.length } });
   } catch (err) {

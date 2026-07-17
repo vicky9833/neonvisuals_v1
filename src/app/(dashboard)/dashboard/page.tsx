@@ -25,6 +25,7 @@ import {
   getEventsForMonth,
   getUpcomingEvents,
 } from "@/lib/engines/occasions";
+import { generateOccasions } from "@/lib/engines/occasion-generator";
 import {
   sendOccasionReminderEmail,
   wasEmailSentRecently,
@@ -86,9 +87,11 @@ export default async function DashboardOverviewPage() {
     getEventsForMonth(companyId, month, year),
   ]);
 
-  // Generate reminders on dashboard load (idempotent + debounced once/day).
+  // Generate occasion instances, then derive reminders from them (Prompt 5b:
+  // reminders is a downstream consumer of occasions). Idempotent + debounced.
   if (companyId) {
     try {
+      await generateOccasions(companyId);
       await generateReminders(companyId);
     } catch {
       // non-blocking

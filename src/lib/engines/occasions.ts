@@ -400,7 +400,15 @@ export async function generateReminders(
     }
   }
 
-  const events = await getUpcomingEvents(companyId, 30, client);
+  // Prompt 5b CUTOVER: reminders are now a DOWNSTREAM CONSUMER of occasions instances.
+  // We no longer recompute occasions here — we read their lead-adjusted notify_date.
+  // occasions are (re)generated upstream by generateOccasions() before this runs.
+  const { data: occ } = await supabase
+    .from("occasions")
+    .select("occasion_type_key, title, date, notify_date, employee_id")
+    .eq("company_id", companyId)
+    .not("notify_date", "is", null)
+    .gte("notify_date", toISO(addDays(now, -7)));
 
   // Existing reminders to dedupe against.
   const { data: existing } = await supabase
@@ -426,41 +434,33 @@ export async function generateReminders(
     ].join("|");
   const seen = new Set((existing ?? []).map((r) => key(r as never)));
 
-  const typeMap: Record<CalendarEventType, Reminder["reminder_type"]> = {
-    birthday: "birthday",
-    work_anniversary: "work_anniversary",
-    festival: "festival",
-    custom: "custom_occasion",
-  };
+  // occasion_type_key -> reminders.reminder_type (CHECK: birthday|work_anniversary|festival|custom_occasion).
+  const reminderType = (k: string): Reminder["reminder_type"] =>
+    k === "birthday" ? "birthday" : k === "festival" ? "festival" : k === "custom" ? "custom_occasion" : "work_anniversary";
 
   const toInsert: Record<string, unknown>[] = [];
   let skipped = 0;
-  const offsets = [7, 3, 1, 0];
 
-  for (const ev of events) {
-    const occ = parse(ev.date);
-    for (const offset of offsets) {
-      const remindDate = toISO(addDays(occ, -offset));
-      if (remindDate < toISO(addDays(now, -7))) continue;
-      const row = {
-        company_id: companyId,
-        reminder_type: typeMap[ev.type],
-        title: ev.title,
-        description: ev.description ?? null,
-        occasion_date: ev.date,
-        reminder_date: remindDate,
-        employee_id: ev.employeeId ?? null,
-        festival_id: ev.festivalId ?? null,
-        custom_occasion_id: ev.customOccasionId ?? null,
-        action_url: ev.actionUrl ?? null,
-      };
-      if (seen.has(key(row as never))) {
-        skipped += 1;
-        continue;
-      }
-      seen.add(key(row as never));
-      toInsert.push(row);
+  for (const o of occ ?? []) {
+    const occasionDate = (o.date as string) ?? (o.notify_date as string);
+    const row = {
+      company_id: companyId,
+      reminder_type: reminderType(o.occasion_type_key as string),
+      title: o.title as string,
+      description: null,
+      occasion_date: occasionDate,
+      reminder_date: o.notify_date as string,
+      employee_id: (o.employee_id as string | null) ?? null,
+      festival_id: null,
+      custom_occasion_id: null,
+      action_url: null,
+    };
+    if (seen.has(key(row as never))) {
+      skipped += 1;
+      continue;
     }
+    seen.add(key(row as never));
+    toInsert.push(row);
   }
 
   let created = 0;
