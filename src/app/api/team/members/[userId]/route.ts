@@ -4,6 +4,7 @@ import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { requireTenant, apiAuthErrorResponse } from "@/lib/api-auth";
 import { sendMemberRoleChangedEmail } from "@/lib/services/email";
+import { notify, NOTIFICATION_TYPES } from "@/lib/engines/notifications";
 
 export const runtime = "nodejs";
 
@@ -96,6 +97,20 @@ export async function DELETE(_request: Request, { params }: { params: Promise<{ 
     if (!removed) {
       return NextResponse.json({ error: "not_found", message: "Member not found in your company." }, { status: 404 });
     }
+
+    // In-app (6a): notify org_owner + the removed user. No pre-existing email to preserve.
+    try {
+      await notify(createAdminClient(), {
+        type: NOTIFICATION_TYPES.MEMBER_REMOVED,
+        audience: [{ plane: "tenant", role: "org_owner" }],
+        recipients: [userId],
+        companyId,
+        title: "Team membership updated",
+        body: "A member was removed from the team.",
+        link: "/dashboard/team",
+      });
+    } catch (e) { console.error("[team/members] remove in-app notify failed:", e); }
+
     return NextResponse.json({ data: { removed: userId } });
   } catch (err) {
     const authResponse = apiAuthErrorResponse(err);
@@ -124,11 +139,22 @@ async function notifyRoleChange(
     ownerEmail = (op?.email as string) ?? null;
   }
   const recipients = Array.from(new Set([affected?.email as string | undefined, ownerEmail].filter((e): e is string => Boolean(e))));
-  if (recipients.length === 0) return;
-  await sendMemberRoleChangedEmail({
-    to: recipients,
-    companyName: (company?.name as string) ?? "your organisation",
-    memberEmail: (affected?.email as string) ?? affectedUserId,
-    oldRole, newRole, changedBy: changedByEmail,
+  if (recipients.length > 0) {
+    await sendMemberRoleChangedEmail({
+      to: recipients,
+      companyName: (company?.name as string) ?? "your organisation",
+      memberEmail: (affected?.email as string) ?? affectedUserId,
+      oldRole, newRole, changedBy: changedByEmail,
+    });
+  }
+  // In-app (6a): affected user + org_owner. Reference-style title (no PII).
+  await notify(admin, {
+    type: NOTIFICATION_TYPES.MEMBER_ROLE_CHANGED,
+    audience: [{ plane: "tenant", role: "org_owner" }],
+    recipients: [affectedUserId],
+    companyId,
+    title: "Team role updated",
+    body: `A team member's role was changed to ${newRole}.`,
+    link: "/dashboard/team",
   });
 }

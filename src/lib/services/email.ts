@@ -21,6 +21,30 @@ export function isEmailConfigured(): boolean {
 }
 
 /**
+ * Generic sender for the notification engine (Prompt 6a). Routes an arbitrary
+ * notification email through the SAME `sendEmail` path (Resend + email_log +
+ * graceful degradation) so there is no parallel email path. Subject MUST be
+ * reference-style (no employee PII — §10.13); the caller (engine) enforces it.
+ */
+export function sendNotificationEmail(params: {
+  to: string | string[];
+  subject: string;
+  html: string;
+  template: string;
+  replyTo?: string;
+  metadata?: Record<string, unknown>;
+}): Promise<EmailResult> {
+  return sendEmail({
+    to: params.to,
+    subject: params.subject,
+    html: params.html,
+    template: params.template,
+    replyTo: params.replyTo,
+    metadata: params.metadata,
+  });
+}
+
+/**
  * Internal ops/sales alert recipients. Reads OPS_ALERT_EMAIL (comma-separated),
  * falling back to the FROM address so an alert is never sent to nobody.
  */

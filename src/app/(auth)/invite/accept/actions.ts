@@ -3,6 +3,7 @@
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { sendMemberJoinedEmail } from "@/lib/services/email";
+import { notify, NOTIFICATION_TYPES } from "@/lib/engines/notifications";
 
 export interface AcceptInviteResult {
   ok: boolean;
@@ -75,11 +76,24 @@ async function notifyOwners(companyId: string, memberEmail: string): Promise<voi
   const recipients = (profiles ?? [])
     .map((p) => p.email as string | null)
     .filter((e): e is string => Boolean(e) && e !== memberEmail);
-  if (recipients.length === 0) return;
+  if (recipients.length > 0) {
+    await sendMemberJoinedEmail({
+      to: recipients,
+      companyName: (company?.name as string) ?? "your organisation",
+      memberEmail,
+    });
+  }
 
-  await sendMemberJoinedEmail({
-    to: recipients,
-    companyName: (company?.name as string) ?? "your organisation",
-    memberEmail,
+  // In-app (6a): notify org owners/admins that a member joined.
+  await notify(admin, {
+    type: NOTIFICATION_TYPES.MEMBER_JOINED,
+    audience: [
+      { plane: "tenant", role: "org_owner" },
+      { plane: "tenant", role: "org_admin" },
+    ],
+    companyId,
+    title: "New team member joined",
+    body: `${memberEmail} joined your team.`,
+    link: "/dashboard/team",
   });
 }
