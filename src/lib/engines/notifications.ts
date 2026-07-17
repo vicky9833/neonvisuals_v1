@@ -31,6 +31,7 @@ export const NOTIFICATION_TYPES = {
   OCCASION_ESCALATION_OPS: "occasion_escalation_ops", // platform: §7 escalation
   PLATFORM_DIGEST: "platform_digest", // platform: daily aggregate across orgs
   QUOTE_REQUEST_OPS: "quote_request_ops", // platform: a tenant requested a quote (§9)
+  QUOTE_APPROVAL_ROUTED: "quote_approval_routed", // tenant: an over-limit quote routed to the next approver (§7, 7b)
   MEMBER_INVITED: "member_invited",
   MEMBER_JOINED: "member_joined",
   MEMBER_REMOVED: "member_removed",

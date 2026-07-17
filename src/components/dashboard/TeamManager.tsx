@@ -13,7 +13,14 @@ export interface TeamMemberRow {
   role: string;
   department: string | null;
   status: string;
+  /** company_members.approval_limit — the value the quote.approve ≤limit conditional reads. */
+  approvalLimit: number | null;
 }
+
+/** Roles whose approval is bounded by approval_limit (matrix "limit" cell). */
+const LIMIT_ROLES = new Set(["hr", "manager"]);
+/** Roles that approve with no limit (matrix "Y"). */
+const UNLIMITED_APPROVER_ROLES = new Set(["org_owner", "org_admin", "finance"]);
 
 const ROLE_TARGETS = ["org_admin", "hr", "finance", "manager", "viewer"] as const;
 const roleLabel = (r: string) => r.replace(/^org_/, "").replace(/_/g, " ");
@@ -46,6 +53,34 @@ export function TeamManager({
       const j = await res.json().catch(() => ({}));
       if (!res.ok) { toast.error(j.message ?? "Could not change role."); return; }
       toast.success("Role updated.");
+      router.refresh();
+    } finally { setBusy(null); }
+  }
+
+  async function setApprovalLimit(userId: string, raw: string) {
+    // Empty => null (no approval authority); else a non-negative integer.
+    const trimmed = raw.trim();
+    let approvalLimit: number | null;
+    if (trimmed === "") {
+      approvalLimit = null;
+    } else {
+      const n = Number(trimmed);
+      if (!Number.isInteger(n) || n < 0) {
+        toast.error("Approval limit must be a whole number ≥ 0 (or blank for none).");
+        return;
+      }
+      approvalLimit = n;
+    }
+    setBusy(userId);
+    try {
+      const res = await fetch(`/api/team/members/${userId}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ approvalLimit }),
+      });
+      const j = await res.json().catch(() => ({}));
+      if (!res.ok) { toast.error(j.message ?? "Could not set approval limit."); return; }
+      toast.success(approvalLimit == null ? "Approval limit cleared." : `Approval limit set to ₹${approvalLimit.toLocaleString("en-IN")}.`);
       router.refresh();
     } finally { setBusy(null); }
   }
@@ -86,6 +121,7 @@ export function TeamManager({
             <th className="px-4 py-3 font-medium">Role</th>
             <th className="px-4 py-3 font-medium">Department</th>
             <th className="px-4 py-3 font-medium">Status</th>
+            <th className="px-4 py-3 font-medium">Approval limit</th>
             {canManage ? <th className="px-4 py-3 font-medium text-right">Manage</th> : null}
           </tr>
         </thead>
@@ -108,6 +144,36 @@ export function TeamManager({
                 <td className="px-4 py-3 text-[#6B7280]">{m.department ?? "—"}</td>
                 <td className="px-4 py-3">
                   <span className={m.status === "active" ? "text-[#2D6A4F]" : "text-[#6B7280]"}>{m.status}</span>
+                </td>
+                <td className="px-4 py-3">
+                  {UNLIMITED_APPROVER_ROLES.has(m.role) ? (
+                    <span className="text-xs text-[#6B7280]">Unlimited</span>
+                  ) : LIMIT_ROLES.has(m.role) ? (
+                    canManage ? (
+                      <input
+                        type="number"
+                        min={0}
+                        step={1}
+                        inputMode="numeric"
+                        aria-label={`Approval limit for ${m.email}`}
+                        defaultValue={m.approvalLimit ?? ""}
+                        placeholder="None"
+                        disabled={busy === m.userId}
+                        onBlur={(e) => {
+                          const next = e.target.value.trim();
+                          const current = m.approvalLimit == null ? "" : String(m.approvalLimit);
+                          if (next !== current) setApprovalLimit(m.userId, e.target.value);
+                        }}
+                        className="h-8 w-28 rounded-md border border-[#E5E2DC] bg-white px-2 text-xs outline-none focus-visible:border-gold"
+                      />
+                    ) : (
+                      <span className="text-xs text-[#6B7280]">
+                        {m.approvalLimit == null ? "None" : `₹${m.approvalLimit.toLocaleString("en-IN")}`}
+                      </span>
+                    )
+                  ) : (
+                    <span className="text-xs text-[#9CA3AF]">—</span>
+                  )}
                 </td>
                 {canManage ? (
                   <td className="px-4 py-3">
