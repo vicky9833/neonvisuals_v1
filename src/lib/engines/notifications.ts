@@ -174,6 +174,13 @@ export interface NotifyInput {
   /** In-app body; MAY name the person for the tenant audience only. */
   body?: string | null;
   link?: string | null;
+  /**
+   * Stable idempotency key for the in-app row (unique per recipient via
+   * notifications_recipient_dedupe_uk). Repeated notify() for the same
+   * event+recipient is a no-op — survives occasion regeneration (occasion.id is
+   * NOT stable; use company+employee+type+date). Omit for one-off events.
+   */
+  dedupeKey?: string | null;
   /** Optional email channel; when provided, fired per-recipient email pref. */
   email?: NotifyEmail | null;
 }
@@ -240,6 +247,8 @@ export async function notify(
     }
 
     // Write the in-app row when in_app is enabled (records channels actually sent).
+    // Idempotent per (recipient, dedupe_key): a repeated event no-ops on the unique
+    // index (23505) rather than accumulating duplicate bell rows.
     if (pref.in_app) {
       const { error } = await client.from("notifications").insert({
         recipient_user_id: userId,
@@ -249,8 +258,13 @@ export async function notify(
         body: input.body ?? null,
         link: input.link ?? null,
         channels_sent: channels,
+        dedupe_key: input.dedupeKey ?? null,
       });
       if (!error) result.inApp += 1;
+      else if (error.code !== "23505") {
+        // 23505 = deduped (already notified this recipient for this event) — not an error.
+        console.error("[notify] in-app insert failed:", error.message);
+      }
     }
     if (willEmail) result.emailed += 1;
   }
@@ -320,6 +334,9 @@ export async function notifyOccasionAtLeadTime(
     departmentId = (emp?.department_id as string | null) ?? null;
   }
 
+  // Stable identity across occasion regeneration (occasion.id is NOT stable).
+  const stable = `${occasion.company_id}:${occasion.employee_id ?? "cw"}:${occasion.occasion_type_key}:${occasion.date}`;
+
   // TENANT — title reference-style; body may name the person (occasion.title).
   await notify(client, {
     type: NOTIFICATION_TYPES.OCCASION_REMINDER,
@@ -334,6 +351,7 @@ export async function notifyOccasionAtLeadTime(
     title: `Upcoming ${label} ${inDays}`,
     body: occasion.title, // authorised tenant PII viewers only (RLS)
     link: "/dashboard/occasions",
+    dedupeKey: `occ:${stable}`,
   });
 
   // PLATFORM — reference-style ONLY (no employee PII); ops wa.me deep link.
@@ -352,6 +370,7 @@ export async function notifyOccasionAtLeadTime(
     title: `${company.name}: upcoming ${label}`,
     body: `An upcoming ${label} for ${company.name}${company.plan ? ` (${company.plan})` : ""} ${inDays}.`,
     link: wa, // may be null when the client has no phone — omitted gracefully
+    dedupeKey: `occops:${stable}`,
   });
 }
 

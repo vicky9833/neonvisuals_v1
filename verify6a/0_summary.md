@@ -23,6 +23,16 @@ sentinels (name + phone) → **ZERO hits**. Tenant BODIES intentionally name the
 authorised viewers) — proven present so the title-cleanliness is non-vacuous. Platform
 notifications are entirely PII-free. Control leak proves the grep works.
 
+## In-app dedupe (added after review — the regeneration-ephemerality trap)
+Migration `040_notification_dedupe` adds `notifications.dedupe_key` + a partial unique index
+`(recipient_user_id, dedupe_key) WHERE dedupe_key IS NOT NULL`. `notify()` inserts idempotently
+(23505 conflict = deduped, not an error). `notifyOccasionAtLeadTime` sets a STABLE key
+`occ:${company}:${employee|cw}:${type}:${date}` (survives occasion regeneration, which mints new
+occasion.ids each cron run) so repeated cron runs on the notify_date day do NOT accumulate
+duplicate bell rows. Proven: `verify6a/_dedupe.ts` — two runs (different occasion.id, same stable
+identity) → exactly ONE in-app per recipient; a distinct occasion still notifies. NULL keys
+(membership/one-off) remain repeatable.
+
 ## Code (additive)
 - NEW `src/lib/engines/notifications.ts` — `resolveAudience/resolveAudienceSpec` (§7 role queries;
   tenant isolation), `notify()` (in-app + email per `notification_prefs`, channels_sent, service-role
