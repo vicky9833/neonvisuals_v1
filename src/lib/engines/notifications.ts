@@ -32,6 +32,10 @@ export const NOTIFICATION_TYPES = {
   PLATFORM_DIGEST: "platform_digest", // platform: daily aggregate across orgs
   QUOTE_REQUEST_OPS: "quote_request_ops", // platform: a tenant requested a quote (§9)
   QUOTE_APPROVAL_ROUTED: "quote_approval_routed", // tenant: an over-limit quote routed to the next approver (§7, 7b)
+  ORDER_IN_PRODUCTION: "order_in_production", // tenant: order entered production (§7, 7c-i) — hr, in-app
+  ORDER_PROOF_PHOTOS_READY: "order_proof_photos_ready", // tenant: QC proof photos ready (§7, 7c-i seam; fired by 7c-ii) — hr/org_admin, email
+  ORDER_DISPATCHED: "order_dispatched", // tenant: order shipped/dispatched (§7, 7c-i) — hr + dept manager, email + tracking
+  ORDER_DELIVERED: "order_delivered", // tenant: order delivered (§7, 7c-i) — hr, in-app
   MEMBER_INVITED: "member_invited",
   MEMBER_JOINED: "member_joined",
   MEMBER_REMOVED: "member_removed",
@@ -683,4 +687,143 @@ export async function runUserDigests(
     if (res.success) sent += 1;
   }
   return { users: userIds.length, sent };
+}
+
+// ── §7 order-lifecycle transition notifications (Prompt 7c-i) ────────────────
+// Fired from order.ts updateOrderStatus on the real 9-state machine. PII-SAFE (§10.13): titles,
+// bodies, subjects, and links carry ONLY the order reference + status + tracking — NEVER employee
+// name/dob/phone. Deduped per (recipient, dedupe_key) so re-running a transition scan no-ops.
+
+export interface OrderTransitionNotifyInput {
+  orderId: string;
+  companyId: string;
+  orderNumber: string | null;
+  status: "in_production" | "shipped" | "delivered";
+  trackingNumber?: string | null;
+  courierPartner?: string | null;
+}
+
+/**
+ * Resolve the dept-manager user_ids for every department represented by an order's recipients
+ * (via order_recipients.employee_id → employees.department_id). Reuses resolveAudienceSpec so the
+ * §7 dept_manager resolution stays single-sourced. Company-scoped (tenant isolation).
+ */
+async function resolveOrderDeptManagers(
+  client: SupabaseClient,
+  orderId: string,
+  companyId: string,
+): Promise<string[]> {
+  const { data: recips } = await client
+    .from("order_recipients")
+    .select("employee_id")
+    .eq("order_id", orderId);
+  const empIds = [
+    ...new Set((recips ?? []).map((r) => r.employee_id as string | null).filter((x): x is string => Boolean(x))),
+  ];
+  if (empIds.length === 0) return [];
+  const { data: emps } = await client.from("employees").select("department_id").in("id", empIds);
+  const deptIds = [
+    ...new Set((emps ?? []).map((e) => e.department_id as string | null).filter((x): x is string => Boolean(x))),
+  ];
+  const ids = new Set<string>();
+  for (const departmentId of deptIds) {
+    const managerIds = await resolveAudienceSpec(
+      client,
+      { plane: "tenant", role: "dept_manager" },
+      { companyId, departmentId },
+    );
+    for (const id of managerIds) ids.add(id);
+  }
+  return [...ids];
+}
+
+/**
+ * Fire the §7 notification for an order status transition. `client` MUST be service-role.
+ *   in_production → hr (in-app)
+ *   shipped       → hr + dept managers of the order's recipient departments (email + in-app, tracking)
+ *   delivered     → hr (in-app)
+ * Returns the NotifyResult (or null for a status with no §7 row).
+ */
+export async function notifyOrderStatusChange(
+  client: SupabaseClient,
+  input: OrderTransitionNotifyInput,
+): Promise<NotifyResult | null> {
+  const ref = input.orderNumber ?? input.orderId;
+  const link = `/dashboard/orders/${input.orderId}`;
+
+  if (input.status === "in_production") {
+    return notify(client, {
+      type: NOTIFICATION_TYPES.ORDER_IN_PRODUCTION,
+      audience: [{ plane: "tenant", role: "hr" }],
+      companyId: input.companyId,
+      title: `Order ${ref} is in production`,
+      body: `Your gifting order ${ref} has entered production.`,
+      link,
+      dedupeKey: `order:${input.orderId}:in_production`,
+    });
+  }
+
+  if (input.status === "delivered") {
+    return notify(client, {
+      type: NOTIFICATION_TYPES.ORDER_DELIVERED,
+      audience: [{ plane: "tenant", role: "hr" }],
+      companyId: input.companyId,
+      title: `Order ${ref} delivered`,
+      body: `Your gifting order ${ref} has been delivered.`,
+      link,
+      dedupeKey: `order:${input.orderId}:delivered`,
+    });
+  }
+
+  // shipped (= §7 "Dispatched + tracking") → hr + dept managers, email + in-app.
+  const deptManagerIds = await resolveOrderDeptManagers(client, input.orderId, input.companyId);
+  const trackingLine = input.trackingNumber
+    ? ` Tracking: ${input.trackingNumber}${input.courierPartner ? ` (${input.courierPartner})` : ""}.`
+    : "";
+  const subject = `Order ${ref} dispatched`;
+  return notify(client, {
+    type: NOTIFICATION_TYPES.ORDER_DISPATCHED,
+    audience: [{ plane: "tenant", role: "hr" }],
+    recipients: deptManagerIds,
+    companyId: input.companyId,
+    title: subject,
+    body: `Your gifting order ${ref} has been dispatched.${trackingLine}`,
+    link,
+    dedupeKey: `order:${input.orderId}:dispatched`,
+    email: {
+      subject,
+      html: `<p>Order ${ref} has been dispatched.${trackingLine}</p><p><a href="${link}">Track your order</a></p>`,
+      template: "order_dispatched",
+    },
+  });
+}
+
+/**
+ * §7 "Proof photos ready" SEAM (Prompt 7c-i). The email-with-images upload flow is 7c-ii; this
+ * helper is the hook 7c-ii calls after ops uploads QC proof photos. hr/org_admin, email + in-app,
+ * PII-safe (order ref only). Not called in phase i.
+ */
+export async function notifyProofPhotosReady(
+  client: SupabaseClient,
+  input: { orderId: string; companyId: string; orderNumber: string | null },
+): Promise<NotifyResult> {
+  const ref = input.orderNumber ?? input.orderId;
+  const link = `/dashboard/orders/${input.orderId}`;
+  return notify(client, {
+    type: NOTIFICATION_TYPES.ORDER_PROOF_PHOTOS_READY,
+    audience: [
+      { plane: "tenant", role: "hr" },
+      { plane: "tenant", role: "org_admin" },
+    ],
+    companyId: input.companyId,
+    title: `Proof photos ready for order ${ref}`,
+    body: `Proof photos for your gifting order ${ref} are ready to review.`,
+    link,
+    dedupeKey: `order:${input.orderId}:proof_photos_ready`,
+    email: {
+      subject: `Proof photos ready for order ${ref}`,
+      html: `<p>Proof photos for order ${ref} are ready.</p><p><a href="${link}">Review proof photos</a></p>`,
+      template: "order_proof_photos_ready",
+    },
+  });
 }
