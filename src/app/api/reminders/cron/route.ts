@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { generateReminders, getUpcomingEvents } from "@/lib/engines/occasions";
 import { generateOccasions } from "@/lib/engines/occasion-generator";
+import { notifyOccasionAtLeadTime } from "@/lib/engines/notifications";
 import { resolveCompanyRecipients } from "@/lib/services/recipients";
 import {
   opsAlertRecipients,
@@ -48,7 +49,7 @@ export async function GET(request: Request) {
   try {
     const { data: companies } = await supa
       .from("companies")
-      .select("id, name");
+      .select("id, name, plan, primary_contact_name, primary_contact_phone");
 
     const digestCompanies: Array<{
       companyName: string;
@@ -66,6 +67,27 @@ export async function GET(request: Request) {
         await generateReminders(companyId, supa);
       } catch (err) {
         console.error(`[CRON] occasion/reminder gen failed for ${companyId}:`, err);
+      }
+
+      // 1b. IN-APP notifications (Prompt 6a) for occasions at their lead date.
+      // Sources from occasions (precise occasion_type_key) — does NOT email
+      // (the company-contact email below is preserved; no double-fire).
+      try {
+        const { data: dueOccasions } = await supa
+          .from("occasions")
+          .select("id, company_id, employee_id, occasion_type_key, title, date")
+          .eq("company_id", companyId)
+          .eq("notify_date", today);
+        for (const occ of dueOccasions ?? []) {
+          await notifyOccasionAtLeadTime(supa, occ as never, {
+            name: (c.name as string) ?? "Company",
+            plan: (c.plan as string | null) ?? null,
+            primary_contact_name: (c.primary_contact_name as string | null) ?? null,
+            primary_contact_phone: (c.primary_contact_phone as string | null) ?? null,
+          });
+        }
+      } catch (err) {
+        console.error(`[CRON] in-app occasion notify failed for ${companyId}:`, err);
       }
 
       // 2. Email occasion reminders whose reminder_date is today.

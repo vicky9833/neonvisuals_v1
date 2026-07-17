@@ -9,6 +9,8 @@ import {
   inviteAcceptUrl,
 } from "@/lib/invites";
 import { sendMemberInviteEmail } from "@/lib/services/email";
+import { createAdminClient } from "@/lib/supabase/admin";
+import { notify, NOTIFICATION_TYPES } from "@/lib/engines/notifications";
 
 export const runtime = "nodejs";
 
@@ -98,6 +100,22 @@ export async function POST(request: Request) {
     } catch (err) {
       console.error("[team/invites] invite email failed:", err);
     }
+
+    // In-app (6a): notify org owners/admins that an invite was sent (alongside
+    // the invitee's email link above — the invitee has no account/bell yet).
+    try {
+      await notify(createAdminClient(), {
+        type: NOTIFICATION_TYPES.MEMBER_INVITED,
+        audience: [
+          { plane: "tenant", role: "org_owner" },
+          { plane: "tenant", role: "org_admin" },
+        ],
+        companyId,
+        title: "Team invite sent",
+        body: `A ${role} invite was sent to ${email.toLowerCase()}.`,
+        link: "/dashboard/team",
+      });
+    } catch (e) { console.error("[team/invites] in-app notify failed:", e); }
 
     // The raw token/link is returned to the inviter (who initiated it); the DB
     // stored only the hash.

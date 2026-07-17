@@ -1,0 +1,10 @@
+{
+  "extends": "../tsconfig.json",
+  "compilerOptions": {
+    "baseUrl": "..",
+    "paths": {
+      "@/*": ["src/*"],
+      "server-only": ["verify6a/_stubs/server-only.ts"]
+    }
+  }
+}
