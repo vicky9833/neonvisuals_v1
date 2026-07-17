@@ -242,6 +242,19 @@ export async function updateQuoteStatus(id: string, status: QuoteStatus): Promis
           : {};
   const { error } = await supa.from("quotes").update({ status, ...stamp }).eq("id", id);
   if (error) throw new Error(`Update status failed: ${error.message}`);
+
+  // Prompt 7a reversal: a cancelled/rejected quote with NO order = a fallen-through gift ->
+  // CLEAR occasion_gift_state so 6b escalation RESUMES. Service-role (system signal); only clears
+  // rows with order_id NULL (a converted-to-order gift is committed and persists).
+  if (status === "cancelled" || status === "rejected") {
+    try {
+      const { createAdminClient } = await import("@/lib/supabase/admin");
+      const { clearGiftChosenForQuote } = await import("@/lib/engines/notifications");
+      await clearGiftChosenForQuote(createAdminClient(), id);
+    } catch (e) {
+      console.error("[quote.updateQuoteStatus] gift-state reversal failed:", e);
+    }
+  }
 }
 
 /** Reconstructs a QuoteInput from a stored quote (for update/duplicate). */
