@@ -64,6 +64,14 @@ org_owner members + companies via MCP disable-trigger; users via `_cleanup_users
 notifications=0, notification_prefs=0, occasion_gift_state=0, t6b companies/email=0,
 platform_staff=1 (founder untouched), t6b users=0.
 
+## P7 OBLIGATION (logged — title-in-key is a NOW choice, not the durable fix)
+`stableOccasionKey` uses the occasion `title` to disambiguate same-date company-wide
+festival/custom occasions. This is safe NOW (titles are immutable/seeded), but a title EDIT would
+change the stable key and orphan the gift-state / dedupe rows. **P7 obligation: when P7 touches
+occasion linking, replace title-in-key with a stable `festival_id` / `custom_occasion_id` FK on the
+occasion** (the durable identity). Employee occasions already use `employee_id` (stable) — only the
+company-wide branch depends on title.
+
 ## NOT built (P7): the REAL gift-chosen write (quote->order writes occasion_gift_state) +
 occasion-linked quotes. 6b proves the escalation MECHANISM via synthetic gift-state. Foundation
 only. Holding.
