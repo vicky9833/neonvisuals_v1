@@ -37,9 +37,18 @@ equivalence remains exact.
 - `/api/reminders/cron` + dashboard — call `generateOccasions` then `generateReminders`.
 - `/api/occasions/festivals` POST — wired festival Free=3 cap.
 
+## Preview smoke (deployed foundation) — PASS
+`PREVIEW_smoke.md` (`_preview_smoke_run.txt`): all 6 items PASS on the deployed foundation preview
+(`10d1539`) — cutover (reminders sourced from occasions), milestone suppression, onboarding sign,
+blackout ORG **and PLATFORM** skip + rush, email-once, festival cap, no regression. Documented a
+test-harness finding: the dashboard resolves company via `profiles.company_id` (linked at
+onboarding); admin-created test users needed a profiles UPDATE to link — not a product bug.
+
 ## Residue
-Zero. All t5b_ fixtures deleted per script (no members created → no last-owner-guard step).
-Final: t5b companies=0, occasions=0, reminders=0, t5b email_log=0.
+Zero. All t5b_ fixtures deleted per script; org_owner members/companies via MCP disable-trigger
+(`trg_guard_last_owner`); auth users via `_cleanup_users.mjs`; global `platform_blackout_dates`
+t5b_ rows deleted post-measurement. Final (MCP): companies=0, members=0, occasions=0, profiles=0,
+platform_blackout=0, email_log=0, users=0.
 
 ## RESOLVED RULINGS (folded in — user decisions)
 1. **Milestone SUPPRESSES work_anniversary at years {5,10,15,20}** — RULED: milestone_anniversary
