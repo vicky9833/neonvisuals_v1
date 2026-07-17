@@ -92,6 +92,16 @@ export function giftHistoryWindowStart(ctx: PlanContext): string | null {
   return d.toISOString().slice(0, 10);
 }
 
+/**
+ * Concierge assignment tiering (§8): a Pro company gets a DEDICATED/assignable ops owner; a Free
+ * company uses the SHARED queue (requests stay unassigned). Evaluated against the requesting
+ * COMPANY's plan (the actor is always platform staff). Concierge RAISE itself is ungated (both
+ * tiers can talk to their gifting manager — never gate support).
+ */
+export function canAssignConcierge(ctx: Pick<PlanContext, "plan" | "planOverrideBy">): boolean {
+  return isProPlan(ctx);
+}
+
 /** Festival calendar cap (§8): Free = 3 festivals opted-in, Pro = unlimited. */
 export const FREE_FESTIVAL_LIMIT = 3;
 export function festivalLimit(ctx: PlanContext): number {
