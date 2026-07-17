@@ -20,14 +20,35 @@ every generated occasion has lead_days + notify_date  PASS
 birthday lead_days=14 + notify_date computed          PASS
 residue t5b_ companies = 0                            PASS
 ```
-**No occasion was dropped or invented.** The new engine additionally carries per-type
-`lead_days` + a blackout-adjusted `notify_date` (which the old engine lacked). For these
-fixtures the additive types were {} (no milestone-year or future joiners); items 2/3 exercise
-onboarding/probation/rush.
+**No occasion was dropped or invented** for these (non-milestone) fixtures. The new engine
+additionally carries per-type `lead_days` + a blackout-adjusted `notify_date` (which the old
+engine lacked). For these fixtures the additive types were {} (no milestone-year or future
+joiners); items 2/3 exercise onboarding/probation/rush; `_milestone.ts` exercises the milestone
+suppression below.
 
-## STOP-for-decision (flagged)
-**work_anniversary + milestone overlap**: at a milestone year (1/3/5/10/15/20) the engine
-generates BOTH a yearly `work_anniversary` (from getCalendarEvents, T-14) AND a
-`milestone_anniversary` (T-30) — i.e. milestones AUGMENT rather than REPLACE the yearly
-anniversary. Confirm this is intended, or milestone should suppress the plain anniversary at
-milestone years. (Kept augment to preserve equivalence — the old work_anniversary is untouched.)
+## RESOLVED RULING — milestone SUPPRESSES work_anniversary at milestone years {5,10,15,20}
+The overlap flagged in the build pass is now decided: at a milestone year the premium
+`milestone_anniversary` (T-30) **REPLACES** the plain `work_anniversary` (T-14) — one gift, not
+two. This is an **INTENDED divergence** from strict equivalence, scoped to milestone-year
+anniversaries only. Milestone set is **{5,10,15,20}** (years 1 and 3 are NOT milestones and keep
+the plain T-14 anniversary).
+
+- **Non-milestone equivalence still holds exactly**: `_equivalence.ts` (Alice 7-yr, Cara 2-yr —
+  both non-milestone) → 15==15, zero dropped/invented (re-run above). The suppression touches
+  ONLY `${employee}|${anniversaryDate}` pairs whose year-count ∈ {5,10,15,20}.
+- **Suppression proof** (`_milestone.ts`, run `_milestone_run.txt`): a 10-yr employee →
+  `milestone_anniversary` present, `work_anniversary` SUPPRESSED, exactly ONE anniversary-family
+  occasion (no double-gift). A 3-yr employee → plain `work_anniversary` present, NO milestone.
+```
+10-yr: milestone_anniversary PRESENT                         PASS
+10-yr: plain work_anniversary SUPPRESSED (not present)       PASS
+10-yr: exactly ONE anniversary-family occasion (no double)   PASS
+10-yr: milestone on same anniversary date, lead 30           PASS
+3-yr: plain work_anniversary PRESENT                         PASS
+3-yr: NO milestone_anniversary                               PASS
+3-yr: work_anniversary lead 14 (regular)                     PASS
+```
+
+Implementation: `generateOccasions` precomputes each employee's next anniversary + year-count,
+builds a `suppressSet` of milestone-year `${employeeId}|${date}` pairs, and skips exactly those
+`work_anniversary` events in the shared-types loop before emitting the milestone in the §4A loop.

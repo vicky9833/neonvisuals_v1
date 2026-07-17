@@ -7,6 +7,9 @@ DOWNSTREAM consumer of occasions instances. Additive + engine-replacement; no tr
 On identical synthetic fixtures the NEW engine's shared-type occasion set
 (birthday/work_anniversary/festival/custom) EQUALS the OLD engine's (getCalendarEvents): 15==15,
 **zero dropped, zero invented** — plus the new per-type lead_days/notify_date. No silent divergence.
+The ONE intended divergence — milestone_anniversary suppressing work_anniversary at years
+{5,10,15,20} — is scoped, documented, and separately proven (`_milestone.ts`); non-milestone
+equivalence remains exact.
 
 ## Build health
 - `npx tsc --noEmit` → **exit 0** (`_tsc.txt` implied; ran clean)
@@ -16,6 +19,7 @@ On identical synthetic fixtures the NEW engine's shared-type occasion set
 | Item | Artifact | Result |
 |------|----------|--------|
 | 1 equivalence gate | `1_equivalence.md` (`_equivalence_run.txt`) | **PASS** — new==old shared set, no drop/invent |
+| 1b milestone suppression (ruling) | `1_equivalence.md` (`_milestone_run.txt`) | **PASS** — 10-yr→milestone only, 3-yr→plain anniv |
 | 2 null-DOJ / onboarding sign / year-agnostic bday | `2_edges.md` (`_engine_run.txt`) | PASS — skip+count, notify=join−5, cross-year birthday |
 | 3 lead-time + blackout skip + rush | `3_blackout_rush.md` (`_engine_run.txt`) | PASS — blackout-back-off + rush flag |
 | 4 reminders downstream of occasions | `4_cutover.md` (`_cutover_cap_run.txt`) | PASS — occasion-sourced reminder + real Resend send |
@@ -37,19 +41,20 @@ On identical synthetic fixtures the NEW engine's shared-type occasion set
 Zero. All t5b_ fixtures deleted per script (no members created → no last-owner-guard step).
 Final: t5b companies=0, occasions=0, reminders=0, t5b email_log=0.
 
-## STOP-for-decision points (confirm on promote)
-1. **work_anniversary + milestone overlap** — at milestone years (1/3/5/10/15/20) the engine
-   generates BOTH the yearly work_anniversary (T-14) AND milestone_anniversary (T-30) — AUGMENT,
-   not replace (kept to preserve equivalence). Confirm, or milestone should suppress the plain
-   anniversary at those years.
-2. **Reminder cadence change** — old = 4-reminder ladder [7,3,1,0] per occasion; new = ONE reminder
-   at the per-type lead notify_date (the §4 lead-time model). Email PATH preserved; cadence changed
-   by design. Confirm acceptable.
-3. **Probation +90 only** — generated at joining+90 (not +180). Confirm whether +180 is also wanted.
-4. **Platform blackout store** — added minimal `platform_blackout_dates` (production/delivery), the
-   sanctioned "add a minimal one". Confirm the shape (currently platform-global, not per-region).
-5. **Onboarding/probation only for FUTURE joiners within horizon** — past joiners' onboarding/
-   probation already elapsed, so skipped. Confirm.
+## RESOLVED RULINGS (folded in — user decisions)
+1. **Milestone SUPPRESSES work_anniversary at years {5,10,15,20}** — RULED: milestone_anniversary
+   (T-30) REPLACES the plain work_anniversary (T-14) at those years (no double-gift). Years 1/3 and
+   all non-milestone years keep the plain T-14 anniversary. Implemented + proven (`_milestone.ts`);
+   non-milestone equivalence unchanged (15==15). Intended divergence documented in `1_equivalence.md`.
+2. **Reminder cadence single-lead** — CONFIRMED: ONE reminder per occasion at the per-type lead
+   notify_date (email PATH preserved). **HARD OBLIGATION for Prompt 6**: implement the §7 escalation
+   ladder (lead → half-lead-no-gift → T-3-nothing). 5b intentionally does NOT ship the ladder.
+3. **Probation +90** — CONFIRMED default (`PROBATION_DAYS = 90` const). Per-company configurability
+   is a Prompt 8 settings seam (§4A "configurable period") — const left as the single tuning point.
+4. **platform_blackout_dates** — shape CONFIRMED (production/delivery, platform-global). Lead-time
+   engine READS platform blackout in addition to org blackout (proven in preview smoke item 4).
+5. **Onboarding/probation only for FUTURE joiners within horizon** — CONFIRMED (past joiners'
+   windows already elapsed, so skipped; birthday still generates for null-joining employees).
 
 ## NOT built (Prompt 6/7): notification matrix/dispatch, concierge routing. 5b sets occasion
 ## instances + lead dates + rush state; P6 dispatches, P7 routes. Foundation only. Holding.

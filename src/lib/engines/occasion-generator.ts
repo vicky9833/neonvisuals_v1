@@ -16,7 +16,13 @@ import { getCalendarEvents } from "@/lib/engines/occasions";
  */
 
 const HORIZON_DAYS = 365;
-const MILESTONE_YEARS = [1, 3, 5, 10, 15, 20];
+// §4A milestone years (ruling: 5/10/15/20). At these years the milestone_anniversary
+// REPLACES the plain work_anniversary (premium/T-30) — not both (no double-gifting).
+// Years 1/3 (and all non-milestone years) get the regular T-14 work_anniversary.
+const MILESTONE_YEARS = [5, 10, 15, 20];
+// Probation completion period. DEFAULT 90 days; per-company configurability is a P8 settings
+// seam (§4A "configurable period") — do not treat 90 as the only possible value.
+const PROBATION_DAYS = 90;
 
 function iso(d: Date): string {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
@@ -104,9 +110,41 @@ export async function generateOccasions(
   let rush = 0;
   const pushRow = (r: Record<string, unknown>) => { if (r.is_rush) rush += 1; rows.push(r); };
 
+  // ---- Load employees FIRST so we can precompute milestone anniversaries ----
+  const { data: emps } = await supabase
+    .from("employees")
+    .select("id, full_name, joining_date")
+    .eq("company_id", companyId)
+    .eq("is_active", true);
+
+  // Precompute per-employee next anniversary + whether it is a milestone year.
+  // suppressSet holds `${employeeId}|${date}` for anniversaries whose year-count is a
+  // milestone: at those the milestone_anniversary REPLACES the plain work_anniversary
+  // (ruling: no double-gift). Non-milestone anniversaries fall through unchanged (exact
+  // equivalence with the old engine preserved).
+  const annivByEmp = new Map<string, { date: string; years: number }>();
+  const suppressSet = new Set<string>();
+  for (const emp of emps ?? []) {
+    const doj = emp.joining_date as string | null;
+    if (!doj) continue;
+    const anniv = nextAnniversary(doj, today, end);
+    if (!anniv) continue;
+    annivByEmp.set(emp.id as string, anniv);
+    if (MILESTONE_YEARS.includes(anniv.years)) {
+      suppressSet.add(`${emp.id as string}|${anniv.date}`);
+    }
+  }
+
   // ---- SHARED types (birthday, work_anniversary, festival, custom) via the OLD computation ----
   const events = await getCalendarEvents(companyId, today, end, client);
   for (const e of events) {
+    // Milestone-year suppression: skip the plain work_anniversary the old engine emitted
+    // at a milestone year — the premium milestone_anniversary (below) replaces it. This is
+    // an INTENDED divergence from strict equivalence (documented in verify5b/1_equivalence.md);
+    // all non-milestone-year anniversaries pass through untouched.
+    if (e.type === "work_anniversary" && e.employeeId && suppressSet.has(`${e.employeeId}|${e.date}`)) {
+      continue;
+    }
     let key: string;
     let lead: number;
     if (e.type === "birthday") { key = "birthday"; lead = leadOf("birthday", 14); }
@@ -136,11 +174,6 @@ export async function generateOccasions(
   }
 
   // ---- §4A additions from joining_date: onboarding, probation, milestone ----
-  const { data: emps } = await supabase
-    .from("employees")
-    .select("id, full_name, joining_date")
-    .eq("company_id", companyId)
-    .eq("is_active", true);
   let missingJoiningDate = 0;
   for (const emp of emps ?? []) {
     const doj = emp.joining_date as string | null;
@@ -153,15 +186,16 @@ export async function generateOccasions(
       const { notify, rush: r } = computeNotify(doj, lead, blackout, today);
       pushRow({ company_id: companyId, employee_id: emp.id, occasion_type_key: "onboarding", title: `${name} — Onboarding`, date: doj, recur_month: null, recur_day: null, lead_days: lead, recurrence: "none", is_company_wide: false, status: "upcoming", auto_generated: true, is_sensitive: false, notify_date: notify, is_rush: r });
     }
-    // Probation completion: joining + 90 days, within horizon. Lead 7.
-    const prob = addDaysISO(doj, 90);
+    // Probation completion: joining + PROBATION_DAYS, within horizon. Lead 7.
+    const prob = addDaysISO(doj, PROBATION_DAYS);
     if (prob >= today && prob <= end) {
       const lead = leadOf("probation_completion", 7);
       const { notify, rush: r } = computeNotify(prob, lead, blackout, today);
       pushRow({ company_id: companyId, employee_id: emp.id, occasion_type_key: "probation_completion", title: `${name} — Probation Completion`, date: prob, recur_month: null, recur_day: null, lead_days: lead, recurrence: "none", is_company_wide: false, status: "upcoming", auto_generated: true, is_sensitive: false, notify_date: notify, is_rush: r });
     }
-    // Milestone anniversary: next anniversary within horizon whose year-count is a milestone. Lead 30.
-    const anniv = nextAnniversary(doj, today, end);
+    // Milestone anniversary: reuse the precomputed next anniversary; emit only at milestone
+    // years (the plain work_anniversary was suppressed above for these). Lead 30.
+    const anniv = annivByEmp.get(emp.id as string);
     if (anniv && MILESTONE_YEARS.includes(anniv.years)) {
       const lead = leadOf("milestone_anniversary", 30);
       const { notify, rush: r } = computeNotify(anniv.date, lead, blackout, today);
