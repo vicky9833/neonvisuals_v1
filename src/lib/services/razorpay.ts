@@ -72,6 +72,48 @@ export async function createPaymentLink(
   return { id: String(link.id), short_url: String(link.short_url) };
 }
 
+export interface CreateOrderParams {
+  /** Amount in paise (₹1 = 100 paise). */
+  amount: number;
+  currency?: "INR";
+  /** Idempotency/reconciliation receipt (max 40 chars per Razorpay). */
+  receipt: string;
+  /** Reconciliation metadata echoed back on the webhook payload. */
+  notes?: Record<string, string>;
+}
+
+export interface OrderResult {
+  id: string;
+  amount: number;
+  currency: string;
+}
+
+/**
+ * Creates a Razorpay order (server-side, keys never leave the server). Throws
+ * if Razorpay isn't configured - the caller should guard with
+ * `isRazorpayConfigured()` first. Runs against whichever key mode is
+ * configured (TEST keys => test-mode order, no real money).
+ */
+export async function createOrder(
+  params: CreateOrderParams,
+): Promise<OrderResult> {
+  if (!isRazorpayConfigured()) {
+    throw new Error("Razorpay is not configured.");
+  }
+  const rzp = getRazorpay();
+  const order = await rzp.orders.create({
+    amount: Math.round(params.amount),
+    currency: params.currency ?? "INR",
+    receipt: params.receipt,
+    notes: params.notes ?? {},
+  });
+  return {
+    id: String(order.id),
+    amount: Number(order.amount),
+    currency: String(order.currency),
+  };
+}
+
 /**
  * Verifies a Razorpay webhook signature (HMAC SHA256 of the raw body).
  * Uses RAZORPAY_WEBHOOK_SECRET, falling back to RAZORPAY_KEY_SECRET.
