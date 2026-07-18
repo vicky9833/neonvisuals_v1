@@ -9,7 +9,7 @@ import { SidebarBody } from "@/components/dashboard/Sidebar";
 
 /** Mobile/tablet slide-in drawer (below lg). Driven by dashboard context. */
 export function MobileSidebar() {
-  const { company, sidebarOpen, setSidebarOpen } = useDashboard();
+  const { company, branding, sidebarOpen, setSidebarOpen } = useDashboard();
   const pathname = usePathname();
 
   // Close on route change.
@@ -66,7 +66,8 @@ export function MobileSidebar() {
           <X className="size-5" />
         </button>
         <SidebarBody
-          companyName={company?.name ?? "Your Company"}
+          companyName={branding.orgName || company?.name || "Your Company"}
+          branding={branding}
           onNavigate={() => setSidebarOpen(false)}
         />
       </aside>

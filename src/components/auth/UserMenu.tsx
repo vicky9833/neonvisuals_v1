@@ -55,6 +55,13 @@ export function UserMenu({ profile }: { profile: AuthProfileLite }) {
           <span className="truncate text-xs font-normal text-[#6B7280]">
             {profile.email}
           </span>
+          {/* P9d (R2): the viewer's OWN org name (keyed to auth.uid()) — no cross-tenant leak. */}
+          {profile.companyName ? (
+            <span className="mt-1 flex items-center gap-1 truncate text-xs font-medium text-gold">
+              <Building2 className="size-3" />
+              {profile.companyName}
+            </span>
+          ) : null}
         </DropdownMenuLabel>
         <DropdownMenuSeparator />
         <DropdownMenuItem asChild>

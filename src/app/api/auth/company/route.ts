@@ -6,9 +6,13 @@ import {
   requireTenant,
   apiAuthErrorResponse,
 } from "@/lib/api-auth";
+import { sanitizeLogoUrl, isValidHexColor } from "@/lib/engines/branding";
 
 export const runtime = "nodejs";
 
+// P9d (R1): logo is an external URL, hardened to https + image extension (no data:/inline-SVG);
+// brand colors are hex-validated. "" clears a value back to the NEON fallback.
+const hexOrEmpty = z.string().refine((v) => v === "" || isValidHexColor(v), "must be a hex color like #1A1A2E");
 const patchSchema = z.object({
   name: z.string().min(1).optional(),
   industry: z.string().optional(),
@@ -16,7 +20,12 @@ const patchSchema = z.object({
   city: z.string().optional(),
   address: z.string().optional(),
   website: z.string().url().optional().or(z.literal("")),
-  logo_url: z.string().url().optional(),
+  logo_url: z
+    .string()
+    .refine((v) => v === "" || sanitizeLogoUrl(v) !== null, "must be an https image URL (.png/.jpg/.webp/.gif/.svg)")
+    .optional(),
+  brand_primary: hexOrEmpty.optional(),
+  brand_accent: hexOrEmpty.optional(),
   gstin: z.string().optional(),
   primary_contact_name: z.string().optional(),
   primary_contact_email: z.string().email().optional(),
@@ -64,10 +73,16 @@ export async function PATCH(request: Request) {
     if (!parsed.success) {
       return NextResponse.json({ error: "invalid_input", message: parsed.error.message }, { status: 400 });
     }
+    // Normalize branding: "" clears back to NULL (→ NEON fallback at render); logo re-sanitized.
+    const update: Record<string, unknown> = { ...parsed.data };
+    if ("logo_url" in update) update.logo_url = sanitizeLogoUrl(update.logo_url as string) ?? null;
+    if ("brand_primary" in update) update.brand_primary = (update.brand_primary as string) || null;
+    if ("brand_accent" in update) update.brand_accent = (update.brand_accent as string) || null;
+
     const supabase = await createClient();
     const { data, error } = await supabase
       .from("companies")
-      .update(parsed.data)
+      .update(update)
       .eq("id", profile.company_id)
       .select("*")
       .single();

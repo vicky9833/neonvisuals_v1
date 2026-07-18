@@ -21,7 +21,7 @@ import {
 import { cn } from "@/lib/utils";
 import { Logo } from "@/components/brand/logo";
 import { WHATSAPP_NUMBER, TAGLINE } from "@/lib/utils/constants";
-import { useDashboard } from "@/components/dashboard/DashboardProvider";
+import { useDashboard, type ShellBranding } from "@/components/dashboard/DashboardProvider";
 
 interface NavItem {
   label: string;
@@ -120,20 +120,36 @@ function SectionLabel({ children }: { children: string }) {
 /** Shared sidebar content used by both the desktop sidebar and mobile drawer. */
 export function SidebarBody({
   companyName,
+  branding,
   onNavigate,
 }: {
   companyName: string;
+  branding?: ShellBranding;
   onNavigate?: () => void;
 }) {
   const pathname = usePathname();
   const visible = (items: NavItem[]) => items;
+  // P9d (R1): the viewer's OWN org identity. A validated external logo renders as a locked-down
+  // <img> (no inline SVG / data-URI — sanitized at write); null → the NEON lockup (fallback ruling).
+  const hasOrgLogo = Boolean(branding?.logoUrl);
 
   return (
     <div className="flex h-full flex-col bg-navy text-white">
       {/* Brand */}
       <div className="border-b border-white/10 px-6 py-5">
         <Link href="/dashboard" onClick={onNavigate} className="block">
-          <Logo variant="horizontal" theme="light" iconSize={32} asLink={false} />
+          {hasOrgLogo ? (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img
+              src={branding!.logoUrl!}
+              alt={branding!.orgName}
+              height={32}
+              style={{ height: 32, width: "auto", maxHeight: 32 }}
+              className="object-contain"
+            />
+          ) : (
+            <Logo variant="horizontal" theme="light" iconSize={32} asLink={false} />
+          )}
           <span className="mt-1 block text-xs text-slate-400">{TAGLINE}</span>
         </Link>
       </div>
@@ -166,9 +182,12 @@ export function SidebarBody({
         ))}
       </nav>
 
-      {/* Footer: company + plan */}
+      {/* Footer: company + plan. Company name tinted with the org accent (NEON gold on fallback). */}
       <div className="border-t border-white/10 px-5 py-4">
-        <p className="truncate text-sm font-semibold text-white">
+        <p
+          className="truncate text-sm font-semibold"
+          style={{ color: branding?.accent ?? "#C4A35A" }}
+        >
           {companyName}
         </p>
         <p className="text-xs text-slate-400">Free Plan</p>
@@ -179,10 +198,10 @@ export function SidebarBody({
 
 /** Permanent desktop sidebar (hidden below lg). */
 export function Sidebar() {
-  const { company } = useDashboard();
+  const { company, branding } = useDashboard();
   return (
     <aside className="fixed inset-y-0 left-0 z-30 hidden w-64 lg:block">
-      <SidebarBody companyName={company?.name ?? "Your Company"} />
+      <SidebarBody companyName={branding.orgName || company?.name || "Your Company"} branding={branding} />
     </aside>
   );
 }

@@ -6,6 +6,7 @@ import { MobileNav, type NavLink } from "@/components/shared/mobile-nav";
 import { SearchOverlay } from "@/components/search/search-overlay";
 import { CollectionIcon } from "@/components/collections/collection-icon";
 import { HeaderAuth } from "@/components/auth/HeaderAuth";
+import { KitLink } from "@/components/shared/KitLink";
 import { NavLinks } from "@/components/shared/nav-links";
 import { BUCKETS } from "@/data/buckets";
 
@@ -82,12 +83,7 @@ export function Header() {
 
         <div className="flex items-center gap-2">
           <SearchOverlay />
-          <Link
-            href="/gift-builder"
-            className="hidden h-10 items-center rounded-full border border-gold/50 bg-gold/10 px-5 text-[13px] font-semibold text-navy transition-colors hover:bg-gold/20 md:inline-flex"
-          >
-            Curate a Kit
-          </Link>
+          <KitLink />
           <HeaderAuth />
           <MobileNav links={NAV_LINKS} />
         </div>

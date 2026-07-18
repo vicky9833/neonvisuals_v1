@@ -10,9 +10,18 @@ import {
 } from "react";
 import type { Company, Profile } from "@/lib/auth-types";
 
+/** P9d (R1): the viewer's OWN org branding for the portal shell (plain data; NEON fallback applied server-side). */
+export interface ShellBranding {
+  orgName: string;
+  logoUrl: string | null;
+  primary: string;
+  accent: string;
+}
+
 interface DashboardContextValue {
   profile: Profile;
   company: Company | null;
+  branding: ShellBranding;
   sidebarOpen: boolean;
   setSidebarOpen: (open: boolean) => void;
   pageTitle: string;
@@ -32,10 +41,12 @@ export function useDashboard(): DashboardContextValue {
 export function DashboardProvider({
   profile,
   company,
+  branding,
   children,
 }: {
   profile: Profile;
   company: Company | null;
+  branding: ShellBranding;
   children: ReactNode;
 }) {
   const [sidebarOpen, setSidebarOpen] = useState(false);
@@ -45,12 +56,13 @@ export function DashboardProvider({
     () => ({
       profile,
       company,
+      branding,
       sidebarOpen,
       setSidebarOpen,
       pageTitle,
       setPageTitle,
     }),
-    [profile, company, sidebarOpen, pageTitle],
+    [profile, company, branding, sidebarOpen, pageTitle],
   );
 
   return (

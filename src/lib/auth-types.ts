@@ -27,6 +27,8 @@ export interface Company {
   address: string | null;
   website: string | null;
   logo_url: string | null;
+  brand_primary: string | null;
+  brand_accent: string | null;
   gstin: string | null;
   primary_contact_name: string | null;
   primary_contact_email: string | null;
