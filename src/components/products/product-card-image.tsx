@@ -38,6 +38,7 @@ export function ProductCardImage({ imageUrl, name }: ProductCardImageProps) {
         src={imageUrl}
         alt={`${name} - personalised corporate gift`}
         fill
+        unoptimized
         onLoad={() => setLoaded(true)}
         onError={() => setErrored(true)}
         className={`object-contain p-3 transition-all duration-300 group-hover:scale-105 ${

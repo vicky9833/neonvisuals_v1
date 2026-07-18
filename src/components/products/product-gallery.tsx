@@ -38,6 +38,7 @@ export function ProductGallery({ name, imageUrl, galleryImages = [] }: ProductGa
           src={uniqueImages[activeIndex]}
           alt={`${name} - view ${activeIndex + 1}`}
           fill
+          unoptimized
           priority
           className="object-contain p-6"
           sizes="(max-width: 1024px) 100vw, 55vw"
@@ -61,6 +62,7 @@ export function ProductGallery({ name, imageUrl, galleryImages = [] }: ProductGa
                 src={src}
                 alt={`${name} thumbnail ${i + 1}`}
                 fill
+                unoptimized
                 className="object-contain p-1"
                 sizes="80px"
               />

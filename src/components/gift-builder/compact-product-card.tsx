@@ -25,6 +25,7 @@ export function CompactProductCard({
             src={product.imageUrl}
             alt={product.name}
             fill
+            unoptimized
             className="object-contain p-3"
             sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
           />

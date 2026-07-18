@@ -35,19 +35,12 @@ function InstagramIcon({ className }: IconProps) {
   );
 }
 
-function XIcon({ className }: IconProps) {
-  return (
-    <svg viewBox="0 0 24 24" fill="currentColor" className={className} aria-hidden="true">
-      <path d="M18.9 1.5h3.68l-8.04 9.19L24 22.5h-7.4l-5.8-7.58-6.63 7.58H.49l8.6-9.83L0 1.5h7.59l5.24 6.93L18.9 1.5zm-1.29 18.79h2.04L6.49 3.6H4.3l13.31 16.69z" />
-    </svg>
-  );
-}
-
+// P-fixpass #8: the X/Twitter entry was a dead https://twitter.com placeholder — removed until a
+// real handle is available. LinkedIn now points at the company page (see LINKEDIN_URL constant).
 const SOCIALS = [
   { label: "LinkedIn", href: LINKEDIN_URL, Icon: LinkedinIcon },
   { label: "Instagram", href: INSTAGRAM_URL, Icon: InstagramIcon },
   { label: "WhatsApp", href: WHATSAPP_URL, Icon: MessageCircle },
-  { label: "X (Twitter)", href: "https://twitter.com", Icon: XIcon },
 ];
 
 const QUICK_LINKS = [

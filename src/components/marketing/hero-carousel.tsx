@@ -43,6 +43,7 @@ export function HeroCarousel({ images, intervalMs = 4000 }: HeroCarouselProps) {
           src={src}
           alt={`Neon Visuals premium gifting showcase ${i + 1}`}
           fill
+          unoptimized
           priority={i < 2}
           sizes="(max-width: 1024px) 100vw, 45vw"
           className={cn(

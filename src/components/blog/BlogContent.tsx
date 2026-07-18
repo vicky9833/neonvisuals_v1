@@ -73,6 +73,7 @@ const components: Components = {
           alt={alt ?? ""}
           width={1200}
           height={700}
+          unoptimized
           sizes="(max-width: 768px) 100vw, 768px"
           loading="lazy"
           className="h-auto w-full rounded-xl border border-[#EDE9E3] object-cover"
