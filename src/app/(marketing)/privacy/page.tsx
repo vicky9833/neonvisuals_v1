@@ -13,7 +13,7 @@ export const metadata: Metadata = buildMetadata({
 // address + personal mobile from the source doc are intentionally redacted to "Mumbai, Maharashtra" and
 // the grievance email (they live in internal records / GST invoices only). "Last updated" is left as a
 // clearly-editable field (no invented date). Founder edits the LAST_UPDATED line on publish.
-const LAST_UPDATED = "to be set on publication";
+const LAST_UPDATED = "June 15, 2026";
 const PRIVACY = `**Last updated: ${LAST_UPDATED}**
 
 Neon Visuals ("**Neon Visuals**", "**we**", "**us**", or "**our**") is a sole proprietorship (constitution: proprietorship) owned by **Vikas Vishwakarma**, trading as **Neon Visuals**, GSTIN **27BZSPV5411Q1ZA**, Udyam **UDYAM-MH-18-0340367**, with its principal place of business in **Mumbai, Maharashtra**. We provide a premium corporate-gifting service and a workforce-recognition software platform to businesses and institutions across India.

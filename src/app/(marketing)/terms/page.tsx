@@ -13,7 +13,7 @@ export const metadata: Metadata = buildMetadata({
 // personal mobile from the source doc are intentionally redacted to "Mumbai, Maharashtra" and the
 // contact email (they live in internal records / GST invoices only). "Last updated" is a clearly-
 // editable field (no invented date); founder edits LAST_UPDATED on publish.
-const LAST_UPDATED = "to be set on publication";
+const LAST_UPDATED = "June 15, 2026";
 const TERMS = `**Last updated: ${LAST_UPDATED}**
 
 These Terms & Conditions ("**Terms**") govern your access to and use of the website, platform, and services provided by **Neon Visuals**, a sole proprietorship (constitution: proprietorship) owned by **Vikas Vishwakarma** ("**Neon Visuals**", "**we**", "**us**", "**our**"), trading as **Neon Visuals**, GSTIN **27BZSPV5411Q1ZA**, Udyam **UDYAM-MH-18-0340367**, with its principal place of business in **Mumbai, Maharashtra**.
