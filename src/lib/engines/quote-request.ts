@@ -16,7 +16,10 @@ export interface QuoteRequestOccasion {
   employeeId: string | null; // null = company-wide
   occasionTypeKey: string;
   occasionDate: string; // ISO
-  title?: string | null; // festival/custom name (company-wide disambiguation)
+  title?: string | null; // display only (P9b editable) — no longer part of the cw key
+  /** P9a FK identity for a company-wide occasion (festival_id or custom_occasion_id). */
+  festivalId?: string | null;
+  customOccasionId?: string | null;
 }
 
 export interface QuoteRequestInput {
@@ -53,7 +56,8 @@ export async function requestQuote(
         employee_id: input.occasion.employeeId,
         occasion_type_key: input.occasion.occasionTypeKey,
         date: input.occasion.occasionDate,
-        title: input.occasion.title,
+        festival_id: input.occasion.festivalId,
+        custom_occasion_id: input.occasion.customOccasionId,
       })
     : null;
 
@@ -90,7 +94,8 @@ export async function requestQuote(
         employee_id: input.occasion.employeeId,
         occasion_type_key: input.occasion.occasionTypeKey,
         date: input.occasion.occasionDate,
-        title: input.occasion.title,
+        festival_id: input.occasion.festivalId,
+        custom_occasion_id: input.occasion.customOccasionId,
       },
       { quoteId: data.id as string, chosenBy: input.requestedBy },
     );

@@ -170,6 +170,11 @@ export async function generateOccasions(
       lead_days: lead, recurrence, is_company_wide: !e.employeeId, budget: null,
       status: "upcoming", auto_generated: true, is_sensitive: typeCfg.get(key)?.sensitive ?? false,
       notify_date: notify, is_rush: r,
+      // P9a: company-wide occasions are BORN with their immutable FK identity (festival/custom),
+      // resolved deterministically here (getCalendarEvents already carries the id). Employee
+      // occasions carry neither (their key has no title component).
+      festival_id: e.type === "festival" ? (e.festivalId ?? null) : null,
+      custom_occasion_id: e.type === "custom" ? (e.customOccasionId ?? null) : null,
     });
   }
 
@@ -201,6 +206,18 @@ export async function generateOccasions(
       const { notify, rush: r } = computeNotify(anniv.date, lead, blackout, today);
       pushRow({ company_id: companyId, employee_id: emp.id, occasion_type_key: "milestone_anniversary", title: `${name} — ${anniv.years} Year Milestone`, date: anniv.date, recur_month: null, recur_day: null, lead_days: lead, recurrence: "none", is_company_wide: false, status: "upcoming", auto_generated: true, is_sensitive: false, notify_date: notify, is_rush: r });
     }
+  }
+
+  // P9a GUARD (FK-NOT-NULL-at-birth for cw rows): a company-wide occasion whose FK identity did
+  // not resolve would compute a degenerate key (`…:cw:type:date:`) and silently break dedupe/
+  // gift-state. REJECT such rows at creation rather than writing a null-keyed identity.
+  const unresolvedCw = rows.filter(
+    (r) => r.is_company_wide === true && !r.festival_id && !r.custom_occasion_id,
+  );
+  if (unresolvedCw.length > 0) {
+    throw new Error(
+      `P9a guard: ${unresolvedCw.length} company-wide occasion(s) with no resolved festival_id/custom_occasion_id — refusing to write a null-keyed identity`,
+    );
   }
 
   // Idempotent regen: replace auto-generated occasions, preserve manual ones.

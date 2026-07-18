@@ -58,20 +58,25 @@ export interface StableOccasion {
   employee_id: string | null;
   occasion_type_key: string;
   date: string;
-  title?: string | null;
+  title?: string | null; // display only (P9b editable) — NO LONGER part of the company-wide key
+  /** P9a FK identity: company-wide festival occasions carry festival_id; custom carry custom_occasion_id. */
+  festival_id?: string | null;
+  custom_occasion_id?: string | null;
 }
 /**
  * Stable key for an occasion INSTANCE, independent of the ephemeral occasions.id
  * (regenerated each cron run). Employee occasions are unique by
- * (company, employee, type, date). Company-WIDE festival/custom occasions can
- * share a date, so the title (festival/custom name — NOT employee PII) is
- * appended to disambiguate. Used for the gift-state key, notification dedupe,
- * and per-stage escalation dedupe — one source of truth.
+ * (company, employee, type, date) — already FK-stable, untouched.
+ *
+ * COMPANY-WIDE occasions (P9a): the key's disambiguator is now the IMMUTABLE FK
+ * (festival_id, or `custom:<custom_occasion_id>`) instead of the editable display title — so a
+ * future title edit (P9b) never changes the key and never orphans side-table state. The generator
+ * enforces one-of(festival_id, custom_occasion_id) for every cw row, so the FK is always present.
  */
 export function stableOccasionKey(o: StableOccasion): string {
-  return o.employee_id
-    ? `${o.company_id}:${o.employee_id}:${o.occasion_type_key}:${o.date}`
-    : `${o.company_id}:cw:${o.occasion_type_key}:${o.date}:${o.title ?? ""}`;
+  if (o.employee_id) return `${o.company_id}:${o.employee_id}:${o.occasion_type_key}:${o.date}`;
+  const fk = o.festival_id ?? (o.custom_occasion_id ? `custom:${o.custom_occasion_id}` : "");
+  return `${o.company_id}:cw:${o.occasion_type_key}:${o.date}:${fk}`;
 }
 
 // ── Audience specs (§7 role queries) ─────────────────────────────────────────
@@ -342,6 +347,9 @@ export interface OccasionForNotify {
   occasion_type_key: string;
   title: string; // MAY contain the employee name — tenant in-app body only
   date: string; // occasion date (ISO)
+  /** P9a FK identity for the company-wide key (carried from the occasions row). */
+  festival_id?: string | null;
+  custom_occasion_id?: string | null;
 }
 
 export interface CompanyForNotify {
@@ -472,7 +480,7 @@ export async function giftChosenFor(
  */
 export async function writeGiftChosen(
   client: SupabaseClient,
-  occasion: { company_id: string; employee_id: string | null; occasion_type_key: string; date: string; title?: string | null },
+  occasion: { company_id: string; employee_id: string | null; occasion_type_key: string; date: string; title?: string | null; festival_id?: string | null; custom_occasion_id?: string | null },
   opts: { quoteId?: string | null; orderId?: string | null; chosenBy?: string | null },
 ): Promise<void> {
   const key = stableOccasionKey(occasion);
@@ -483,6 +491,9 @@ export async function writeGiftChosen(
       employee_id: occasion.employee_id,
       occasion_type_key: occasion.occasion_type_key,
       occasion_date: occasion.date,
+      // P9a: persist the FK identity alongside the decomposed columns (stable under title edits).
+      festival_id: occasion.festival_id ?? null,
+      custom_occasion_id: occasion.custom_occasion_id ?? null,
       status: opts.orderId ? "ordered" : "chosen",
       quote_id: opts.quoteId ?? null,
       order_id: opts.orderId ?? null,
