@@ -80,7 +80,7 @@ export async function GET(request: Request) {
       try {
         const { data: dueOccasions } = await supa
           .from("occasions")
-          .select("id, company_id, employee_id, occasion_type_key, title, date")
+          .select("id, company_id, employee_id, occasion_type_key, title, date, festival_id, custom_occasion_id")
           .eq("company_id", companyId)
           .eq("notify_date", today);
         for (const occ of dueOccasions ?? []) {
@@ -101,7 +101,7 @@ export async function GET(request: Request) {
       try {
         const { data: upcoming } = await supa
           .from("occasions")
-          .select("id, company_id, employee_id, occasion_type_key, title, date, lead_days")
+          .select("id, company_id, employee_id, occasion_type_key, title, date, lead_days, festival_id, custom_occasion_id")
           .eq("company_id", companyId)
           .gte("date", today);
         for (const occ of upcoming ?? []) {

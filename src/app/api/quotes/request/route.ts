@@ -24,6 +24,8 @@ const schema = z.object({
       occasionTypeKey: z.string().min(1).max(64),
       occasionDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
       title: z.string().max(200).nullable().optional(),
+      festivalId: z.string().uuid().nullable().optional(),
+      customOccasionId: z.string().uuid().nullable().optional(),
     })
     .nullable()
     .optional(),
@@ -64,6 +66,8 @@ export async function POST(request: Request) {
             occasionTypeKey: parsed.data.occasion.occasionTypeKey,
             occasionDate: parsed.data.occasion.occasionDate,
             title: parsed.data.occasion.title ?? null,
+            festivalId: parsed.data.occasion.festivalId ?? null,
+            customOccasionId: parsed.data.occasion.customOccasionId ?? null,
           }
         : null,
       products: parsed.data.products,
