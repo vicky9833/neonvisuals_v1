@@ -26,6 +26,15 @@ import { sendPaymentConfirmationEmail } from "@/lib/services/email";
 export const SAC_CODE = "998396";
 export const DEFAULT_GST_RATE = 18;
 
+/**
+ * PLACEHOLDER seller GSTIN (Karnataka, state code 29) for test-mode subscription invoices.
+ * ⚠️ A real GST tax invoice is legally INVALID without the true seller GSTIN — replacing this
+ * with Neon Visuals' registered GSTIN in prod is a HARD go-live prerequisite (see GO_LIVE_GATE.md).
+ */
+export const SELLER_GSTIN_PLACEHOLDER = "29AAAAA0000A1Z5";
+/** Neon Visuals Pro subscription price (₹, GST-INCLUSIVE — the all-in amount the customer pays). */
+export const PRO_SUBSCRIPTION_PRICE_RUPEES = 1999;
+
 export type InvoiceType =
   | "advance"
   | "balance"
@@ -71,7 +80,8 @@ export interface Invoice {
   id: string;
   invoice_number: string | null;
   company_id: string;
-  order_id: string;
+  order_id: string | null;
+  subscription_id: string | null;
   order_number?: string | null;
   invoice_type: InvoiceType;
   status: InvoiceStatus;
@@ -170,6 +180,39 @@ export function calculateGST(
   };
 }
 
+/**
+ * GST-INCLUSIVE split: the supplied `inclusiveTotal` is the all-in price the customer pays
+ * (e.g. ₹1,999). The GST component is broken out from WITHIN that total, not added on top.
+ *
+ * base = round2(inclusiveTotal / (1 + rate/100)); totalGst = inclusiveTotal − base (by
+ * subtraction, so base + tax reconciles to the inclusive total EXACTLY). Intra-state splits
+ * CGST/SGST with the leftover paisa landing on CGST (standard practice); inter-state is a single
+ * IGST. Worked example @18%, ₹1,999: base 1694.07; intra CGST 152.47 + SGST 152.46 = 304.93;
+ * inter IGST 304.93; grand total 1999.00 exactly.
+ */
+export function calculateGSTInclusive(
+  inclusiveTotal: number,
+  isIntraState: boolean,
+  rate: number = DEFAULT_GST_RATE,
+): {
+  base: number;
+  cgst: number;
+  sgst: number;
+  igst: number;
+  totalGst: number;
+  grandTotal: number;
+} {
+  const total = round2(inclusiveTotal);
+  const base = round2(total / (1 + rate / 100));
+  const totalGst = round2(total - base); // subtraction => base + totalGst === total exactly
+  if (isIntraState) {
+    const cgst = round2(totalGst / 2);
+    const sgst = round2(totalGst - cgst); // remainder paisa reconciles the half-split
+    return { base, cgst, sgst, igst: 0, totalGst, grandTotal: total };
+  }
+  return { base, cgst: 0, sgst: 0, igst: totalGst, totalGst, grandTotal: total };
+}
+
 /** Karnataka GSTIN state code is 29; otherwise infer from city. */
 export function isIntraStateSupply(
   buyerGstin?: string | null,
@@ -260,7 +303,8 @@ function mapInvoice(row: any): Invoice {
     id: row.id,
     invoice_number: row.invoice_number ?? null,
     company_id: row.company_id,
-    order_id: row.order_id,
+    order_id: row.order_id ?? null,
+    subscription_id: row.subscription_id ?? null,
     order_number: row.orders?.order_number ?? null,
     invoice_type: row.invoice_type,
     status: row.status,
@@ -488,6 +532,12 @@ export interface ListInvoicesOptions {
   dateRange?: { start: string; end: string };
   page?: number;
   pageSize?: number;
+  /**
+   * When false, EXCLUDE subscription/billing invoices (subscription_id set) from the result.
+   * Ruling C (§8b): subscription invoices are billing.manage-gated; order invoices keep their
+   * existing company-wide read. The tenant surface passes false for non-billing roles.
+   */
+  includeSubscription?: boolean;
 }
 
 export async function listInvoices(
@@ -502,6 +552,7 @@ export async function listInvoices(
   if (options.companyId) query = query.eq("company_id", options.companyId);
   if (options.orderId) query = query.eq("order_id", options.orderId);
   if (options.status) query = query.eq("status", options.status);
+  if (options.includeSubscription === false) query = query.is("subscription_id", null);
   if (options.dateRange) {
     query = query
       .gte("invoice_date", options.dateRange.start)
@@ -576,7 +627,7 @@ export async function recordPayment(
   if (payment.razorpayPaymentId) patch.razorpay_payment_id = payment.razorpayPaymentId;
   await supa.from("invoices").update(patch).eq("id", invoiceId);
 
-  await recomputeOrderPaymentStatus(invoice.order_id, supa);
+  if (invoice.order_id) await recomputeOrderPaymentStatus(invoice.order_id, supa);
 
   // Awaited (serverless-safe) payment confirmation email to the client.
   // Wrapped so a send failure can't fail payment recording.
@@ -726,6 +777,125 @@ export async function handleRazorpayWebhook(payload: any): Promise<void> {
 /* eslint-enable @typescript-eslint/no-explicit-any */
 
 // ---------------------------------------------------------------------------
+// Subscription invoices (Prompt 8b) — the legal record of a Pro payment.
+// ---------------------------------------------------------------------------
+
+export interface CreateSubscriptionInvoiceInput {
+  subscriptionId: string;
+  companyId: string;
+  /** All-in price the customer paid, in RUPEES (GST-INCLUSIVE, e.g. 1999). */
+  amountRupees: number;
+  razorpayPaymentId?: string | null;
+  razorpayOrderId?: string | null;
+  periodStart?: string | null;
+  periodEnd?: string | null;
+}
+
+/**
+ * Creates the GST subscription invoice for a verified Pro payment. IDEMPOTENT: at most one invoice
+ * per subscription (pre-check + the DB partial-unique `invoices_one_per_subscription`), so a
+ * re-delivered 8a activation never produces a duplicate — one payment = one invoice.
+ *
+ * GST-INCLUSIVE: the ₹1,999 is the all-in amount; the base + CGST/SGST (KA buyer) or IGST
+ * (other state) are broken out from within it and reconcile to ₹1,999.00 exactly. Runs on the
+ * caller-supplied client (the webhook path passes the service-role admin client).
+ */
+export async function createSubscriptionInvoice(
+  db: SupabaseClient,
+  input: CreateSubscriptionInvoiceInput,
+): Promise<Invoice | null> {
+  // Idempotency guard 1: existing invoice for this subscription -> return it, create nothing.
+  const { data: existing } = await db
+    .from("invoices")
+    .select(INVOICE_SELECT)
+    .eq("subscription_id", input.subscriptionId)
+    .maybeSingle();
+  if (existing) return mapInvoice(existing);
+
+  const { data: company } = await db
+    .from("companies")
+    .select("name, address, city, gstin, primary_contact_name, primary_contact_email, primary_contact_phone")
+    .eq("id", input.companyId)
+    .maybeSingle();
+
+  const buyerGstin = (company?.gstin as string | null) ?? null;
+  const intraState = isIntraStateSupply(buyerGstin, company?.city as string | null);
+  const gst = calculateGSTInclusive(input.amountRupees, intraState);
+
+  const today = new Date().toISOString().slice(0, 10);
+  const periodLabel =
+    input.periodStart && input.periodEnd
+      ? ` (${input.periodStart.slice(0, 10)} to ${input.periodEnd.slice(0, 10)})`
+      : "";
+  const lineItems: InvoiceLineItem[] = [
+    {
+      description: `Neon Visuals Pro Subscription - annual${periodLabel}`,
+      hsnSac: SAC_CODE,
+      quantity: 1,
+      unitPrice: gst.base,
+      total: gst.base,
+      gstRate: DEFAULT_GST_RATE,
+    },
+  ];
+
+  const payload = {
+    company_id: input.companyId,
+    order_id: null,
+    subscription_id: input.subscriptionId,
+    invoice_type: "standard" as InvoiceType,
+    status: "paid" as InvoiceStatus,
+    invoice_date: today,
+    due_date: today,
+    paid_date: today,
+    seller_name: "Neon Visuals",
+    seller_address: "Bangalore, Karnataka, India",
+    seller_gstin: SELLER_GSTIN_PLACEHOLDER, // TODO: real GSTIN before live billing (GO_LIVE_GATE.md)
+    buyer_name:
+      (company?.primary_contact_name as string) ?? (company?.name as string) ?? "Client",
+    buyer_company: (company?.name as string) ?? "Client",
+    buyer_address: (company?.address as string) ?? null,
+    buyer_gstin: buyerGstin,
+    buyer_email: (company?.primary_contact_email as string) ?? null,
+    buyer_phone: (company?.primary_contact_phone as string) ?? null,
+    line_items: lineItems,
+    subtotal: gst.base,
+    gst_rate: DEFAULT_GST_RATE,
+    cgst_amount: gst.cgst,
+    sgst_amount: gst.sgst,
+    igst_amount: gst.igst,
+    is_intra_state: intraState,
+    total_gst: gst.totalGst,
+    grand_total: gst.grandTotal,
+    amount_in_words: numberToWords(gst.grandTotal),
+    amount_due: 0,
+    amount_paid: gst.grandTotal,
+    payment_percentage: 100,
+    razorpay_payment_id: input.razorpayPaymentId ?? null,
+    razorpay_order_id: input.razorpayOrderId ?? null,
+    notes: "Neon Visuals Pro subscription - GST-inclusive.",
+  };
+
+  const { data, error } = await db
+    .from("invoices")
+    .insert(payload)
+    .select(INVOICE_SELECT)
+    .single();
+  if (error) {
+    // Idempotency guard 2: concurrent insert lost the partial-unique race -> fetch + return.
+    if ((error as { code?: string }).code === "23505") {
+      const { data: raced } = await db
+        .from("invoices")
+        .select(INVOICE_SELECT)
+        .eq("subscription_id", input.subscriptionId)
+        .maybeSingle();
+      return raced ? mapInvoice(raced) : null;
+    }
+    throw new Error(`Create subscription invoice failed: ${error.message}`);
+  }
+  return mapInvoice(data);
+}
+
+// ---------------------------------------------------------------------------
 // Stats
 // ---------------------------------------------------------------------------
 
@@ -811,7 +981,8 @@ export async function getBillingStats(companyId?: string): Promise<BillingStats>
 export interface ClientInvoice {
   id: string;
   invoice_number: string | null;
-  order_id: string;
+  order_id: string | null;
+  is_subscription: boolean;
   order_number?: string | null;
   invoice_type: InvoiceType;
   status: InvoiceStatus;
@@ -833,6 +1004,7 @@ export function toClientInvoice(invoice: Invoice): ClientInvoice {
     id: invoice.id,
     invoice_number: invoice.invoice_number,
     order_id: invoice.order_id,
+    is_subscription: invoice.subscription_id != null,
     order_number: invoice.order_number,
     invoice_type: invoice.invoice_type,
     status: invoice.status,

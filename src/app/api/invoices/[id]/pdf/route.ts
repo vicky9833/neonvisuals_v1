@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import {
   requireApiAuth,
   auditCrossTenantAccess,
+  tenantCapability,
   apiAuthErrorResponse,
 } from "@/lib/api-auth";
 import { getInvoice } from "@/lib/engines/billing";
@@ -34,6 +35,16 @@ export async function GET(
     } else if (invoice.company_id !== profile.company_id) {
       return NextResponse.json(
         { error: "forbidden", message: "No access to this invoice." },
+        { status: 403 },
+      );
+    } else if (
+      invoice.subscription_id &&
+      tenantCapability(profile, "billing.manage").effect !== "allow"
+    ) {
+      // Ruling C (§8b): a subscription/billing invoice needs billing.manage (owner/admin/finance).
+      // Order invoices keep their existing own-company access (handled by the check above).
+      return NextResponse.json(
+        { error: "forbidden", message: "Billing access required for this invoice." },
         { status: 403 },
       );
     }

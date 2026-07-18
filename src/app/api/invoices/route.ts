@@ -4,6 +4,7 @@ import {
   requireApiAuth,
   requirePlatform,
   auditCrossTenantAccess,
+  tenantCapability,
   apiAuthErrorResponse,
 } from "@/lib/api-auth";
 import {
@@ -77,6 +78,10 @@ export async function GET(request: Request) {
 
     const from = searchParams.get("from");
     const to = searchParams.get("to");
+    // Ruling C (§8b): subscription/billing invoices are billing.manage-gated; order invoices keep
+    // their existing company-wide read. A non-billing tenant role sees only order invoices.
+    const canSeeBilling =
+      isAdmin || tenantCapability(profile, "billing.manage").effect === "allow";
     const result = await listInvoices({
       companyId: isAdmin
         ? (searchParams.get("companyId") ?? undefined)
@@ -84,6 +89,7 @@ export async function GET(request: Request) {
       orderId: searchParams.get("orderId") ?? undefined,
       status: (searchParams.get("status") as InvoiceStatus) ?? undefined,
       dateRange: from && to ? { start: from, end: to } : undefined,
+      includeSubscription: canSeeBilling,
     });
 
     if (isAdmin) return NextResponse.json({ data: result });

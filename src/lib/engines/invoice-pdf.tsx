@@ -218,7 +218,7 @@ function InvoiceDocument({ invoice }: { invoice: Invoice }) {
 
         <View style={styles.refBox}>
           <Text>
-            Order: {invoice.order_number ?? "-"}
+            {invoice.subscription_id ? "Subscription (Pro)" : `Order: ${invoice.order_number ?? "-"}`}
           </Text>
           <Text>Type: {TYPE_LABEL[invoice.invoice_type] ?? invoice.invoice_type}</Text>
           <Text>Place of Supply: {invoice.is_intra_state ? "Karnataka (Intra-state)" : "Inter-state"}</Text>

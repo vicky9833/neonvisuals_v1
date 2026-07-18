@@ -1,6 +1,8 @@
 import "server-only";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { createOrder } from "@/lib/services/razorpay";
+import { createSubscriptionInvoice } from "@/lib/engines/billing";
+import { saveInvoicePDF } from "@/lib/engines/invoice-pdf";
 
 /**
  * Subscription Engine — INTERNAL USE ONLY (server-side).
@@ -128,7 +130,7 @@ export async function activateSubscriptionFromWebhook(
 
   const { data: sub } = await admin
     .from("subscriptions")
-    .select("id, company_id, status")
+    .select("id, company_id, status, amount")
     .eq("razorpay_order_id", input.razorpayOrderId)
     .maybeSingle();
 
@@ -171,6 +173,31 @@ export async function activateSubscriptionFromWebhook(
     .eq("id", companyId);
   if (companyErr) {
     throw new Error(`Plan activation failed: ${companyErr.message}`);
+  }
+
+  // Generate the GST subscription invoice + PDF (Prompt 8b) — BEST-EFFORT.
+  // The customer has PAID and Pro is already granted; a failure here must NOT un-grant Pro
+  // (the invoice is idempotent + regenerable). Never throws out of activation.
+  try {
+    const amountRupees = Number(sub.amount ?? 0) / 100;
+    const invoice = await createSubscriptionInvoice(admin, {
+      subscriptionId,
+      companyId,
+      amountRupees,
+      razorpayPaymentId: input.razorpayPaymentId ?? null,
+      razorpayOrderId: input.razorpayOrderId,
+      periodStart: now.toISOString(),
+      periodEnd: periodEnd.toISOString(),
+    });
+    if (invoice) {
+      try {
+        await saveInvoicePDF(invoice.id);
+      } catch (pdfErr) {
+        console.error("[subscription] invoice PDF generation failed (Pro still granted)", pdfErr);
+      }
+    }
+  } catch (invErr) {
+    console.error("[subscription] invoice generation failed (Pro still granted)", invErr);
   }
 
   return { activated: true, alreadyActive: false, companyId, subscriptionId };

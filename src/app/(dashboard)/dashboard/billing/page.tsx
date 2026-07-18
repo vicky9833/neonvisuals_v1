@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { getProfile } from "@/lib/auth";
+import { getAuthContext, authorizeTenant } from "@/lib/authz/context";
 import { SetPageTitle } from "@/components/dashboard/DashboardProvider";
 import { ClientBillingView } from "@/components/billing/ClientBillingView";
 import {
@@ -28,9 +29,18 @@ export default async function BillingPage() {
   const profile = await getProfile();
   const companyId = profile?.company_id ?? "";
 
+  // Ruling C (§8b): subscription/billing invoices are billing.manage-gated (owner/admin/finance);
+  // order invoices keep their existing company-wide read. Non-billing roles see only order invoices.
+  const ctx = await getAuthContext();
+  const canSeeBilling =
+    !!ctx &&
+    (ctx.isPlatformStaff ||
+      (!!companyId &&
+        authorizeTenant(ctx, companyId, "billing.manage").effect === "allow"));
+
   const [invoicesResult, stats] = companyId
     ? await Promise.all([
-        listInvoices({ companyId, pageSize: 100 }),
+        listInvoices({ companyId, pageSize: 100, includeSubscription: canSeeBilling }),
         getBillingStats(companyId),
       ])
     : [{ invoices: [] }, EMPTY_STATS];
