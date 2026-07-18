@@ -122,13 +122,14 @@ export async function processApproval(params: {
   // Pro-gate BEFORE any mutation. Free => not_applicable (non-error), quote proceeds ungated.
   const { data: company } = await admin
     .from("companies")
-    .select("name, plan, plan_status, plan_override_by")
+    .select("name, plan, plan_status, plan_override_by, is_demo")
     .eq("id", companyId)
     .maybeSingle();
   const gate = canUseApprovals({
     plan: (company?.plan as string | null) ?? null,
     planStatus: (company?.plan_status as string | null) ?? null,
     planOverrideBy: (company?.plan_override_by as string | null) ?? null,
+    isDemo: (company?.is_demo as boolean | null) ?? false,
     isPlatformStaff: principal.isPlatformStaff,
   });
   if (!gate.allowed) return { kind: "not_applicable", reason: gate.reason };

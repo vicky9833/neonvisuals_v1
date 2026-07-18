@@ -32,8 +32,8 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
       // §8 plan tiering: Pro companies get a dedicated (assignable) concierge owner; Free/lapsed
       // stay in the shared queue — UNLESS §0 platform-staff bypass applies (8c-ii): an authorized
       // staffer may assign on any tier.
-      const { data: company } = await admin.from("companies").select("plan, plan_override_by").eq("id", req.company_id).maybeSingle();
-      const assignable = canAssignConcierge({ plan: (company?.plan as string | null) ?? null, planOverrideBy: (company?.plan_override_by as string | null) ?? null, isPlatformStaff: principal.isPlatformStaff });
+      const { data: company } = await admin.from("companies").select("plan, plan_override_by, is_demo").eq("id", req.company_id).maybeSingle();
+      const assignable = canAssignConcierge({ plan: (company?.plan as string | null) ?? null, planOverrideBy: (company?.plan_override_by as string | null) ?? null, isDemo: (company?.is_demo as boolean | null) ?? false, isPlatformStaff: principal.isPlatformStaff });
       if (!assignable) {
         return NextResponse.json({ error: "shared_queue", message: "This company is on the shared concierge queue. Dedicated assignment is a Pro feature." }, { status: 422 });
       }

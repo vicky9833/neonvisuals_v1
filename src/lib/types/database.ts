@@ -99,6 +99,7 @@ export type Database = {
           gstin: string | null
           id: string
           industry: string | null
+          is_demo: boolean
           logo_url: string | null
           name: string
           _deprecated_observed_festivals: string[] | null

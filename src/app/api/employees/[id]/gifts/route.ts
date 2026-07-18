@@ -45,6 +45,7 @@ export async function GET(_request: Request, { params }: Ctx) {
       plan: plan.plan,
       planStatus: plan.planStatus,
       planOverrideBy: plan.planOverrideBy,
+      isDemo: plan.isDemo,
       isPlatformStaff: principal.isPlatformStaff,
     });
 
