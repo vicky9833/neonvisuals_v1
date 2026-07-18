@@ -54,16 +54,30 @@ interface LoadedOrders {
   orderMonth: Map<string, string>;
 }
 
+/**
+ * P9b §R3: platform-wide analytics must NEVER count demo/sandbox tenants. This resolves the (tiny)
+ * set of is_demo company ids so every cross-company fact set (orders, gift_records, invoices,
+ * companies, employees) can be filtered. Demo spend/counts never pollute platform aggregates.
+ */
+async function loadDemoCompanyIds(supa: ReturnType<typeof createAdminClient>): Promise<Set<string>> {
+  const { data } = await supa.from("companies").select("id").eq("is_demo", true);
+  return new Set((data ?? []).map((c) => c.id as string));
+}
+
 async function loadOrders(range: DateRange): Promise<LoadedOrders> {
   const supa = createAdminClient();
-  const { data: orders } = await supa
-    .from("orders")
-    .select("id, company_id, grand_total, status, created_at")
-    .gte("created_at", range.start)
-    .lte("created_at", `${range.end}T23:59:59`)
-    .neq("status", "cancelled");
+  const [{ data: orders }, demo] = await Promise.all([
+    supa
+      .from("orders")
+      .select("id, company_id, grand_total, status, created_at")
+      .gte("created_at", range.start)
+      .lte("created_at", `${range.end}T23:59:59`)
+      .neq("status", "cancelled"),
+    loadDemoCompanyIds(supa),
+  ]);
 
-  const orderRows = orders ?? [];
+  // P9b §R3: drop demo-org orders before any aggregation (feeds revenue + product analytics).
+  const orderRows = (orders ?? []).filter((o) => !demo.has(o.company_id as string));
   const orderIds = orderRows.map((o) => o.id as string);
   const orderMonth = new Map<string, string>();
   for (const o of orderRows) {
@@ -331,15 +345,20 @@ export async function getSalesFunnelAnalytics(range: DateRange) {
 
 export async function getClientAnalytics(range: DateRange) {
   const supa = createAdminClient();
-  const [{ data: companies }, { data: employees }, { data: orders }] = await Promise.all([
-    supa.from("companies").select("id, name, industry, employee_count, created_at"),
+  const [{ data: companies }, { data: employees }, { data: orders }, demo] = await Promise.all([
+    supa.from("companies").select("id, name, industry, employee_count, created_at").eq("is_demo", false),
     supa.from("employees").select("company_id").eq("is_active", true),
     supa.from("orders").select("company_id, grand_total, status, created_at").neq("status", "cancelled"),
+    loadDemoCompanyIds(supa),
   ]);
 
-  const companyRows = companies ?? [];
+  // P9b §R3: demo orgs excluded from platform client analytics (companies pre-filtered above;
+  // employees + orders filtered by the demo-id set so demo counts/spend never enter the aggregate).
+  const companyRows = (companies ?? []).filter((c) => !demo.has(c.id as string));
+  const employeeRows = (employees ?? []).filter((e) => !demo.has(e.company_id as string));
+  const orderRows = (orders ?? []).filter((o) => !demo.has(o.company_id as string));
   const empByCompany = new Map<string, number>();
-  for (const e of employees ?? []) {
+  for (const e of employeeRows) {
     const id = e.company_id as string | null;
     if (id) empByCompany.set(id, (empByCompany.get(id) ?? 0) + 1);
   }
@@ -350,7 +369,7 @@ export async function getClientAnalytics(range: DateRange) {
   const activeInRange = new Set<string>();
   const startMs = new Date(range.start).getTime();
   const endMs = new Date(`${range.end}T23:59:59`).getTime();
-  for (const o of orders ?? []) {
+  for (const o of orderRows) {
     const id = o.company_id as string;
     revByCompany.set(id, (revByCompany.get(id) ?? 0) + Number(o.grand_total ?? 0));
     ordersByCompany.set(id, (ordersByCompany.get(id) ?? 0) + 1);
@@ -415,7 +434,7 @@ export async function getClientAnalytics(range: DateRange) {
     newClients,
     activeClients: activeInRange.size,
     churnedClients: churned,
-    totalEmployeesManaged: (employees ?? []).length,
+    totalEmployeesManaged: employeeRows.length,
     clientsByIndustry,
     clientsBySize,
     topClients,
@@ -537,13 +556,17 @@ export async function getProductAnalytics(range: DateRange) {
 
 export async function getGiftImpactAnalytics(range: DateRange) {
   const supa = createAdminClient();
-  const { data: gifts } = await supa
-    .from("gift_records")
-    .select("employee_id, collection_code, occasion_type, gifted_date, desk_test_status, recipient_reaction, linkedin_posted")
-    .eq("is_archived", false)
-    .gte("gifted_date", range.start)
-    .lte("gifted_date", range.end);
-  const rows = gifts ?? [];
+  const [{ data: gifts }, demo] = await Promise.all([
+    supa
+      .from("gift_records")
+      .select("company_id, employee_id, collection_code, occasion_type, gifted_date, desk_test_status, recipient_reaction, linkedin_posted")
+      .eq("is_archived", false)
+      .gte("gifted_date", range.start)
+      .lte("gifted_date", range.end),
+    loadDemoCompanyIds(supa),
+  ]);
+  // P9b §R3: demo-org gift records excluded from platform gift-impact analytics.
+  const rows = (gifts ?? []).filter((g) => !demo.has(g.company_id as string));
 
   const employees = new Set(rows.map((g) => g.employee_id as string).filter(Boolean));
   const checked = rows.filter((g) => g.desk_test_status && g.desk_test_status !== "unknown");
@@ -687,10 +710,10 @@ export async function getContentAnalytics(range: DateRange) {
 
 export async function getFinancialAnalytics(range: DateRange) {
   const supa = createAdminClient();
-  const [{ data: invoices }, { data: payments }] = await Promise.all([
+  const [{ data: invoices }, { data: payments }, demo] = await Promise.all([
     supa
       .from("invoices")
-      .select("amount_due, amount_paid, status, due_date, invoice_date, created_at")
+      .select("company_id, amount_due, amount_paid, status, due_date, invoice_date, created_at")
       .gte("invoice_date", range.start)
       .lte("invoice_date", range.end),
     supa
@@ -699,9 +722,13 @@ export async function getFinancialAnalytics(range: DateRange) {
       .eq("status", "completed")
       .gte("payment_date", range.start)
       .lte("payment_date", `${range.end}T23:59:59`),
+    loadDemoCompanyIds(supa),
   ]);
 
-  const invRows = (invoices ?? []).filter((i) => i.status !== "cancelled");
+  // P9b §R3: demo orgs never carry invoices (no billing), but exclude defensively for consistency.
+  const invRows = (invoices ?? [])
+    .filter((i) => i.status !== "cancelled")
+    .filter((i) => !demo.has(i.company_id as string));
   const payRows = payments ?? [];
 
   const totalInvoiced = invRows.reduce((s, i) => s + Number(i.amount_due ?? 0), 0);

@@ -102,6 +102,7 @@ export async function POST(request: Request) {
       plan: plan.plan,
       planStatus: plan.planStatus,
       planOverrideBy: plan.planOverrideBy,
+      isDemo: plan.isDemo,
       isPlatformStaff: profile.isPlatformStaff,
       activeCount: count,
       employeeLimit: plan.employeeLimit,

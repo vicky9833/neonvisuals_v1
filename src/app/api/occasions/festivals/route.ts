@@ -17,6 +17,8 @@ const schema = z.object({
       festival_id: z.string().uuid(),
       is_active: z.boolean(),
       custom_date: z.string().nullable().optional(),
+      // P9b §R2: per-org festival display override (display-only; never touches the stable key).
+      display_name_override: z.string().trim().max(80).nullable().optional(),
     }),
   ),
 });
@@ -53,7 +55,7 @@ export async function POST(request: Request) {
     // §8 festival cap: Free = 3 opted-in festivals, Pro/platform = unlimited. Compute the
     // resulting active set (existing active ∪ submitted-active) − submitted-inactive.
     const plan = await getCompanyPlanContext(profile.company_id);
-    const limit = festivalLimit({ plan: plan.plan, planStatus: plan.planStatus, planOverrideBy: plan.planOverrideBy, isPlatformStaff: profile.isPlatformStaff });
+    const limit = festivalLimit({ plan: plan.plan, planStatus: plan.planStatus, planOverrideBy: plan.planOverrideBy, isDemo: plan.isDemo, isPlatformStaff: profile.isPlatformStaff });
     if (Number.isFinite(limit)) {
       const supabase = await createClient();
       const { data: existing } = await supabase

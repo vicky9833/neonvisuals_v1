@@ -479,18 +479,20 @@ export async function getCompanyPlanContext(companyId: string): Promise<{
   plan: string | null;
   planStatus: string | null;
   planOverrideBy: string | null;
+  isDemo: boolean;
   employeeLimit: number;
 }> {
   const supabase = await createClient();
   const { data } = await supabase
     .from("companies")
-    .select("plan, plan_status, plan_override_by, employee_limit")
+    .select("plan, plan_status, plan_override_by, is_demo, employee_limit")
     .eq("id", companyId)
     .maybeSingle();
   return {
     plan: (data?.plan as string) ?? null,
     planStatus: (data?.plan_status as string) ?? null,
     planOverrideBy: (data?.plan_override_by as string) ?? null,
+    isDemo: (data?.is_demo as boolean) ?? false, // P9b §R3: demo org Pro-at-gate
     employeeLimit: (data?.employee_limit as number) ?? 5,
   };
 }

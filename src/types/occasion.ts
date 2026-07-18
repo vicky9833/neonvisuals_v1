@@ -49,7 +49,12 @@ export interface CustomOccasion {
 
 export interface FestivalPreference {
   festival_id: string;
+  /** Display name resolved for this tenant: the per-org override if set, else the baseline. */
   name: string;
+  /** Immutable platform baseline name (festival_calendar.name) — for the editor's reset affordance. */
+  baseline_name: string;
+  /** Per-org display override (P9b §R2); null when the tenant uses the baseline name. */
+  display_name_override: string | null;
   default_date: string;
   effective_date: string;
   is_active: boolean;

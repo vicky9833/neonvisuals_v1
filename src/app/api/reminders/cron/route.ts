@@ -52,9 +52,12 @@ export async function GET(request: Request) {
   let digestSent = false;
 
   try {
+    // P9b §R3: demo orgs are excluded from the reminders sweep — no occasion generation and no
+    // contact emails for a demo/sandbox tenant. (Real orgs are is_demo=false.)
     const { data: companies } = await supa
       .from("companies")
-      .select("id, name, plan, primary_contact_name, primary_contact_phone");
+      .select("id, name, plan, primary_contact_name, primary_contact_phone")
+      .eq("is_demo", false);
 
     const digestCompanies: Array<{
       companyName: string;

@@ -16,7 +16,7 @@ const patchSchema = z.object({
 
 async function ensurePro(companyId: string, isPlatformStaff: boolean): Promise<NextResponse | null> {
   const plan = await getCompanyPlanContext(companyId);
-  const gate = canUseDepartments({ plan: plan.plan, planStatus: plan.planStatus, planOverrideBy: plan.planOverrideBy, isPlatformStaff });
+  const gate = canUseDepartments({ plan: plan.plan, planStatus: plan.planStatus, planOverrideBy: plan.planOverrideBy, isDemo: plan.isDemo, isPlatformStaff });
   if (!gate.allowed) {
     return NextResponse.json({ error: "plan_gate", reason: gate.reason, message: gateMessage(gate.reason) }, { status: 403 });
   }

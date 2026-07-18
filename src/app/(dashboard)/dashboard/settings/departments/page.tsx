@@ -4,6 +4,7 @@ import { getAuthContext, authorizeTenant } from "@/lib/authz/context";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { PageHeader } from "@/components/shared/page-header";
 import { getCompanyPlanContext } from "@/lib/employees/queries";
+import { isProPlan } from "@/lib/employees/plan-gate";
 import { listDepartments } from "@/lib/departments/queries";
 import {
   DepartmentsManager,
@@ -25,10 +26,8 @@ export default async function DepartmentsPage() {
 
   const canManage = authorizeTenant(ctx, companyId, "settings.manage").effect === "allow";
   const plan = await getCompanyPlanContext(companyId);
-  const isPro =
-    ctx.isPlatformStaff ||
-    Boolean(plan.planOverrideBy) ||
-    ["pro", "scale", "enterprise"].includes((plan.plan ?? "").toLowerCase());
+  // P9b §R3: route through isProPlan so a demo org (is_demo) is Pro across the UI too, not just the API.
+  const isPro = ctx.isPlatformStaff || isProPlan(plan);
 
   const departments = isPro ? await listDepartments(companyId) : [];
 

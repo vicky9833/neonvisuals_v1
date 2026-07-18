@@ -194,12 +194,16 @@ export async function getCalendarEvents(
 
   const { data: prefs } = await supabase
     .from("company_festivals")
-    .select("festival_id, is_active, custom_date")
+    .select("festival_id, is_active, custom_date, display_name_override")
     .eq("company_id", companyId);
   const prefMap = new Map(
     (prefs ?? []).map((p) => [
       p.festival_id as string,
-      { active: p.is_active as boolean, custom: p.custom_date as string | null },
+      {
+        active: p.is_active as boolean,
+        custom: p.custom_date as string | null,
+        override: (p.display_name_override as string | null) ?? null,
+      },
     ]),
   );
 
@@ -208,17 +212,20 @@ export async function getCalendarEvents(
     if (pref && !pref.active) continue; // explicitly disabled
     const date = pref?.custom ?? (f.date as string);
     if (date < startDate || date > endDate) continue;
+    // P9b §R2: display resolves override-else-baseline. DISPLAY ONLY — the stable occasion key is
+    // FK-based (P9a), so a rename never touches identity/dedupe/gift-state.
+    const displayName = pref?.override ?? (f.name as string);
     events.push({
       id: `festival-${f.id}-${date}`,
       type: "festival",
-      title: f.name as string,
+      title: displayName,
       description: (f.description as string | null) ?? "Festival",
       date,
       festivalId: f.id as string,
       recurrence: "yearly",
       suggestedCollection: "D",
       suggestedAction: "Plan Festive Gifting",
-      actionUrl: buildActionUrl("festival", f.name as string),
+      actionUrl: buildActionUrl("festival", displayName),
       color: EVENT_COLORS.festival,
     });
   }
@@ -330,7 +337,7 @@ export async function getFestivalPreferences(
 
   const { data: prefs } = await supabase
     .from("company_festivals")
-    .select("festival_id, is_active, custom_date")
+    .select("festival_id, is_active, custom_date, display_name_override")
     .eq("company_id", companyId);
   const prefMap = new Map(
     (prefs ?? []).map((p) => [p.festival_id as string, p]),
@@ -339,9 +346,14 @@ export async function getFestivalPreferences(
   return (festivals ?? []).map((f) => {
     const pref = prefMap.get(f.id as string);
     const custom = (pref?.custom_date as string | null) ?? null;
+    const baseline = f.name as string;
+    const override = (pref?.display_name_override as string | null) ?? null;
     return {
       festival_id: f.id as string,
-      name: f.name as string,
+      // P9b §R2: resolved display name (override-else-baseline).
+      name: override ?? baseline,
+      baseline_name: baseline,
+      display_name_override: override,
       default_date: f.date as string,
       effective_date: custom ?? (f.date as string),
       // Default-on when no preference row exists yet.
@@ -354,15 +366,36 @@ export async function getFestivalPreferences(
 
 export async function saveFestivalPreferences(
   companyId: string,
-  prefs: Array<{ festival_id: string; is_active: boolean; custom_date?: string | null }>,
+  prefs: Array<{
+    festival_id: string;
+    is_active: boolean;
+    custom_date?: string | null;
+    /** P9b §R2: per-org display override; null/empty clears back to the baseline name. */
+    display_name_override?: string | null;
+  }>,
 ): Promise<void> {
   const supabase = await createClient();
-  const rows = prefs.map((p) => ({
-    company_id: companyId,
-    festival_id: p.festival_id,
-    is_active: p.is_active,
-    custom_date: p.custom_date ?? null,
-  }));
+  const rows = prefs.map((p) => {
+    const row: {
+      company_id: string;
+      festival_id: string;
+      is_active: boolean;
+      custom_date: string | null;
+      display_name_override?: string | null;
+    } = {
+      company_id: companyId,
+      festival_id: p.festival_id,
+      is_active: p.is_active,
+      custom_date: p.custom_date ?? null,
+    };
+    // Only write the override when the caller supplied the field, so a plain active/date save
+    // never clobbers an existing rename. An explicit null/"" clears it back to baseline.
+    if (p.display_name_override !== undefined) {
+      const trimmed = (p.display_name_override ?? "").trim();
+      row.display_name_override = trimmed.length > 0 ? trimmed : null;
+    }
+    return row;
+  });
   const { error } = await supabase
     .from("company_festivals")
     .upsert(rows, { onConflict: "company_id,festival_id" });

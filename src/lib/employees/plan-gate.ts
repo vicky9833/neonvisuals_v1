@@ -26,6 +26,11 @@ export interface PlanContext {
   plan: string | null;
   planStatus?: string | null;
   planOverrideBy?: string | null;
+  /**
+   * P9b (§R3): a demo org is granted Pro entitlement at the gate WITHOUT any subscription row
+   * (same tier as a plan-override). Optional so existing callers default to non-demo (false).
+   */
+  isDemo?: boolean;
   isPlatformStaff: boolean;
 }
 
@@ -55,8 +60,9 @@ export const ENTITLED_PLAN_STATUSES: ReadonlySet<string> = new Set(["active", "p
  * ({active, past_due} — lapsed is denied). When `planStatus` is absent (callers that don't load it,
  * e.g. concierge tiering — 8c-ii), status is not enforced (backward-compatible).
  */
-export function isProPlan(ctx: Pick<PlanContext, "plan" | "planOverrideBy" | "planStatus">): boolean {
+export function isProPlan(ctx: Pick<PlanContext, "plan" | "planOverrideBy" | "planStatus" | "isDemo">): boolean {
   if (ctx.planOverrideBy) return true; // override supersedes payment status (§0)
+  if (ctx.isDemo) return true; // P9b §R3: demo org is Pro-at-gate with NO subscription row
   const statusOk = ctx.planStatus == null || ENTITLED_PLAN_STATUSES.has(ctx.planStatus);
   return PRO_PLANS.has((ctx.plan ?? "").toLowerCase()) && statusOk;
 }
@@ -124,7 +130,7 @@ export function giftHistoryWindowStart(ctx: PlanContext): string | null {
  * tiers can talk to their gifting manager — never gate support).
  */
 export function canAssignConcierge(
-  ctx: Pick<PlanContext, "plan" | "planOverrideBy" | "isPlatformStaff">,
+  ctx: Pick<PlanContext, "plan" | "planOverrideBy" | "isDemo" | "isPlatformStaff">,
 ): boolean {
   if (ctx.isPlatformStaff) return true; // §0: platform staff bypass ALL plan gates (8c-ii §0 fix)
   return isProPlan(ctx);
