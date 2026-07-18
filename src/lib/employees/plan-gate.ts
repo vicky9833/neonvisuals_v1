@@ -35,16 +35,29 @@ export interface GateDecision {
     | "free_festival_limit";
 }
 
-/** True when the company's plan (or an override) includes Pro features. */
-export function isProPlan(ctx: Pick<PlanContext, "plan" | "planOverrideBy">): boolean {
-  return PRO_PLANS.has((ctx.plan ?? "").toLowerCase()) || Boolean(ctx.planOverrideBy);
+/**
+ * Canonical plan_status values that still grant Pro entitlement (§8c-i dunning):
+ * `active` (paid) and `past_due` (in the 7-day grace window). `lapsed` does NOT.
+ */
+export const ENTITLED_PLAN_STATUSES: ReadonlySet<string> = new Set(["active", "past_due"]);
+
+/**
+ * True when the company includes Pro features. §8c-i: a plan-override or platform staff supersede
+ * payment status; otherwise Pro requires BOTH a Pro plan AND an entitled plan_status
+ * ({active, past_due} — lapsed is denied). When `planStatus` is absent (callers that don't load it,
+ * e.g. concierge tiering — 8c-ii), status is not enforced (backward-compatible).
+ */
+export function isProPlan(ctx: Pick<PlanContext, "plan" | "planOverrideBy" | "planStatus">): boolean {
+  if (ctx.planOverrideBy) return true; // override supersedes payment status (§0)
+  const statusOk = ctx.planStatus == null || ENTITLED_PLAN_STATUSES.has(ctx.planStatus);
+  return PRO_PLANS.has((ctx.plan ?? "").toLowerCase()) && statusOk;
 }
 
-/** Gate for CSV/XLSX import (Pro-only; platform staff bypass). */
+/** Gate for CSV/XLSX import (Pro-only; platform staff bypass; lapsed denied via isProPlan). */
 export function canImport(ctx: PlanContext): GateDecision {
   if (ctx.isPlatformStaff) return { allowed: true, reason: "platform_bypass" };
   if (ctx.planOverrideBy) return { allowed: true, reason: "plan_override" };
-  if (PRO_PLANS.has((ctx.plan ?? "").toLowerCase())) return { allowed: true, reason: "pro_plan" };
+  if (isProPlan(ctx)) return { allowed: true, reason: "pro_plan" };
   return { allowed: false, reason: "free_plan_import_blocked" };
 }
 

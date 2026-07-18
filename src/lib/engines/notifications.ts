@@ -43,6 +43,10 @@ export const NOTIFICATION_TYPES = {
   MEMBER_JOINED: "member_joined",
   MEMBER_REMOVED: "member_removed",
   MEMBER_ROLE_CHANGED: "member_role_changed",
+  // Billing / plan lifecycle (§7, 8c-i) — PII-safe, no amount in subject.
+  PLAN_EXPIRING: "plan_expiring", // tenant billing: Pro plan renews in ~7 days (T-7 cron)
+  PAYMENT_FAILED: "payment_failed", // tenant billing: a payment attempt failed (webhook; informational, no lapse)
+  PAYMENT_RECEIVED: "payment_received", // tenant billing: payment received, Pro active (renewal/initial activation)
 } as const;
 
 export type NotificationType =
@@ -922,5 +926,92 @@ export async function notifyConciergeReply(
     link,
     dedupeKey: `concierge:${input.requestId}:reply:${input.messageId}`,
     email: { subject: `New concierge reply — ${input.orgName}`, html: `<p>${input.orgName} replied on a concierge request.</p><p><a href="${link}">Open the concierge inbox</a></p>`, template: "concierge_reply" },
+  });
+}
+
+// ── Billing / plan-lifecycle notifications (§7, 8c-i) ────────────────────────
+// Recipients = the company's billing-capable members (owner/admin/finance per §6A billing.manage).
+// PII-safe: reference-style subjects/titles, NO amount and NO employee PII. `client` must be
+// service-role (RLS grants notifications INSERT to service-role only).
+
+async function billingRecipients(
+  client: SupabaseClient,
+  companyId: string,
+): Promise<string[]> {
+  const { data } = await client
+    .from("company_members")
+    .select("user_id")
+    .eq("company_id", companyId)
+    .in("role", ["org_owner", "org_admin", "finance"])
+    .eq("status", "active");
+  return (data ?? []).map((r) => r.user_id as string);
+}
+
+/** T-7 renewal reminder (billing cron). Dedupe once per subscription+period. */
+export async function notifyPlanExpiring(
+  client: SupabaseClient,
+  input: { companyId: string; subscriptionId: string; periodEnd: string },
+): Promise<NotifyResult | null> {
+  const recipients = await billingRecipients(client, input.companyId);
+  if (recipients.length === 0) return null;
+  const subject = "Your Neon Visuals Pro plan is due for renewal";
+  return notify(client, {
+    type: NOTIFICATION_TYPES.PLAN_EXPIRING,
+    recipients,
+    companyId: input.companyId,
+    title: subject,
+    body: "Your Pro subscription is coming up for renewal. Renew to keep your Pro features active.",
+    dedupeKey: `billing:expiring:${input.subscriptionId}:${input.periodEnd}`,
+    email: {
+      subject,
+      template: "plan_expiring",
+      html: "<p>Your Neon Visuals Pro subscription is coming up for renewal. Renew to keep your Pro features active.</p>",
+    },
+  });
+}
+
+/** Failed payment attempt (webhook). Informational — never changes plan_status. */
+export async function notifyPaymentFailed(
+  client: SupabaseClient,
+  input: { companyId: string; eventId?: string | null },
+): Promise<NotifyResult | null> {
+  const recipients = await billingRecipients(client, input.companyId);
+  if (recipients.length === 0) return null;
+  const subject = "A payment attempt for your Neon Visuals plan didn't go through";
+  return notify(client, {
+    type: NOTIFICATION_TYPES.PAYMENT_FAILED,
+    recipients,
+    companyId: input.companyId,
+    title: subject,
+    body: "We couldn't process a recent payment. Your Pro access continues during the grace period — please retry to avoid interruption.",
+    dedupeKey: input.eventId ? `billing:failed:${input.eventId}` : null,
+    email: {
+      subject,
+      template: "payment_failed",
+      html: "<p>We couldn't process a recent payment for your Neon Visuals plan. Your Pro access continues during the grace period — please retry to avoid interruption.</p>",
+    },
+  });
+}
+
+/** Payment received → Pro active (initial or renewal activation). */
+export async function notifyPaymentReceived(
+  client: SupabaseClient,
+  input: { companyId: string; subscriptionId: string },
+): Promise<NotifyResult | null> {
+  const recipients = await billingRecipients(client, input.companyId);
+  if (recipients.length === 0) return null;
+  const subject = "Payment received — your Neon Visuals Pro plan is active";
+  return notify(client, {
+    type: NOTIFICATION_TYPES.PAYMENT_RECEIVED,
+    recipients,
+    companyId: input.companyId,
+    title: subject,
+    body: "Thank you — your Neon Visuals Pro subscription is active.",
+    dedupeKey: `billing:received:${input.subscriptionId}`,
+    email: {
+      subject,
+      template: "payment_received",
+      html: "<p>Thank you — your Neon Visuals Pro subscription is active.</p>",
+    },
   });
 }
