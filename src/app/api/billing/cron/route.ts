@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { transitionPlanStatus } from "@/lib/engines/subscription";
 import { notifyPlanExpiring } from "@/lib/engines/notifications";
+import { runPiiPurge } from "@/lib/engines/pii-purge";
 
 export const runtime = "nodejs";
 
@@ -15,9 +16,11 @@ export const runtime = "nodejs";
  *   (c) past_due & now >= period_end + 7d → past_due → lapsed (Pro cut; plan stays 'pro', never deleted)
  *
  * Idempotent by current-status guard: after (b) the row is past_due (skips (b)); after (c) it is
- * cancelled and out of scope. Re-running the same day is a no-op. companies.plan is NEVER flipped
- * and NO data is ever deleted. MUST NOT generate occasions, email real tenants, or call the
- * reminders cron — it only touches subscriptions/plan_status + billing notifications.
+ * cancelled and out of scope. Re-running the same day is a no-op. companies.plan is NEVER flipped.
+ * MUST NOT generate occasions, email real tenants, or call the reminders cron — it only touches
+ * subscriptions/plan_status + billing notifications, PLUS the §10 PII-purge pass (P9c) appended
+ * after the subscription loop (see below): the one place this cron intentionally deletes data,
+ * scoped to provably-eligible offboarded PII past its 90-day horizon.
  */
 const GRACE_DAYS = 7;
 const DAY_MS = 86_400_000;
@@ -73,5 +76,18 @@ export async function GET(request: Request) {
     }
   }
 
-  return NextResponse.json({ ok: true, ...stats });
+  // §10 PII-PURGE (P9c) — piggybacks this daily cron (no third Hobby slot). SEPARATE, set-based
+  // global pass: the subscription loop above misses orgs without a live sub, but offboarded
+  // employees exist regardless of plan, so the purge queries the eligible employee set directly
+  // (non-demo, past 90d horizon). Idempotent + audited + PII-safe. Isolated in its own try/catch so
+  // a purge error never breaks the billing lifecycle. Logs a count only — never any PII.
+  let purged = 0;
+  try {
+    const res = await runPiiPurge(admin);
+    purged = res.purged;
+  } catch (err) {
+    console.error("[billing/cron] pii-purge failed:", err instanceof Error ? err.message : "unknown");
+  }
+
+  return NextResponse.json({ ok: true, ...stats, pii_purged: purged });
 }
