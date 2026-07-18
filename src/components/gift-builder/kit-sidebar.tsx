@@ -31,7 +31,7 @@ export function KitContents({
           >
             <span className="relative size-12 shrink-0 overflow-hidden rounded-lg border border-[#EDE9E3] bg-[#FAFAF8]">
               {p.imageUrl ? (
-                <Image src={p.imageUrl} alt="" fill className="object-contain" sizes="48px" />
+                <Image src={p.imageUrl} alt="" fill unoptimized className="object-contain" sizes="48px" />
               ) : (
                 <span className="flex size-full items-center justify-center bg-navy text-[10px] font-bold text-gold">
                   NV

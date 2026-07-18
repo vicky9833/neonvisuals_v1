@@ -93,7 +93,7 @@ export function SearchOverlay() {
                         >
                           <span className="relative size-12 shrink-0 overflow-hidden rounded-lg bg-secondary">
                             {p.imageUrl ? (
-                              <Image src={p.imageUrl} alt="" fill className="object-cover" sizes="48px" />
+                              <Image src={p.imageUrl} alt="" fill unoptimized className="object-cover" sizes="48px" />
                             ) : (
                               <span className="flex size-full items-center justify-center bg-navy text-[10px] font-bold text-gold">
                                 NV

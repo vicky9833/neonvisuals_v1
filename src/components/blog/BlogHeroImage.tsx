@@ -29,6 +29,7 @@ export function BlogHeroImage({ src, alt, slug }: BlogHeroImageProps) {
         src={finalSrc}
         alt={alt}
         fill
+        unoptimized
         priority
         sizes="(max-width: 768px) 100vw, 768px"
         className="object-cover"

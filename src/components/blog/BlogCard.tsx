@@ -50,6 +50,7 @@ export function BlogCard({ post, index = 0 }: BlogCardProps) {
               src={post.hero_image_url as string}
               alt={post.hero_image_alt ?? post.title}
               fill
+              unoptimized
               sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
               className="object-cover transition-transform duration-300 group-hover:scale-[1.03]"
               onError={() => setHeroFailed(true)}
@@ -59,6 +60,7 @@ export function BlogCard({ post, index = 0 }: BlogCardProps) {
               src={fallbackSrc}
               alt={post.hero_image_alt ?? post.title}
               fill
+              unoptimized
               sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
               className="object-cover transition-transform duration-300 group-hover:scale-[1.03]"
               onError={() => setFallbackFailed(true)}

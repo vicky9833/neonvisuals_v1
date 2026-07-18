@@ -21,7 +21,8 @@ export const PHONES = [PHONE, PHONE_2, PHONE_3] as const;
 /** Social + web presence. */
 export const INSTAGRAM_HANDLE = "@neonvisuals.co";
 export const INSTAGRAM_URL = "https://instagram.com/neonvisuals.co";
-export const LINKEDIN_URL = "https://linkedin.com/in/neonvisuals";
+export const LINKEDIN_URL =
+  "https://www.linkedin.com/company/neon-visuals-revolutionizing-gifting/";
 export const WEBSITE_URL = "https://neonvisuals.in";
 
 /** Business locations. */
