@@ -1,4 +1,5 @@
 import "server-only";
+import type { SupabaseClient } from "@supabase/supabase-js";
 import { createClient } from "@/lib/supabase/server";
 
 /**
@@ -51,8 +52,13 @@ function round(n: number): number {
 
 const UNASSIGNED = "Unassigned";
 
-export async function getCompanySpendSummary(companyId: string): Promise<CompanySpendSummary> {
-  const supa = await createClient();
+export async function getCompanySpendSummary(
+  companyId: string,
+  client?: SupabaseClient,
+): Promise<CompanySpendSummary> {
+  // RLS client by default (page path); callers/tests may inject a client. The explicit company_id
+  // filter below scopes every read to the one company regardless of which client is passed.
+  const supa = client ?? (await createClient());
 
   // RLS scopes each table to the caller's company; the explicit company_id filter is defense-in-depth.
   const [{ data: orders }, { data: gifts }, { data: employees }, { data: departments }] =
