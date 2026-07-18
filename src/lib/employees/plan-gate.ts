@@ -14,6 +14,14 @@
 /** Plans that include CSV/XLSX import. Prompt 8 will own the real taxonomy. */
 export const PRO_PLANS: ReadonlySet<string> = new Set(["pro", "scale", "enterprise"]);
 
+/**
+ * The Free-tier employee cap (§8c-ii). Native-Free companies use their `employee_limit` column;
+ * a LAPSED Pro company is capped against THIS constant (never a stale Pro-era `employee_limit`),
+ * so a future raised column can't leak a higher cap on lapse. Today == the column default (5),
+ * so this is behavior-preserving; it is drift-proofing.
+ */
+export const FREE_EMPLOYEE_LIMIT = 5;
+
 export interface PlanContext {
   plan: string | null;
   planStatus?: string | null;
@@ -71,8 +79,12 @@ export function canManualAdd(
 ): GateDecision {
   if (ctx.isPlatformStaff) return { allowed: true, reason: "platform_bypass" };
   if (isProPlan(ctx)) return { allowed: true, reason: ctx.planOverrideBy ? "plan_override" : "pro_plan" };
-  // Free tier: soft cap at employee_limit.
-  if (ctx.activeCount >= ctx.employeeLimit) return { allowed: false, reason: "free_cap_reached" };
+  // Free-tier soft cap. Distinguish native-Free (use the employee_limit column) from a LAPSED Pro
+  // company (plan ∈ PRO but isProPlan false due to plan_status) — the latter is capped against the
+  // explicit FREE_EMPLOYEE_LIMIT so a stale Pro-era column can never leak a higher cap on lapse.
+  const isProTierPlan = PRO_PLANS.has((ctx.plan ?? "").toLowerCase());
+  const cap = isProTierPlan ? FREE_EMPLOYEE_LIMIT : ctx.employeeLimit;
+  if (ctx.activeCount >= cap) return { allowed: false, reason: "free_cap_reached" };
   return { allowed: true, reason: "free_plan_import_blocked" }; // allowed under cap
 }
 
@@ -111,7 +123,10 @@ export function giftHistoryWindowStart(ctx: PlanContext): string | null {
  * COMPANY's plan (the actor is always platform staff). Concierge RAISE itself is ungated (both
  * tiers can talk to their gifting manager — never gate support).
  */
-export function canAssignConcierge(ctx: Pick<PlanContext, "plan" | "planOverrideBy">): boolean {
+export function canAssignConcierge(
+  ctx: Pick<PlanContext, "plan" | "planOverrideBy" | "isPlatformStaff">,
+): boolean {
+  if (ctx.isPlatformStaff) return true; // §0: platform staff bypass ALL plan gates (8c-ii §0 fix)
   return isProPlan(ctx);
 }
 

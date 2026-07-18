@@ -19,7 +19,7 @@ const schema = z.object({
  */
 export async function PATCH(request: Request, { params }: { params: Promise<{ id: string }> }) {
   try {
-    await requirePlatform("platform.concierge.inbox", { entity: "concierge", action: "concierge.update" });
+    const principal = await requirePlatform("platform.concierge.inbox", { entity: "concierge", action: "concierge.update" });
     const { id } = await params;
     const parsed = schema.safeParse(await request.json().catch(() => null));
     if (!parsed.success) return NextResponse.json({ error: "invalid_input", message: parsed.error.issues[0]?.message ?? "Invalid input." }, { status: 400 });
@@ -29,9 +29,11 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
     if (!req) return NextResponse.json({ error: "not_found", message: "Request not found." }, { status: 404 });
 
     if (parsed.data.assignedStaffId !== undefined) {
-      // §8 plan tiering: only Pro companies get a dedicated (assignable) concierge owner.
+      // §8 plan tiering: Pro companies get a dedicated (assignable) concierge owner; Free/lapsed
+      // stay in the shared queue — UNLESS §0 platform-staff bypass applies (8c-ii): an authorized
+      // staffer may assign on any tier.
       const { data: company } = await admin.from("companies").select("plan, plan_override_by").eq("id", req.company_id).maybeSingle();
-      const assignable = canAssignConcierge({ plan: (company?.plan as string | null) ?? null, planOverrideBy: (company?.plan_override_by as string | null) ?? null });
+      const assignable = canAssignConcierge({ plan: (company?.plan as string | null) ?? null, planOverrideBy: (company?.plan_override_by as string | null) ?? null, isPlatformStaff: principal.isPlatformStaff });
       if (!assignable) {
         return NextResponse.json({ error: "shared_queue", message: "This company is on the shared concierge queue. Dedicated assignment is a Pro feature." }, { status: 422 });
       }
