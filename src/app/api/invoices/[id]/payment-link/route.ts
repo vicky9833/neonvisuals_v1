@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { requireApiRole, apiAuthErrorResponse } from "@/lib/api-auth";
+import { requirePlatform, apiAuthErrorResponse } from "@/lib/api-auth";
 import { createInvoicePaymentLink, getInvoice } from "@/lib/engines/billing";
 import { generateInvoicePDF } from "@/lib/engines/invoice-pdf";
 import { sendInvoiceEmail } from "@/lib/services/email";
@@ -7,13 +7,20 @@ import { isRazorpayConfigured } from "@/lib/services/razorpay";
 
 export const runtime = "nodejs";
 
-// POST - create a Razorpay payment link for this invoice (super_admin only).
+// POST - create a Razorpay payment link for this invoice (billing.manage: owner/admin/finance).
 export async function POST(
   _request: Request,
   { params }: { params: Promise<{ id: string }> },
 ) {
   try {
-    await requireApiRole(["super_admin"]);
+    const { id } = await params;
+    // §8c-ii: billing capability gate (owner/admin/finance per §6A) — replaces the deprecated
+    // requireApiRole super_admin shim. platform.billing.manage is audited by requirePlatform.
+    await requirePlatform("platform.billing.manage", {
+      entity: "invoice",
+      entityId: id,
+      action: "invoice.payment_link",
+    });
     if (!isRazorpayConfigured()) {
       return NextResponse.json(
         {
@@ -24,7 +31,6 @@ export async function POST(
         { status: 422 },
       );
     }
-    const { id } = await params;
     const result = await createInvoicePaymentLink(id);
 
     // Awaited (serverless-safe) branded invoice email with PDF + payment link.
