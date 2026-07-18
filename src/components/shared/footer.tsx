@@ -10,7 +10,6 @@ import {
   LINKEDIN_URL,
   PHONE,
   PHONE_2,
-  PHONE_3,
   SUPPORT_EMAIL,
   TAGLINE,
   WHATSAPP_URL,
@@ -183,7 +182,7 @@ export function Footer() {
               Call us
             </div>
             <div className="flex flex-col gap-1">
-              {[PHONE, PHONE_2, PHONE_3].map((phone) => (
+              {[PHONE, PHONE_2].map((phone) => (
                 <a
                   key={phone}
                   href={`tel:${phone.replace(/\s+/g, "")}`}
