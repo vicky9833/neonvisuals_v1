@@ -218,7 +218,7 @@ function InvoiceDocument({ invoice }: { invoice: Invoice }) {
 
         <View style={styles.refBox}>
           <Text>
-            Order: {invoice.order_number ?? "-"}
+            {invoice.subscription_id ? "Subscription (Pro)" : `Order: ${invoice.order_number ?? "-"}`}
           </Text>
           <Text>Type: {TYPE_LABEL[invoice.invoice_type] ?? invoice.invoice_type}</Text>
           <Text>Place of Supply: {invoice.is_intra_state ? "Karnataka (Intra-state)" : "Inter-state"}</Text>
@@ -326,13 +326,17 @@ export async function generateInvoicePDF(invoice: Invoice): Promise<Buffer> {
   return renderToBuffer(<InvoiceDocument invoice={invoice} />);
 }
 
-/** Generates + uploads the PDF to private storage, stores the path on the row. */
+/**
+ * Generates + uploads the PDF to private storage, stores the path on the row.
+ * Reads the invoice via the SERVICE-ROLE client so this works from the no-session
+ * webhook/activation path (the request-scoped RLS client would read null there).
+ */
 export async function saveInvoicePDF(invoiceId: string): Promise<string> {
-  const invoice = await getInvoice(invoiceId);
+  const supa = createAdminClient();
+  const invoice = await getInvoice(invoiceId, supa);
   if (!invoice) throw new Error("Invoice not found");
   const buffer = await generateInvoicePDF(invoice);
 
-  const supa = createAdminClient();
   const path = `invoices/${invoice.invoice_number ?? invoice.id}.pdf`;
   // Reuse the existing private "quote-pdfs" bucket for generated documents.
   const { error } = await supa.storage
