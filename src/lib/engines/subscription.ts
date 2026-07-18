@@ -3,6 +3,46 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import { createOrder } from "@/lib/services/razorpay";
 import { createSubscriptionInvoice } from "@/lib/engines/billing";
 import { saveInvoicePDF } from "@/lib/engines/invoice-pdf";
+import { notifyPaymentReceived } from "@/lib/engines/notifications";
+
+/** Canonical plan lifecycle states (companies.plan_status gate source-of-truth, §8c-i). */
+export type PlanStatus = "active" | "past_due" | "lapsed";
+
+/** Canonical plan_status -> existing subscriptions.status enum (no enum migration). */
+const SUB_STATUS_FOR: Record<PlanStatus, string> = {
+  active: "active",
+  past_due: "past_due",
+  lapsed: "cancelled",
+};
+
+/**
+ * The SINGLE lifecycle writer (service-role choke point). Wraps the atomic
+ * `transition_plan_status` SQL function so BOTH the billing cron and the webhook write
+ * companies.plan_status + subscriptions.status + current_period_end (+ lapsed_at) consistently,
+ * in one transaction. companies.plan is only ever set to 'pro' (activatePro) — never downgraded.
+ */
+export async function transitionPlanStatus(
+  admin: SupabaseClient,
+  input: {
+    companyId: string;
+    toStatus: PlanStatus;
+    subscriptionId?: string | null;
+    periodEnd?: string | null;
+    lapsedAt?: string | null;
+    activatePro?: boolean;
+  },
+): Promise<void> {
+  const { error } = await admin.rpc("transition_plan_status", {
+    p_company_id: input.companyId,
+    p_plan_status: input.toStatus,
+    p_sub_status: SUB_STATUS_FOR[input.toStatus],
+    p_subscription_id: input.subscriptionId ?? null,
+    p_period_end: input.periodEnd ?? null,
+    p_lapsed_at: input.lapsedAt ?? null,
+    p_activate_pro: input.activatePro ?? false,
+  });
+  if (error) throw new Error(`transition_plan_status failed: ${error.message}`);
+}
 
 /**
  * Subscription Engine — INTERNAL USE ONLY (server-side).
@@ -142,38 +182,76 @@ export async function activateSubscriptionFromWebhook(
   const subscriptionId = sub.id as string;
   const companyId = sub.company_id as string;
 
-  // Idempotent no-op: already active (re-delivered event).
+  // Idempotent no-op: this period row is already active (re-delivered event / order.paid +
+  // payment.captured double-fire).
   if (sub.status === "active") {
     return { activated: false, alreadyActive: true, companyId, subscriptionId };
   }
 
   const now = new Date();
-  const periodEnd = new Date(now);
+
+  // RENEWAL-aware period. If the company has an existing ACTIVE row with a future period end
+  // (early renewal while still active), extend from that end; otherwise (initial, or renewal
+  // at/after expiry where the prior row is past_due/cancelled) start now.
+  const { data: priorActive } = await admin
+    .from("subscriptions")
+    .select("id, current_period_end")
+    .eq("company_id", companyId)
+    .eq("status", "active")
+    .neq("id", subscriptionId)
+    .order("current_period_end", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+
+  let base = now;
+  if (priorActive?.current_period_end) {
+    const priorEnd = new Date(priorActive.current_period_end as string);
+    if (priorEnd.getTime() > now.getTime()) base = priorEnd; // early renew: extend, don't truncate
+  }
+  const periodEnd = new Date(base);
   periodEnd.setFullYear(periodEnd.getFullYear() + 1);
 
-  const { error: subErr } = await admin
+  // Demote a prior ACTIVE row so the partial-unique (one active per company) is satisfied.
+  // Supersede — NOT lapse: lapsed_at stays null (deprecate-don't-destroy; identity preserved).
+  if (priorActive?.id) {
+    await admin
+      .from("subscriptions")
+      .update({ status: "cancelled", updated_at: now.toISOString() })
+      .eq("id", priorActive.id as string)
+      .eq("status", "active");
+  }
+
+  // Set activation-local metadata on THIS period row, guarded so a concurrent activation
+  // (different event id, same order) can't double-run: only the first (status != active) wins.
+  const { data: claimed, error: subErr } = await admin
     .from("subscriptions")
     .update({
-      status: "active",
       razorpay_payment_id: input.razorpayPaymentId ?? null,
       current_period_start: now.toISOString(),
-      current_period_end: periodEnd.toISOString(),
       updated_at: now.toISOString(),
     })
     .eq("id", subscriptionId)
-    .neq("status", "active"); // guard against a concurrent activation
+    .neq("status", "active")
+    .select("id")
+    .maybeSingle();
   if (subErr) {
     throw new Error(`Subscription activation failed: ${subErr.message}`);
   }
-
-  // Grant Pro. This is the sole plan-write path (never a client claim).
-  const { error: companyErr } = await admin
-    .from("companies")
-    .update({ plan: "pro", plan_status: "active" })
-    .eq("id", companyId);
-  if (companyErr) {
-    throw new Error(`Plan activation failed: ${companyErr.message}`);
+  if (!claimed) {
+    // Lost the race — another delivery already activated this period. Idempotent no-op.
+    return { activated: false, alreadyActive: true, companyId, subscriptionId };
   }
+
+  // Atomic lifecycle transition (both planes): plan_status=active, sub.status=active,
+  // current_period_end set, plan forced to 'pro'. The SOLE plan-grant path (never a client claim).
+  await transitionPlanStatus(admin, {
+    companyId,
+    toStatus: "active",
+    subscriptionId,
+    periodEnd: periodEnd.toISOString(),
+    lapsedAt: null,
+    activatePro: true,
+  });
 
   // Generate the GST subscription invoice + PDF (Prompt 8b) — BEST-EFFORT.
   // The customer has PAID and Pro is already granted; a failure here must NOT un-grant Pro
@@ -198,6 +276,13 @@ export async function activateSubscriptionFromWebhook(
     }
   } catch (invErr) {
     console.error("[subscription] invoice generation failed (Pro still granted)", invErr);
+  }
+
+  // Payment-received notification (§7) — best-effort; never affects the grant.
+  try {
+    await notifyPaymentReceived(admin, { companyId, subscriptionId });
+  } catch (notifyErr) {
+    console.error("[subscription] payment_received notify failed (Pro still granted)", notifyErr);
   }
 
   return { activated: true, alreadyActive: false, companyId, subscriptionId };

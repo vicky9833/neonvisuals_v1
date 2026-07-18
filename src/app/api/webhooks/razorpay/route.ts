@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { verifyWebhookSignature } from "@/lib/services/razorpay";
 import { handleRazorpayWebhook } from "@/lib/engines/billing";
 import { activateSubscriptionFromWebhook } from "@/lib/engines/subscription";
+import { notifyPaymentFailed } from "@/lib/engines/notifications";
 import { createAdminClient } from "@/lib/supabase/admin";
 
 export const runtime = "nodejs";
@@ -120,6 +121,33 @@ async function dispatch(
         razorpayPaymentId,
       });
     }
+    return;
+  }
+
+  // payment.failed (§8c-i): INFORMATIONAL ONLY — notify billing contacts, NEVER change plan_status
+  // (the annual model lapses via the cron, not a failed webhook). Resolve the company via order id.
+  if (eventType === "payment.failed") {
+    const paymentEntity = p?.payload?.payment?.entity;
+    const razorpayOrderId: string = paymentEntity?.order_id ?? "";
+    if (razorpayOrderId) {
+      const { data: sub } = await admin
+        .from("subscriptions")
+        .select("company_id")
+        .eq("razorpay_order_id", razorpayOrderId)
+        .maybeSingle();
+      const companyId = (sub as { company_id?: string } | null)?.company_id;
+      if (companyId) {
+        await notifyPaymentFailed(admin, { companyId, eventId: paymentEntity?.id ?? null });
+      }
+    }
+    return;
+  }
+
+  // subscription.halted / subscription.cancelled (§8c-i): handle-if-present, but the annual
+  // one-time model does NOT depend on them (the billing cron is authoritative for lapse). Safe
+  // acknowledged no-op — never downgrades from a webhook we don't rely on.
+  if (eventType === "subscription.halted" || eventType === "subscription.cancelled") {
+    console.warn(`[webhooks/razorpay] ${eventType} acknowledged (no-op; cron authoritative)`);
     return;
   }
 
