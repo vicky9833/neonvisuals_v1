@@ -114,7 +114,15 @@ export async function getPendingChanges(admin: SupabaseClient): Promise<PendingC
 export async function publishCatalog(admin: SupabaseClient): Promise<PublishResult> {
   const pendingBefore = (await getPendingChanges(admin)).count;
 
-  const regen = await regenerateFromDb(admin);
+  // Regenerate (payload-sourced, byte-faithful). If any active product violates the catalog
+  // invariant (e.g. missing image), the serializer throws — surface it as a clean publish failure
+  // rather than a raw stack trace. The activation guard normally prevents this state.
+  let regen: Awaited<ReturnType<typeof regenerateFromDb>>;
+  try {
+    regen = await regenerateFromDb(admin);
+  } catch (e) {
+    throw new Error(`Publish blocked: catalog regeneration failed — ${e instanceof Error ? e.message : String(e)}`);
+  }
   const outputHash = sha256(regen.productsSource + regen.productImagesSource);
   const generatedAt = new Date().toISOString();
 

@@ -350,6 +350,14 @@ export async function updateAdminProduct(
   // subset of the edit so a regenerate reflects it. Pricing/cogs/margin are INTERNAL and never enter
   // the payload — so a pricing-only edit leaves the payload (and thus the public catalog) untouched.
   const existingPayload = await readPayload(supa, sku);
+
+  // Catalog invariant (P11a/Req 9.3, 16.2): every ACTIVE (public) product must have an image, or the
+  // serializer/regen throws. Enforce it at the activation source so an imageless product can never be
+  // made public (drafts may remain imageless while in progress).
+  if (updates.status === "active" && existingPayload && !existingPayload.imageUrl) {
+    throw new Error("Cannot activate a product with no image. Upload an image first.");
+  }
+
   if (existingPayload) {
     const bucketCode = updates.bucketId ? await bucketCodeById(supa, updates.bucketId) : null;
     columns.public_payload = applyPayloadPatch(existingPayload, updates, bucketCode) as unknown as Record<string, unknown>;

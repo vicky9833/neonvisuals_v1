@@ -82,6 +82,9 @@ export async function PATCH(
   } catch (err) {
     const authResponse = apiAuthErrorResponse(err);
     if (authResponse) return authResponse;
+    if (err instanceof Error && /Cannot activate a product with no image/.test(err.message)) {
+      return NextResponse.json({ error: "no_image", message: err.message }, { status: 422 });
+    }
     console.error("[admin/products/[sku]]", err);
     return NextResponse.json(
       { error: "server_error", message: "Failed to update product." },
