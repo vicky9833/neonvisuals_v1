@@ -1,5 +1,4 @@
 import type { Metadata } from "next";
-import Image from "next/image";
 import Link from "next/link";
 import {
   Building,
@@ -14,6 +13,7 @@ import {
   type LucideIcon,
 } from "lucide-react";
 import { Reveal } from "@/components/marketing/reveal";
+import { TeamAvatar } from "@/components/marketing/team-avatar";
 import {
   LEGACY_EMAIL,
   LINKEDIN_URL,
@@ -212,13 +212,7 @@ export default function AboutPage() {
               <Reveal key={f.name} delay={i * 80}>
                 <div className="flex flex-col items-center rounded-xl border border-[#EDE9E3] bg-white px-6 py-8 text-center">
                   <div className="mx-auto mb-4 h-48 w-48 overflow-hidden rounded-full border-4 border-[#C4A35A]">
-                    <Image
-                      src={f.photo}
-                      alt={`${f.name}, ${f.title} at Neon Visuals`}
-                      width={200}
-                      height={200}
-                      className="h-full w-full object-cover object-top transition-transform duration-300 hover:scale-105"
-                    />
+                    <TeamAvatar src={f.photo} name={f.name} title={f.title} />
                   </div>
                   <h3 className="text-xl font-bold text-[#1A1A2E]">{f.name}</h3>
                   <p className="mt-1 text-sm font-medium text-[#C4A35A]">{f.title}</p>

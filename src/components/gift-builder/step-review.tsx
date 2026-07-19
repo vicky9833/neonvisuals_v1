@@ -2,6 +2,7 @@ import type { Dispatch } from "react";
 import Image from "next/image";
 import { MessageCircle, Mail, Phone } from "lucide-react";
 import { variantUrl, originalOnError } from "@/lib/utils/image-variants";
+import { isValidIndianMobile, isValidEmail } from "@/lib/utils/form-validation";
 import {
   buildWhatsAppUrl,
   buildEmailUrl,
@@ -33,11 +34,14 @@ export function StepReview({
   const level = getPersonalisationLevel(state.personalisationLevel);
   const total = state.selectedProducts.length * state.quantity;
 
-  const valid =
-    state.contactName.trim() &&
-    state.contactCompany.trim() &&
-    /\S+@\S+\.\S+/.test(state.contactEmail) &&
-    state.contactPhone.trim().length >= 6;
+  const nameOk = state.contactName.trim().length > 0;
+  const companyOk = state.contactCompany.trim().length > 0;
+  const emailOk = isValidEmail(state.contactEmail);
+  const phoneOk = isValidIndianMobile(state.contactPhone);
+  const valid = nameOk && companyOk && emailOk && phoneOk;
+  // Inline errors only once the user has typed something (don't shout on an empty pristine field).
+  const emailError = state.contactEmail.trim() && !emailOk ? "Enter a valid email address." : undefined;
+  const phoneError = state.contactPhone.trim() && !phoneOk ? "Enter a valid 10-digit Indian mobile (e.g. +91 90000 00000)." : undefined;
 
   /** Fire-and-forget lead capture - never blocks the WhatsApp/email handoff. */
   function captureLead() {
@@ -152,8 +156,8 @@ export function StepReview({
         <div className="mt-4 grid gap-4 sm:grid-cols-2">
           <Field label="Name *" value={state.contactName} onChange={(v) => setField("contactName", v)} placeholder="Your name" />
           <Field label="Company *" value={state.contactCompany} onChange={(v) => setField("contactCompany", v)} placeholder="Company name" />
-          <Field label="Email *" type="email" value={state.contactEmail} onChange={(v) => setField("contactEmail", v)} placeholder="you@company.com" />
-          <Field label="Phone *" type="tel" value={state.contactPhone} onChange={(v) => setField("contactPhone", v)} placeholder="+91 90000 00000" />
+          <Field label="Email *" type="email" value={state.contactEmail} onChange={(v) => setField("contactEmail", v)} placeholder="you@company.com" error={emailError} />
+          <Field label="Phone *" type="tel" value={state.contactPhone} onChange={(v) => setField("contactPhone", v)} placeholder="+91 90000 00000" error={phoneError} />
           <div>
             <label className="block text-sm font-medium text-[#1A1A1A]">How did you hear about us?</label>
             <select
@@ -207,12 +211,18 @@ export function StepReview({
               <Mail className="size-4" /> Send via Email
             </button>
           )}
-          <a
-            href="tel:+919019409590"
-            className="flex items-center justify-center gap-2 rounded-xl border border-navy py-3 text-sm font-semibold text-navy transition-colors hover:bg-secondary"
-          >
-            <Phone className="size-4" /> Call to Discuss
-          </a>
+          {valid ? (
+            <a
+              href="tel:+919019409590"
+              className="flex items-center justify-center gap-2 rounded-xl border border-navy py-3 text-sm font-semibold text-navy transition-colors hover:bg-secondary"
+            >
+              <Phone className="size-4" /> Call to Discuss
+            </a>
+          ) : (
+            <button type="button" disabled className="flex cursor-not-allowed items-center justify-center gap-2 rounded-xl border border-[#EDE9E3] py-3 text-sm font-semibold text-[#999999]">
+              <Phone className="size-4" /> Call to Discuss
+            </button>
+          )}
         </div>
         {!valid ? (
           <p className="text-xs text-destructive">Please fill in your name, company, a valid email, and phone to send the enquiry.</p>
@@ -271,12 +281,14 @@ function Field({
   onChange,
   placeholder,
   type = "text",
+  error,
 }: {
   label: string;
   value: string;
   onChange: (v: string) => void;
   placeholder?: string;
   type?: string;
+  error?: string;
 }) {
   return (
     <div>
@@ -286,8 +298,12 @@ function Field({
         value={value}
         onChange={(e) => onChange(e.target.value)}
         placeholder={placeholder}
-        className="mt-1.5 h-11 w-full rounded-xl border border-[#EDE9E3] bg-white px-3 text-sm focus-visible:border-gold focus-visible:outline-none"
+        aria-invalid={error ? true : undefined}
+        className={`mt-1.5 h-11 w-full rounded-xl border bg-white px-3 text-sm focus-visible:outline-none ${
+          error ? "border-destructive focus-visible:border-destructive" : "border-[#EDE9E3] focus-visible:border-gold"
+        }`}
       />
+      {error ? <p className="mt-1 text-xs text-destructive">{error}</p> : null}
     </div>
   );
 }
