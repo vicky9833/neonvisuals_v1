@@ -34,7 +34,10 @@ export async function PATCH(request: Request, { params }: Ctx) {
     if (!parsed.success) {
       return NextResponse.json({ error: "invalid_input", message: parsed.error.issues[0]?.message ?? "Invalid input." }, { status: 400 });
     }
-    await updateDepartment(companyId, id, parsed.data);
+    const updated = await updateDepartment(companyId, id, parsed.data);
+    if (!updated) {
+      return NextResponse.json({ error: "not_found", message: "Department not found." }, { status: 404 });
+    }
     return NextResponse.json({ data: { id } });
   } catch (err) {
     return errorResponse(err);
@@ -48,7 +51,10 @@ export async function DELETE(_request: Request, { params }: Ctx) {
     const gated = await ensurePro(companyId, principal.isPlatformStaff);
     if (gated) return gated;
     const { id } = await params;
-    await deleteDepartment(companyId, id);
+    const deleted = await deleteDepartment(companyId, id);
+    if (!deleted) {
+      return NextResponse.json({ error: "not_found", message: "Department not found." }, { status: 404 });
+    }
     return NextResponse.json({ data: { id, deleted: true } });
   } catch (err) {
     return errorResponse(err);

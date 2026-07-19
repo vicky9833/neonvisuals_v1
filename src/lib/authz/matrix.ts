@@ -116,6 +116,10 @@ const AUDITED_PLATFORM_CAPS: ReadonlySet<PlatformCapability> = new Set<PlatformC
   "platform.billing.manage",
   "platform.pii.read",
   "platform.impersonate",
+  // P10c: the leads CRM is PII-adjacent (contact name/email/phone), so audit every
+  // platform.leads.manage action (actor + action + entity/entity_id; NO PII values in the row).
+  // The other 5 P10a caps stay unaudited (platform-owned, non-PII).
+  "platform.leads.manage",
 ]);
 
 /** shipping-only field allowlist for platform `ops` PII reads (app-layer, item 1). */

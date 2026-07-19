@@ -35,8 +35,8 @@ export async function GET(
   { params }: { params: Promise<{ id: string }> },
 ) {
   try {
-    await requirePlatform("platform.leads.manage", { entity: "lead", action: "lead.activity.list" });
     const { id } = await params;
+    await requirePlatform("platform.leads.manage", { entity: "lead", entityId: id, action: "lead.activity.list" });
     const activities = await getActivities(id);
     return NextResponse.json({ data: activities });
   } catch (err) {
@@ -55,8 +55,8 @@ export async function POST(
   { params }: { params: Promise<{ id: string }> },
 ) {
   try {
-    const profile = await requirePlatform("platform.leads.manage", { entity: "lead", action: "lead.activity.add" });
     const { id } = await params;
+    const profile = await requirePlatform("platform.leads.manage", { entity: "lead", entityId: id, action: "lead.activity.add" });
     const body = await request.json().catch(() => null);
     if (!body) {
       return NextResponse.json(
