@@ -11,7 +11,10 @@
     "restructure-images": "tsx scripts/restructure-images.ts",
     "upload-images": "tsx scripts/upload-images-v2.ts",
     "generate-catalog": "tsx scripts/generate-catalog.ts",
-    "generate-variants": "tsx scripts/generate-variants.ts"
+    "generate-variants": "tsx scripts/generate-variants.ts",
+    "sweep-old-variants": "tsx scripts/sweep-old-variants.ts",
+    "import-catalog": "tsx scripts/import-catalog-to-db.ts",
+    "regenerate-catalog": "tsx scripts/regenerate-catalog-from-db.ts"
   },
   "dependencies": {
     "@hookform/resolvers": "^5.4.0",
