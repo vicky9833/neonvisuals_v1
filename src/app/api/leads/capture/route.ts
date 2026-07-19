@@ -2,13 +2,15 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 import { captureLead, type LeadSource } from "@/lib/engines/lead";
 import { sendNewLeadAlertEmail } from "@/lib/services/email";
+import { checkRateLimit, clientIp } from "@/lib/services/rate-limit";
 
 export const runtime = "nodejs";
 
 /**
  * PUBLIC endpoint - no auth. Captures gift builder / website enquiries as leads.
- * Returns only { success } and never exposes lead data. Simple in-memory rate
- * limit of 10 requests per IP per hour (resets on server restart / per instance).
+ * Returns only { success } and never exposes lead data. Rate limited to 10
+ * requests per IP per hour via the SHARED `rate_limits` store (P10a) — holds
+ * across Vercel lambdas, unlike the previous per-instance in-memory Map.
  */
 
 const schema = z.object({
@@ -66,32 +68,18 @@ function composeNotes(fields: {
   return parts.length > 0 ? parts.join(" | ") : undefined;
 }
 
-const WINDOW_MS = 60 * 60 * 1000;
+const WINDOW_SECONDS = 60 * 60;
 const MAX_PER_WINDOW = 10;
-const hits = new Map<string, number[]>();
-
-function rateLimited(ip: string): boolean {
-  const now = Date.now();
-  const recent = (hits.get(ip) ?? []).filter((t) => now - t < WINDOW_MS);
-  recent.push(now);
-  hits.set(ip, recent);
-  // Opportunistic cleanup to bound memory.
-  if (hits.size > 5000) {
-    for (const [key, times] of hits) {
-      if (times.every((t) => now - t >= WINDOW_MS)) hits.delete(key);
-    }
-  }
-  return recent.length > MAX_PER_WINDOW;
-}
 
 export async function POST(request: Request) {
   try {
-    const ip =
-      request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ||
-      request.headers.get("x-real-ip") ||
-      "unknown";
-
-    if (rateLimited(ip)) {
+    const { limited } = await checkRateLimit({
+      bucket: "leads_capture",
+      identifier: clientIp(request),
+      windowSeconds: WINDOW_SECONDS,
+      max: MAX_PER_WINDOW,
+    });
+    if (limited) {
       return NextResponse.json(
         { error: "rate_limited", message: "Too many submissions. Try later." },
         { status: 429 },

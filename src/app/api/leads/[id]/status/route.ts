@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
-import { requireApiRole, apiAuthErrorResponse } from "@/lib/api-auth";
+import { requirePlatform, apiAuthErrorResponse } from "@/lib/api-auth";
 import { getLead, updateLeadStatus, type LeadStatus } from "@/lib/engines/lead";
 
 export const runtime = "nodejs";
@@ -25,7 +25,7 @@ export async function PATCH(
   { params }: { params: Promise<{ id: string }> },
 ) {
   try {
-    const profile = await requireApiRole(["super_admin"]);
+    const profile = await requirePlatform("platform.leads.manage", { entity: "lead", action: "lead.status" });
     const { id } = await params;
     const body = await request.json().catch(() => null);
     if (!body) {

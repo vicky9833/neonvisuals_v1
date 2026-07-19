@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
-import { requireApiRole, apiAuthErrorResponse } from "@/lib/api-auth";
+import { requirePlatform, apiAuthErrorResponse } from "@/lib/api-auth";
 import {
   createLead,
   listLeads,
@@ -62,7 +62,7 @@ const createSchema = z.object({
 
 export async function POST(request: Request) {
   try {
-    await requireApiRole(["super_admin"]);
+    await requirePlatform("platform.leads.manage", { entity: "lead", action: "lead.create" });
     const body = await request.json().catch(() => null);
     if (!body) {
       return NextResponse.json(
@@ -96,7 +96,7 @@ export async function POST(request: Request) {
 
 export async function GET(request: Request) {
   try {
-    await requireApiRole(["super_admin"]);
+    await requirePlatform("platform.leads.manage", { entity: "lead", action: "lead.list" });
     const { searchParams } = new URL(request.url);
     const statusParam = searchParams.get("status");
     const result = await listLeads({

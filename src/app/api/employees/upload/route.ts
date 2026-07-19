@@ -18,7 +18,7 @@ import {
   recordImportJob,
 } from "@/lib/employees/queries";
 import { canImport, gateMessage } from "@/lib/employees/plan-gate";
-import { scanUploadOrThrow } from "@/lib/employees/upload-scan";
+import { scanUploadOrThrow, UploadScanError } from "@/lib/employees/upload-scan";
 import type { ImportRowError } from "@/types/employee";
 
 export const runtime = "nodejs";
@@ -133,6 +133,9 @@ export async function POST(request: Request) {
   } catch (err) {
     const authResponse = apiAuthErrorResponse(err);
     if (authResponse) return authResponse;
+    if (err instanceof UploadScanError) {
+      return NextResponse.json({ error: err.code, message: err.message }, { status: err.status });
+    }
     console.error("[employees/upload]"); // NEVER log err payload — may contain PII
     return NextResponse.json({ error: "server_error", message: "Import failed." }, { status: 500 });
   }

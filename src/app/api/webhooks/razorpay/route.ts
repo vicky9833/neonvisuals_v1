@@ -4,8 +4,14 @@ import { handleRazorpayWebhook } from "@/lib/engines/billing";
 import { activateSubscriptionFromWebhook } from "@/lib/engines/subscription";
 import { notifyPaymentFailed } from "@/lib/engines/notifications";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { checkRateLimit, clientIp } from "@/lib/services/rate-limit";
 
 export const runtime = "nodejs";
+
+// DoS guard: generous per-IP ceiling so legitimate Razorpay bursts/retries pass, but a flood is
+// bounded before signature work. Fail-open (limiter error never drops a real webhook).
+const WEBHOOK_RL_WINDOW_SECONDS = 60;
+const WEBHOOK_RL_MAX = 300;
 
 /**
  * Razorpay webhook receiver — THE INTEGRITY BOUNDARY.
@@ -26,6 +32,16 @@ export const runtime = "nodejs";
  */
 export async function POST(request: Request) {
   try {
+    const { limited } = await checkRateLimit({
+      bucket: "razorpay_webhook",
+      identifier: clientIp(request),
+      windowSeconds: WEBHOOK_RL_WINDOW_SECONDS,
+      max: WEBHOOK_RL_MAX,
+    });
+    if (limited) {
+      return NextResponse.json({ error: "rate_limited" }, { status: 429 });
+    }
+
     const raw = await request.text();
     const signature = request.headers.get("x-razorpay-signature") ?? "";
 

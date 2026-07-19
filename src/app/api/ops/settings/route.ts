@@ -1,12 +1,12 @@
 import { NextResponse } from "next/server";
-import { requireApiRole, apiAuthErrorResponse } from "@/lib/api-auth";
+import { requirePlatform, apiAuthErrorResponse } from "@/lib/api-auth";
 import { getSettings, saveSettings, type SystemSettings } from "@/lib/admin/settings";
 
 export const runtime = "nodejs";
 
 export async function GET() {
   try {
-    await requireApiRole(["super_admin"]);
+    await requirePlatform("platform.settings.manage", { entity: "settings", action: "settings.read" });
     const settings = await getSettings();
     return NextResponse.json({ data: settings });
   } catch (err) {
@@ -22,7 +22,7 @@ export async function GET() {
 
 export async function PATCH(request: Request) {
   try {
-    const profile = await requireApiRole(["super_admin"]);
+    const profile = await requirePlatform("platform.settings.manage", { entity: "settings", action: "settings.save" });
     const body = (await request
       .json()
       .catch(() => null)) as SystemSettings | null;

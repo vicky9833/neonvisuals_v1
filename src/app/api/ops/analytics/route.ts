@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { requireApiRole, apiAuthErrorResponse } from "@/lib/api-auth";
+import { requirePlatform, apiAuthErrorResponse } from "@/lib/api-auth";
 import { getAnalytics, type AnalyticsSection } from "@/lib/engines/analytics";
 
 export const runtime = "nodejs";
@@ -25,7 +25,7 @@ function defaultRange() {
 
 export async function GET(request: Request) {
   try {
-    await requireApiRole(["super_admin"]);
+    await requirePlatform("platform.analytics.view", { entity: "analytics", action: "analytics.read" });
     const { searchParams } = new URL(request.url);
     const fallback = defaultRange();
     const range = {

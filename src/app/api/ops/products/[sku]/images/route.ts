@@ -1,6 +1,8 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
-import { requireApiRole, apiAuthErrorResponse } from "@/lib/api-auth";
+import { requirePlatform, apiAuthErrorResponse } from "@/lib/api-auth";
+import { scanUploadOrThrow, UploadScanError } from "@/lib/employees/upload-scan";
+import { sniffImageMime, PROOF_EXT } from "@/lib/services/image-validate";
 import { addProductImage, removeProductImage } from "@/lib/admin/products";
 
 export const runtime = "nodejs";
@@ -11,7 +13,7 @@ export async function POST(
   { params }: { params: Promise<{ sku: string }> },
 ) {
   try {
-    await requireApiRole(["super_admin"]);
+    await requirePlatform("platform.products.manage", { entity: "product", action: "product.image.add" });
     const { sku } = await params;
     const formData = await request.formData();
     const file = formData.get("file");
@@ -21,18 +23,26 @@ export async function POST(
         { status: 400 },
       );
     }
-    if (!file.type.startsWith("image/")) {
+    const bytes = await file.arrayBuffer();
+    // SECURITY: validate by MAGIC BYTES (not the client-supplied Content-Type). A renamed
+    // non-image (evil.exe → photo.png) fails here because its bytes are not a valid image signature.
+    const mime = sniffImageMime(bytes);
+    if (!mime) {
       return NextResponse.json(
-        { error: "invalid_input", message: "File must be an image." },
-        { status: 400 },
+        { error: "invalid_image", message: "File is not a valid JPEG/PNG/WebP image." },
+        { status: 422 },
       );
     }
-    const bytes = await file.arrayBuffer();
-    const product = await addProductImage(sku, file.name, bytes, file.type);
+    // Scan-seam on the live persist path (fail-closed; rejects when no scanner is configured).
+    await scanUploadOrThrow(bytes, file.name);
+    const product = await addProductImage(sku, `${sku}.${PROOF_EXT[mime]}`, bytes, mime);
     return NextResponse.json({ data: product }, { status: 201 });
   } catch (err) {
     const authResponse = apiAuthErrorResponse(err);
     if (authResponse) return authResponse;
+    if (err instanceof UploadScanError) {
+      return NextResponse.json({ error: err.code, message: err.message }, { status: err.status });
+    }
     console.error("[admin/products/[sku]/images]", err);
     return NextResponse.json(
       { error: "server_error", message: "Could not upload the image. Please try again." },
@@ -49,7 +59,7 @@ export async function DELETE(
   { params }: { params: Promise<{ sku: string }> },
 ) {
   try {
-    await requireApiRole(["super_admin"]);
+    await requirePlatform("platform.products.manage", { entity: "product", action: "product.image.remove" });
     const { sku } = await params;
     const body = await request.json().catch(() => null);
     const parsed = deleteSchema.safeParse(body);

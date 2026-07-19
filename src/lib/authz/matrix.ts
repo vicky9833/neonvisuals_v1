@@ -86,7 +86,16 @@ export type PlatformCapability =
   | "platform.concierge.inbox" // Concierge inbox
   | "platform.pii.read" // Read tenant employee PII
   | "platform.impersonate" // Impersonate tenant user
-  | "platform.demo_sandbox"; // Create / reset demo sandbox org
+  | "platform.demo_sandbox" // Create / reset demo sandbox org
+  // P10a — named granularity for the /ops admin surface (replaces the requireApiRole
+  // super_admin shim). All gate PLATFORM-STAFF (Y for all five roles) — preserving the
+  // prior staff-membership access exactly while making each domain a first-class capability.
+  | "platform.leads.manage" // Leads CRM (create/read/update/convert)
+  | "platform.pricing.view" // Internal pricing calculator
+  | "platform.settings.manage" // System settings + email test
+  | "platform.content.manage" // Blog / CMS content
+  | "platform.products.manage" // Product catalog admin (list/edit/images)
+  | "platform.analytics.view"; // Ops analytics dashboards
 
 export type Capability = TenantCapability | PlatformCapability;
 
@@ -168,6 +177,14 @@ export const PLATFORM_MATRIX: Record<PlatformCapability, Record<PlatformRole, Pl
   // email. This prompt wires only the authorize() decision + audit-write.
   "platform.impersonate":    { owner: "Y", admin: "Y", ops: "N",             finance: "N", support: "Y" },
   "platform.demo_sandbox":   { owner: "Y", admin: "Y", ops: "N",             finance: "N", support: "Y" },
+  // P10a — /ops admin surface: platform-staff granted (all five roles), matching the prior
+  // requireApiRole staff-membership gate. Loosens nothing; tightens the shim into named caps.
+  "platform.leads.manage":   { owner: "Y", admin: "Y", ops: "Y",             finance: "Y", support: "Y" },
+  "platform.pricing.view":   { owner: "Y", admin: "Y", ops: "Y",             finance: "Y", support: "Y" },
+  "platform.settings.manage":{ owner: "Y", admin: "Y", ops: "Y",             finance: "Y", support: "Y" },
+  "platform.content.manage": { owner: "Y", admin: "Y", ops: "Y",             finance: "Y", support: "Y" },
+  "platform.products.manage":{ owner: "Y", admin: "Y", ops: "Y",             finance: "Y", support: "Y" },
+  "platform.analytics.view": { owner: "Y", admin: "Y", ops: "Y",             finance: "Y", support: "Y" },
 };
 
 // ---------------------------------------------------------------------------

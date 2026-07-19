@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
-import { requireApiRole, apiAuthErrorResponse } from "@/lib/api-auth";
+import { requirePlatform, apiAuthErrorResponse } from "@/lib/api-auth";
 import {
   isEmailConfigured,
   sendWelcomeEmail,
@@ -33,7 +33,7 @@ const schema = z.object({
 
 export async function POST(request: Request) {
   try {
-    const profile = await requireApiRole(["super_admin"]);
+    const profile = await requirePlatform("platform.settings.manage", { entity: "settings", action: "email.test" });
     const to = profile.email;
     const name = profile.email?.split("@")[0] ?? "there";
     const body = await request.json().catch(() => null);

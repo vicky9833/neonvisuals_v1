@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
-import { requireApiRole, apiAuthErrorResponse } from "@/lib/api-auth";
+import { requirePlatform, apiAuthErrorResponse } from "@/lib/api-auth";
 import { getLead, updateLead, updateLeadStatus } from "@/lib/engines/lead";
 
 export const runtime = "nodejs";
@@ -47,7 +47,7 @@ export async function GET(
   { params }: { params: Promise<{ id: string }> },
 ) {
   try {
-    await requireApiRole(["super_admin"]);
+    await requirePlatform("platform.leads.manage", { entity: "lead", action: "lead.read" });
     const { id } = await params;
     const lead = await getLead(id);
     if (!lead) {
@@ -73,7 +73,7 @@ export async function PATCH(
   { params }: { params: Promise<{ id: string }> },
 ) {
   try {
-    await requireApiRole(["super_admin"]);
+    await requirePlatform("platform.leads.manage", { entity: "lead", action: "lead.update" });
     const { id } = await params;
     const body = await request.json().catch(() => null);
     if (!body) {
@@ -112,7 +112,7 @@ export async function DELETE(
   { params }: { params: Promise<{ id: string }> },
 ) {
   try {
-    const profile = await requireApiRole(["super_admin"]);
+    const profile = await requirePlatform("platform.leads.manage", { entity: "lead", action: "lead.delete" });
     const { id } = await params;
     await updateLeadStatus(id, "lost", "Lead deleted", profile.id, "other");
     return NextResponse.json({ data: { ok: true } });

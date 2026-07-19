@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { calculatePricing } from "@/lib/engines/pricing";
-import { requireApiRole, apiAuthErrorResponse } from "@/lib/api-auth";
+import { requirePlatform, apiAuthErrorResponse } from "@/lib/api-auth";
 
 // Internal pricing - super_admin only.
 export const runtime = "nodejs";
@@ -18,7 +18,7 @@ const schema = z.object({
 
 export async function POST(request: Request) {
   try {
-    await requireApiRole(["super_admin"]);
+    await requirePlatform("platform.pricing.view", { entity: "pricing", action: "pricing.calculate" });
     const body = await request.json().catch(() => null);
     if (body === null) {
       return NextResponse.json({ error: "invalid_input", message: "Invalid or missing request body." }, { status: 400 });
