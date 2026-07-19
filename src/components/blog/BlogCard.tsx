@@ -8,6 +8,7 @@ import type { BlogPost } from "@/lib/engines/blog";
 import { PlaceholderImage } from "@/components/products/placeholder-image";
 import { CATEGORY_LABEL } from "./blog-meta";
 import { blogFallbackImage } from "./blog-fallback-images";
+import { variantUrl } from "@/lib/utils/image-variants";
 
 interface BlogCardProps {
   post: Pick<
@@ -47,23 +48,41 @@ export function BlogCard({ post, index = 0 }: BlogCardProps) {
         <div className="relative aspect-[3/2] w-full overflow-hidden rounded-t-xl bg-[#FAFAF8]">
           {showHero ? (
             <Image
-              src={post.hero_image_url as string}
+              src={variantUrl(post.hero_image_url as string, "card")}
               alt={post.hero_image_alt ?? post.title}
               fill
               unoptimized
               sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
               className="object-cover transition-transform duration-300 group-hover:scale-[1.03]"
-              onError={() => setHeroFailed(true)}
+              onError={(e) => {
+                // variant missing → try the full original once → then fall back.
+                const el = e.currentTarget;
+                const original = post.hero_image_url as string;
+                if (el.dataset.fellBack !== "true" && el.src !== original) {
+                  el.dataset.fellBack = "true";
+                  el.src = original;
+                } else {
+                  setHeroFailed(true);
+                }
+              }}
             />
           ) : !fallbackFailed ? (
             <Image
-              src={fallbackSrc}
+              src={variantUrl(fallbackSrc, "card")}
               alt={post.hero_image_alt ?? post.title}
               fill
               unoptimized
               sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
               className="object-cover transition-transform duration-300 group-hover:scale-[1.03]"
-              onError={() => setFallbackFailed(true)}
+              onError={(e) => {
+                const el = e.currentTarget;
+                if (el.dataset.fellBack !== "true" && el.src !== fallbackSrc) {
+                  el.dataset.fellBack = "true";
+                  el.src = fallbackSrc;
+                } else {
+                  setFallbackFailed(true);
+                }
+              }}
             />
           ) : (
             <PlaceholderImage name={post.title} />

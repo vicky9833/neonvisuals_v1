@@ -3,6 +3,7 @@
 import { useState } from "react";
 import Image from "next/image";
 import { PlaceholderImage } from "@/components/products/placeholder-image";
+import { variantUrl, originalOnError } from "@/lib/utils/image-variants";
 
 interface ProductGalleryProps {
   name: string;
@@ -35,11 +36,12 @@ export function ProductGallery({ name, imageUrl, galleryImages = [] }: ProductGa
       <div className="relative aspect-square w-full max-w-[600px] overflow-hidden rounded-2xl border border-[#EDE9E3] bg-[#FAFAF8]">
         <Image
           key={uniqueImages[activeIndex]}
-          src={uniqueImages[activeIndex]}
+          src={variantUrl(uniqueImages[activeIndex], "detail")}
           alt={`${name} - view ${activeIndex + 1}`}
           fill
           unoptimized
           priority
+          onError={originalOnError(uniqueImages[activeIndex])}
           className="object-contain p-6"
           sizes="(max-width: 1024px) 100vw, 55vw"
         />
@@ -59,10 +61,11 @@ export function ProductGallery({ name, imageUrl, galleryImages = [] }: ProductGa
               }`}
             >
               <Image
-                src={src}
+                src={variantUrl(src, "thumb")}
                 alt={`${name} thumbnail ${i + 1}`}
                 fill
                 unoptimized
+                onError={originalOnError(src)}
                 className="object-contain p-1"
                 sizes="80px"
               />

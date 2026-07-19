@@ -4,6 +4,7 @@ import { Plus, Check, Star } from "lucide-react";
 import type { Product } from "@/lib/types/product";
 import { getBucketByCode } from "@/lib/catalog";
 import { PlaceholderImage } from "@/components/products/placeholder-image";
+import { variantUrl, originalOnError } from "@/lib/utils/image-variants";
 
 export function CompactProductCard({
   product,
@@ -22,10 +23,11 @@ export function CompactProductCard({
       <div className="relative aspect-square overflow-hidden rounded-t-2xl border-b border-[#EDE9E3] bg-[#FAFAF8]">
         {product.imageUrl ? (
           <Image
-            src={product.imageUrl}
+            src={variantUrl(product.imageUrl, "card")}
             alt={product.name}
             fill
             unoptimized
+            onError={originalOnError(product.imageUrl)}
             className="object-contain p-3"
             sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
           />

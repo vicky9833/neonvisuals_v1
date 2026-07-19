@@ -1,6 +1,7 @@
 import type { Dispatch } from "react";
 import Image from "next/image";
 import { MessageCircle, Mail, Phone } from "lucide-react";
+import { variantUrl, originalOnError } from "@/lib/utils/image-variants";
 import {
   buildWhatsAppUrl,
   buildEmailUrl,
@@ -106,7 +107,7 @@ export function StepReview({
                     <span className="font-numbers w-5 text-sm text-[#999999]">{i + 1}</span>
                     <span className="relative size-16 shrink-0 overflow-hidden rounded-lg bg-secondary">
                       {p.imageUrl ? (
-                        <Image src={p.imageUrl} alt="" fill unoptimized className="object-cover" sizes="64px" />
+                        <Image src={variantUrl(p.imageUrl, "thumb")} alt="" fill unoptimized onError={originalOnError(p.imageUrl)} className="object-cover" sizes="64px" />
                       ) : (
                         <span className="flex size-full items-center justify-center bg-navy text-[10px] font-bold text-gold">
                           NV

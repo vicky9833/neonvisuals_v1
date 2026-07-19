@@ -10,7 +10,8 @@
     "test": "vitest run",
     "restructure-images": "tsx scripts/restructure-images.ts",
     "upload-images": "tsx scripts/upload-images-v2.ts",
-    "generate-catalog": "tsx scripts/generate-catalog.ts"
+    "generate-catalog": "tsx scripts/generate-catalog.ts",
+    "generate-variants": "tsx scripts/generate-variants.ts"
   },
   "dependencies": {
     "@hookform/resolvers": "^5.4.0",
@@ -56,6 +57,7 @@
     "eslint-config-next": "16.2.9",
     "fast-check": "^4.9.0",
     "jsdom": "^29.1.1",
+    "sharp": "^0.35.3",
     "supabase": "^2.106.0",
     "tailwindcss": "^4",
     "tsx": "^4.19.0",

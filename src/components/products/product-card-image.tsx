@@ -3,6 +3,7 @@
 import { useState } from "react";
 import Image from "next/image";
 import { PlaceholderImage } from "@/components/products/placeholder-image";
+import { variantUrl } from "@/lib/utils/image-variants";
 
 interface ProductCardImageProps {
   /** Absolute or root-relative image URL. */
@@ -17,14 +18,20 @@ interface ProductCardImageProps {
  * to the branded {@link PlaceholderImage} on error or when no image is set.
  * Returns a fragment so the <Image> stays a direct child of the card's
  * aspect-square container.
+ *
+ * Serves the pre-sized `card` WebP variant for the grid; if a variant is
+ * missing it retries the full original once before showing the placeholder.
  */
 export function ProductCardImage({ imageUrl, name }: ProductCardImageProps) {
   const [loaded, setLoaded] = useState(false);
   const [errored, setErrored] = useState(false);
+  const [useOriginal, setUseOriginal] = useState(false);
 
   if (!imageUrl || errored) {
     return <PlaceholderImage name={name} />;
   }
+
+  const src = useOriginal ? imageUrl : variantUrl(imageUrl, "card");
 
   return (
     <>
@@ -35,12 +42,19 @@ export function ProductCardImage({ imageUrl, name }: ProductCardImageProps) {
         />
       ) : null}
       <Image
-        src={imageUrl}
+        key={src}
+        src={src}
         alt={`${name} - personalised corporate gift`}
         fill
         unoptimized
         onLoad={() => setLoaded(true)}
-        onError={() => setErrored(true)}
+        onError={() => {
+          if (!useOriginal) {
+            setUseOriginal(true);
+          } else {
+            setErrored(true);
+          }
+        }}
         className={`object-contain p-3 transition-all duration-300 group-hover:scale-105 ${
           loaded ? "opacity-100" : "opacity-0"
         }`}
