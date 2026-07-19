@@ -54,7 +54,9 @@ export function GiftBuilder({ buckets }: { buckets: Bucket[] }) {
   }
 
   return (
-    <div ref={topRef} className="scroll-mt-24">
+    // Perf-fix: guard against horizontal page scroll — the intentional overflow-x-auto rows
+    // (recommended, collection filter, templates) scroll internally; the page never widens.
+    <div ref={topRef} className="scroll-mt-24 max-w-full overflow-x-hidden">
       <StepProgress current={step} maxReached={maxReached} onStepClick={goTo} />
 
       <div

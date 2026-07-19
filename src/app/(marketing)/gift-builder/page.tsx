@@ -56,7 +56,9 @@ export default function GiftBuilderPage() {
       </section>
 
       <section className="bg-background py-14">
-        <div className="mx-auto max-w-[1200px] px-6">
+        {/* Perf-fix: umbrella overflow guard covering ALL builder states (templates screen + wizard)
+            so no builder view can produce a horizontal page scroll; inner overflow-x-auto rows scroll internally. */}
+        <div className="mx-auto max-w-[1200px] overflow-x-hidden px-6">
           <GiftBuilder buckets={[...BUCKETS]} />
         </div>
       </section>
