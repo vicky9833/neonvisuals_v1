@@ -47,6 +47,7 @@ export function TeamAvatar({ src, name, title }: TeamAvatarProps) {
       alt={`${name}, ${title} at Neon Visuals`}
       width={200}
       height={200}
+      unoptimized
       onError={() => setFailed(true)}
       className="h-full w-full object-cover object-top transition-transform duration-300 hover:scale-105"
     />
