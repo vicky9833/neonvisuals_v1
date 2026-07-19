@@ -166,3 +166,29 @@ describe("Audit obligation (cross-tenant / impersonation)", () => {
     expect(authorize(platform("owner"), "platform.catalog.manage").audit).toBe(false);
   });
 });
+
+describe("P11b — platform.catalog.publish (owner/admin only, audited)", () => {
+  it("owner may publish, and it is audited", () => {
+    const d = authorize(platform("owner"), "platform.catalog.publish");
+    expect(d.effect).toBe("allow");
+    expect(d.audit).toBe(true);
+  });
+  it("admin may publish, and it is audited", () => {
+    const d = authorize(platform("admin"), "platform.catalog.publish");
+    expect(d.effect).toBe("allow");
+    expect(d.audit).toBe(true);
+  });
+  it.each(["ops", "finance", "support"] as const)(
+    "%s is denied publish (a tighter bar than products.manage edit)",
+    (role) => {
+      expect(authorize(platform(role), "platform.catalog.publish").effect).toBe("deny");
+      // …while still permitted to EDIT the DB catalog.
+      expect(authorize(platform(role), "platform.products.manage").effect).toBe("allow");
+    },
+  );
+  it("a tenant principal can never publish (wrong-plane)", () => {
+    const d = authorize(tenant("org_owner"), "platform.catalog.publish");
+    expect(d.effect).toBe("deny");
+    expect(d.reason).toMatch(/wrong-plane/);
+  });
+});

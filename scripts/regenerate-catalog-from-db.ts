@@ -39,7 +39,10 @@ export async function regenerateFromDb(admin: SupabaseClient): Promise<RegenOutp
     .from("products")
     .select("public_payload, sort_order")
     .not("public_payload", "is", null)
-    .neq("status", "archived")
+    // P11b: only ACTIVE products are published. draft (newly created, not yet released) and
+    // archived (soft-deleted) are both excluded. The P11a 299 are all active, so the byte-identity
+    // invariant is preserved (this tightens `neq archived` → `eq active` with the same result set).
+    .eq("status", "active")
     .order("sort_order", { ascending: true });
   if (error) throw new Error(`products read failed: ${error.message}`);
   const products = (data ?? []).map((r) => r.public_payload as unknown as Product);

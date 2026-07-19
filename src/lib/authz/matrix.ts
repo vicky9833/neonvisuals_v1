@@ -94,7 +94,8 @@ export type PlatformCapability =
   | "platform.pricing.view" // Internal pricing calculator
   | "platform.settings.manage" // System settings + email test
   | "platform.content.manage" // Blog / CMS content
-  | "platform.products.manage" // Product catalog admin (list/edit/images)
+  | "platform.products.manage" // Product catalog admin (list/edit/images/create/archive)
+  | "platform.catalog.publish" // P11b: regenerate + publish the public catalog (owner/admin, audited)
   | "platform.analytics.view"; // Ops analytics dashboards
 
 export type Capability = TenantCapability | PlatformCapability;
@@ -120,6 +121,9 @@ const AUDITED_PLATFORM_CAPS: ReadonlySet<PlatformCapability> = new Set<PlatformC
   // platform.leads.manage action (actor + action + entity/entity_id; NO PII values in the row).
   // The other 5 P10a caps stay unaudited (platform-owned, non-PII).
   "platform.leads.manage",
+  // P11b: publishing regenerates the LIVE public catalog — a high-impact write surface held to a
+  // higher bar than edit (owner/admin only) and audited (actor + action, no PII).
+  "platform.catalog.publish",
 ]);
 
 /** shipping-only field allowlist for platform `ops` PII reads (app-layer, item 1). */
@@ -188,6 +192,9 @@ export const PLATFORM_MATRIX: Record<PlatformCapability, Record<PlatformRole, Pl
   "platform.settings.manage":{ owner: "Y", admin: "Y", ops: "Y",             finance: "Y", support: "Y" },
   "platform.content.manage": { owner: "Y", admin: "Y", ops: "Y",             finance: "Y", support: "Y" },
   "platform.products.manage":{ owner: "Y", admin: "Y", ops: "Y",             finance: "Y", support: "Y" },
+  // P11b — publish the public catalog: owner/admin ONLY (a tighter bar than products.manage edit),
+  // audited. ops/finance/support can edit the DB catalog but cannot push it live.
+  "platform.catalog.publish":{ owner: "Y", admin: "Y", ops: "N",             finance: "N", support: "N" },
   "platform.analytics.view": { owner: "Y", admin: "Y", ops: "Y",             finance: "Y", support: "Y" },
 };
 
