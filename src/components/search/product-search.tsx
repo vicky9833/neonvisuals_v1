@@ -14,11 +14,15 @@ interface ProductSearchProps {
 }
 
 /** Interactive catalog: search + collection/tag filters + grid (client island). */
+const PAGE_SIZE = 30;
+
 export function ProductSearch({ products, buckets, initialQuery = "" }: ProductSearchProps) {
   const [query, setQuery] = useState(initialQuery);
   const [debounced, setDebounced] = useState(initialQuery);
   const [collection, setCollection] = useState<string>("all");
   const [tags, setTags] = useState<string[]>([]);
+  // Perf-fix: cap rendered cards (mounted images) to PAGE_SIZE; "Load more" reveals the next page.
+  const [visible, setVisible] = useState(PAGE_SIZE);
 
   // Debounce 300ms + sync ?q= for shareable URLs.
   useEffect(() => {
@@ -49,6 +53,19 @@ export function ProductSearch({ products, buckets, initialQuery = "" }: ProductS
     return list;
   }, [products, collection, tags, debounced]);
 
+  // Reset paging whenever the result set changes (new search/filter) — the React-recommended
+  // "adjust state during render" pattern (no effect), so it takes effect before paint.
+  const filterSig = `${collection}|${tags.join(",")}|${debounced}`;
+  const [prevSig, setPrevSig] = useState(filterSig);
+  if (filterSig !== prevSig) {
+    setPrevSig(filterSig);
+    setVisible(PAGE_SIZE);
+  }
+
+  // Only the first `visible` filtered products are rendered (and grouped) — caps mounted image cards.
+  const shown = useMemo(() => filtered.slice(0, visible), [filtered, visible]);
+  const hasMore = filtered.length > shown.length;
+
   const filterCount = (collection !== "all" ? 1 : 0) + tags.length + (debounced.trim() ? 1 : 0);
   const grouped = collection === "all" && !debounced.trim() && tags.length === 0;
   // Sub-header grouping: a specific collection is active and the user is not searching.
@@ -61,7 +78,7 @@ export function ProductSearch({ products, buckets, initialQuery = "" }: ProductS
     const MORE = "More";
     const order: string[] = [];
     const map = new Map<string, Product[]>();
-    for (const p of filtered) {
+    for (const p of shown) {
       const key = p.category?.trim() ? p.category : MORE;
       if (!map.has(key)) {
         map.set(key, []);
@@ -73,7 +90,7 @@ export function ProductSearch({ products, buckets, initialQuery = "" }: ProductS
     const named = order.filter((k) => k !== MORE);
     const ordered = map.has(MORE) ? [...named, MORE] : named;
     return ordered.map((name) => ({ name, items: map.get(name) ?? [] }));
-  }, [categoryGrouped, filtered]);
+  }, [categoryGrouped, shown]);
 
   return (
     <>
@@ -149,9 +166,9 @@ export function ProductSearch({ products, buckets, initialQuery = "" }: ProductS
         <div className="mx-auto max-w-[1200px] px-6">
           <p className="mb-6 text-sm text-[#666666]">
             {debounced.trim() ? (
-              <>Showing {filtered.length} results for &ldquo;{debounced.trim()}&rdquo;</>
+              <>Showing {shown.length} of {filtered.length} results for &ldquo;{debounced.trim()}&rdquo;</>
             ) : (
-              <>Showing {filtered.length} of {products.length} products</>
+              <>Showing {shown.length} of {filtered.length} products</>
             )}
           </p>
 
@@ -160,7 +177,7 @@ export function ProductSearch({ products, buckets, initialQuery = "" }: ProductS
           ) : grouped ? (
             <div className="space-y-14">
               {buckets.map((b) => {
-                const items = filtered.filter((p) => p.bucket === b.code);
+                const items = shown.filter((p) => p.bucket === b.code);
                 if (items.length === 0) return null;
                 return (
                   <div key={b.code}>
@@ -187,8 +204,20 @@ export function ProductSearch({ products, buckets, initialQuery = "" }: ProductS
               ))}
             </div>
           ) : (
-            <ProductGrid products={filtered} />
+            <ProductGrid products={shown} />
           )}
+
+          {hasMore ? (
+            <div className="mt-12 flex justify-center">
+              <button
+                type="button"
+                onClick={() => setVisible((v) => v + PAGE_SIZE)}
+                className="rounded-full border-2 border-navy px-8 py-3 text-sm font-semibold text-navy transition-colors hover:bg-navy hover:text-white"
+              >
+                Load more ({filtered.length - shown.length} more)
+              </button>
+            </div>
+          ) : null}
         </div>
       </section>
     </>

@@ -84,8 +84,8 @@ export function StepProducts({
       </p>
 
       <div className="mt-8 grid gap-8 lg:grid-cols-[1fr_340px]">
-        {/* Browse area */}
-        <div>
+        {/* Browse area (min-w-0 lets the overflow-x-auto rows scroll internally, not widen the grid) */}
+        <div className="min-w-0">
           {/* Recommended row */}
           {recommended.length > 0 ? (
             <div className="mb-8">
