@@ -18,8 +18,8 @@ export async function POST(
   { params }: { params: Promise<{ id: string }> },
 ) {
   try {
-    const profile = await requirePlatform("platform.leads.manage", { entity: "lead", action: "lead.convert" });
     const { id } = await params;
+    const profile = await requirePlatform("platform.leads.manage", { entity: "lead", entityId: id, action: "lead.convert" });
     const body = await request.json().catch(() => ({}));
     const parsed = schema.safeParse(body ?? {});
     const result = await convertLeadToClient(

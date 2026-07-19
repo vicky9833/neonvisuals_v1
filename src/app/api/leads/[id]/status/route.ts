@@ -25,8 +25,8 @@ export async function PATCH(
   { params }: { params: Promise<{ id: string }> },
 ) {
   try {
-    const profile = await requirePlatform("platform.leads.manage", { entity: "lead", action: "lead.status" });
     const { id } = await params;
+    const profile = await requirePlatform("platform.leads.manage", { entity: "lead", entityId: id, action: "lead.status" });
     const body = await request.json().catch(() => null);
     if (!body) {
       return NextResponse.json(

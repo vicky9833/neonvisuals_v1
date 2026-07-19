@@ -58,26 +58,58 @@ export async function createDepartment(
   return { id: data.id as string };
 }
 
+/**
+ * Update a department. Returns `false` when the id does not exist IN THIS COMPANY
+ * (the scoped update/select matches 0 rows) so the route can answer 404 instead of a
+ * misleading 200 no-op (P10c / P10b LOW-1). Scope (`.eq id .eq company_id`) is UNCHANGED.
+ */
 export async function updateDepartment(
   companyId: string,
   id: string,
   patch: { name?: string; manager_id?: string | null },
-): Promise<void> {
+): Promise<boolean> {
   const supabase = await createClient();
   const update: Record<string, unknown> = {};
   if (patch.name !== undefined) update.name = patch.name.trim();
   if (patch.manager_id !== undefined) update.manager_id = patch.manager_id;
   if (Object.keys(update).length > 0) {
-    const { error } = await supabase.from("departments").update(update).eq("id", id).eq("company_id", companyId);
+    const { data, error } = await supabase
+      .from("departments")
+      .update(update)
+      .eq("id", id)
+      .eq("company_id", companyId)
+      .select("id");
     if (error) throw new Error(error.message);
+    if (!data || data.length === 0) return false; // foreign / nonexistent id → not found
+  } else {
+    // No fields to change — still confirm the department exists in this company.
+    const { data, error } = await supabase
+      .from("departments")
+      .select("id")
+      .eq("id", id)
+      .eq("company_id", companyId)
+      .maybeSingle();
+    if (error) throw new Error(error.message);
+    if (!data) return false;
   }
   if (patch.manager_id) await syncManagerMembership(companyId, id, patch.manager_id);
+  return true;
 }
 
-export async function deleteDepartment(companyId: string, id: string): Promise<void> {
+/**
+ * Delete a department scoped to the company. Returns `false` when 0 rows matched
+ * (foreign / nonexistent id) so the route can answer 404. Scope UNCHANGED.
+ */
+export async function deleteDepartment(companyId: string, id: string): Promise<boolean> {
   const supabase = await createClient();
-  const { error } = await supabase.from("departments").delete().eq("id", id).eq("company_id", companyId);
+  const { data, error } = await supabase
+    .from("departments")
+    .delete()
+    .eq("id", id)
+    .eq("company_id", companyId)
+    .select("id");
   if (error) throw new Error(error.message);
+  return (data?.length ?? 0) > 0;
 }
 
 /**

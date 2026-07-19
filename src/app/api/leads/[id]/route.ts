@@ -47,8 +47,8 @@ export async function GET(
   { params }: { params: Promise<{ id: string }> },
 ) {
   try {
-    await requirePlatform("platform.leads.manage", { entity: "lead", action: "lead.read" });
     const { id } = await params;
+    await requirePlatform("platform.leads.manage", { entity: "lead", entityId: id, action: "lead.read" });
     const lead = await getLead(id);
     if (!lead) {
       return NextResponse.json(
@@ -73,8 +73,8 @@ export async function PATCH(
   { params }: { params: Promise<{ id: string }> },
 ) {
   try {
-    await requirePlatform("platform.leads.manage", { entity: "lead", action: "lead.update" });
     const { id } = await params;
+    await requirePlatform("platform.leads.manage", { entity: "lead", entityId: id, action: "lead.update" });
     const body = await request.json().catch(() => null);
     if (!body) {
       return NextResponse.json(
@@ -112,8 +112,8 @@ export async function DELETE(
   { params }: { params: Promise<{ id: string }> },
 ) {
   try {
-    const profile = await requirePlatform("platform.leads.manage", { entity: "lead", action: "lead.delete" });
     const { id } = await params;
+    const profile = await requirePlatform("platform.leads.manage", { entity: "lead", entityId: id, action: "lead.delete" });
     await updateLeadStatus(id, "lost", "Lead deleted", profile.id, "other");
     return NextResponse.json({ data: { ok: true } });
   } catch (err) {
