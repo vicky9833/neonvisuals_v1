@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import Image from "next/image";
 import { Search, X } from "lucide-react";
 import { PRODUCTS, getBucketByCode, searchProducts } from "@/lib/catalog";
+import { variantUrl, originalOnError } from "@/lib/utils/image-variants";
 
 /** Global header search: icon trigger + full-width overlay with live results. */
 export function SearchOverlay() {
@@ -93,7 +94,7 @@ export function SearchOverlay() {
                         >
                           <span className="relative size-12 shrink-0 overflow-hidden rounded-lg bg-secondary">
                             {p.imageUrl ? (
-                              <Image src={p.imageUrl} alt="" fill unoptimized className="object-cover" sizes="48px" />
+                              <Image src={variantUrl(p.imageUrl, "thumb")} alt="" fill unoptimized onError={originalOnError(p.imageUrl)} className="object-cover" sizes="48px" />
                             ) : (
                               <span className="flex size-full items-center justify-center bg-navy text-[10px] font-bold text-gold">
                                 NV

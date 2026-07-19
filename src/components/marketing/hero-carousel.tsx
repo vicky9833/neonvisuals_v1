@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import Image from "next/image";
 import { cn } from "@/lib/utils";
+import { variantUrl, originalOnError } from "@/lib/utils/image-variants";
 
 interface HeroCarouselProps {
   /** Ordered image URLs to showcase. */
@@ -40,11 +41,12 @@ export function HeroCarousel({ images, intervalMs = 4000 }: HeroCarouselProps) {
       {images.map((src, i) => (
         <Image
           key={src}
-          src={src}
+          src={variantUrl(src, "detail")}
           alt={`Neon Visuals premium gifting showcase ${i + 1}`}
           fill
           unoptimized
           priority={i < 2}
+          onError={originalOnError(src)}
           sizes="(max-width: 1024px) 100vw, 45vw"
           className={cn(
             "object-cover transition-opacity duration-700 ease-out",

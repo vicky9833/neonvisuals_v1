@@ -4,6 +4,7 @@ import Image from "next/image";
 import { X } from "lucide-react";
 import type { Product } from "@/lib/types/product";
 import { getBucketByCode } from "@/lib/catalog";
+import { variantUrl, originalOnError } from "@/lib/utils/image-variants";
 
 /** Shared kit contents list (used by desktop sidebar + mobile drawer). */
 export function KitContents({
@@ -31,7 +32,7 @@ export function KitContents({
           >
             <span className="relative size-12 shrink-0 overflow-hidden rounded-lg border border-[#EDE9E3] bg-[#FAFAF8]">
               {p.imageUrl ? (
-                <Image src={p.imageUrl} alt="" fill unoptimized className="object-contain" sizes="48px" />
+                <Image src={variantUrl(p.imageUrl, "thumb")} alt="" fill unoptimized onError={originalOnError(p.imageUrl)} className="object-contain" sizes="48px" />
               ) : (
                 <span className="flex size-full items-center justify-center bg-navy text-[10px] font-bold text-gold">
                   NV

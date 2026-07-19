@@ -3,6 +3,7 @@
 import { useState } from "react";
 import Image from "next/image";
 import { blogFallbackImage } from "./blog-fallback-images";
+import { variantUrl } from "@/lib/utils/image-variants";
 
 interface BlogHeroImageProps {
   /** DB hero image URL; may be null/empty. */
@@ -26,15 +27,23 @@ export function BlogHeroImage({ src, alt, slug }: BlogHeroImageProps) {
   return (
     <div className="relative mt-8 aspect-video w-full overflow-hidden rounded-2xl bg-secondary">
       <Image
-        src={finalSrc}
+        src={variantUrl(finalSrc, "card")}
         alt={alt}
         fill
         unoptimized
         priority
         sizes="(max-width: 768px) 100vw, 768px"
         className="object-cover"
-        onError={() => {
-          if (showHero) setHeroFailed(true);
+        onError={(e) => {
+          // variant missing → retry the full original once → then, if the DB
+          // hero itself is broken, drop to the product-photo fallback.
+          const el = e.currentTarget;
+          if (el.dataset.fellBack !== "true" && el.src !== finalSrc) {
+            el.dataset.fellBack = "true";
+            el.src = finalSrc;
+          } else if (showHero) {
+            setHeroFailed(true);
+          }
         }}
       />
     </div>
