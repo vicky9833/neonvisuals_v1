@@ -2,7 +2,9 @@
 
 import { useMemo, useState } from "react";
 import Image from "next/image";
-import { Search } from "lucide-react";
+import { Search, Plus, UploadCloud } from "lucide-react";
+import { toast } from "sonner";
+import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
   Select,
@@ -26,17 +28,22 @@ import type {
   ProductAdminStats,
 } from "@/lib/admin/products";
 import { ProductEditDrawer } from "./ProductEditDrawer";
+import { ProductCreateDialog } from "./ProductCreateDialog";
 
 interface ProductTableProps {
   initialProducts: AdminProductRow[];
   stats: ProductAdminStats;
   buckets: BucketOption[];
+  canPublish: boolean;
+  pendingCount: number;
 }
 
 export function ProductTable({
   initialProducts,
   stats,
   buckets,
+  canPublish,
+  pendingCount,
 }: ProductTableProps) {
   const [products, setProducts] = useState(initialProducts);
   const [search, setSearch] = useState("");
@@ -44,6 +51,9 @@ export function ProductTable({
   const [status, setStatus] = useState("all");
   const [selected, setSelected] = useState<string | null>(null);
   const [open, setOpen] = useState(false);
+  const [createOpen, setCreateOpen] = useState(false);
+  const [pending, setPending] = useState(pendingCount);
+  const [publishing, setPublishing] = useState(false);
 
   const filtered = useMemo(() => {
     const q = search.trim().toLowerCase();
@@ -59,19 +69,64 @@ export function ProductTable({
   }, [products, search, collection, status]);
 
   async function refresh() {
-    const res = await fetch("/api/ops/products");
-    if (res.ok) {
-      const body = await res.json();
+    const [prodRes, pendRes] = await Promise.all([
+      fetch("/api/ops/products"),
+      fetch("/api/ops/products/publish"),
+    ]);
+    if (prodRes.ok) {
+      const body = await prodRes.json();
       setProducts(body.data as AdminProductRow[]);
+    }
+    if (pendRes.ok) {
+      const body = await pendRes.json();
+      setPending(Number(body.data?.count ?? 0));
+    }
+  }
+
+  async function publish() {
+    setPublishing(true);
+    try {
+      const res = await fetch("/api/ops/products/publish", { method: "POST" });
+      if (res.ok) {
+        const body = await res.json();
+        setPending(0);
+        toast.success(
+          `Catalog regenerated (${body.data?.productCount ?? 0} products). Deploy the generated files to go live.`,
+        );
+      } else if (res.status === 403) {
+        toast.error("You do not have permission to publish the catalog.");
+      } else {
+        toast.error("Publish failed. Please try again.");
+      }
+    } finally {
+      setPublishing(false);
     }
   }
 
   return (
     <div className="space-y-4">
-      <p className="text-sm text-[#6B7280]">
-        {stats.total} products · {stats.withImages} with images ·{" "}
-        {stats.withoutImages} imageless · {stats.withPricing} priced
-      </p>
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <p className="text-sm text-[#6B7280]">
+          {stats.total} products · {stats.withImages} with images ·{" "}
+          {stats.withoutImages} imageless · {stats.withPricing} priced
+        </p>
+        <div className="flex items-center gap-2">
+          {pending > 0 && (
+            <span className="rounded-full bg-gold/15 px-3 py-1 text-xs font-medium text-[#7C5B00]">
+              {pending} pending change{pending === 1 ? "" : "s"}
+            </span>
+          )}
+          <Button variant="outline" size="sm" onClick={() => setCreateOpen(true)}>
+            <Plus className="mr-1.5 size-4" /> Add Product
+          </Button>
+          {canPublish && (
+            <Button size="sm" onClick={publish} disabled={publishing || pending === 0}>
+              <UploadCloud className="mr-1.5 size-4" />
+              {publishing ? "Publishing…" : "Publish"}
+            </Button>
+          )}
+        </div>
+      </div>
 
       <div className="flex flex-wrap gap-3">
         <div className="relative max-w-xs flex-1">
@@ -196,6 +251,17 @@ export function ProductTable({
         onOpenChange={setOpen}
         buckets={buckets}
         onSaved={refresh}
+      />
+
+      <ProductCreateDialog
+        open={createOpen}
+        onOpenChange={setCreateOpen}
+        buckets={buckets}
+        onCreated={(sku) => {
+          refresh();
+          setSelected(sku);
+          setOpen(true);
+        }}
       />
     </div>
   );

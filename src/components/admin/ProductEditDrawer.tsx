@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import Image from "next/image";
-import { Star, Trash2, Upload } from "lucide-react";
+import { Archive, Star, Trash2, Upload } from "lucide-react";
 import {
   Sheet,
   SheetContent,
@@ -90,6 +90,8 @@ export function ProductEditDrawer({
 
   useEffect(() => {
     if (open && sku) {
+      // Intentional reset-on-open so a previously-loaded SKU's data doesn't flash before load().
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setProduct(null);
       load();
     }
@@ -184,6 +186,29 @@ export function ProductEditDrawer({
         const body = await res.json();
         setProduct(body.data as AdminProduct);
         onSaved();
+      }
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function archive() {
+    if (!sku) return;
+    const ok = window.confirm(
+      `Archive ${sku}?\n\nIt will be removed from the public catalog on the next publish. ` +
+        `Nothing is deleted — you can restore it later by setting its status back to Active.`,
+    );
+    if (!ok) return;
+    setBusy(true);
+    try {
+      const res = await fetch(`/api/ops/products/${sku}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ status: "archived" }),
+      });
+      if (res.ok) {
+        onSaved();
+        onOpenChange(false);
       }
     } finally {
       setBusy(false);
@@ -366,6 +391,17 @@ export function ProductEditDrawer({
                 </a>
               </Button>
             </div>
+
+            {status !== "archived" && (
+              <Button
+                variant="ghost"
+                onClick={archive}
+                disabled={busy}
+                className="w-full text-[#7C2D36] hover:bg-[#7C2D36]/10 hover:text-[#7C2D36]"
+              >
+                <Archive className="mr-1.5 size-4" /> Archive product
+              </Button>
+            )}
           </div>
         )}
       </SheetContent>
