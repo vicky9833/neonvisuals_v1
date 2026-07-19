@@ -14,9 +14,12 @@
  * Variant object keys follow a deterministic path convention so a surface can
  * resolve the right variant purely from the original URL:
  *
- *   onboarding/backpack/x/img-1.png  →  onboarding/backpack/x/img-1__thumb.webp
- *                                        onboarding/backpack/x/img-1__card.webp
- *                                        onboarding/backpack/x/img-1__detail.webp
+ *   onboarding/backpack/x/img-1.png  →  onboarding/backpack/x/img-1.png__thumb.webp
+ *                                        onboarding/backpack/x/img-1.png__card.webp
+ *                                        onboarding/backpack/x/img-1.png__detail.webp
+ *
+ * The original extension is PRESERVED in the key (P10a) so two originals sharing
+ * a basename but differing by extension never collide onto one variant.
  *
  * The originals live locally under `product-images/` (the same tree that seeded
  * the bucket via `upload-images-v2`), so variants are resized from disk — no
@@ -75,9 +78,10 @@ const IMAGE_EXT = new Set([".png", ".jpg", ".jpeg", ".webp", ".avif"]);
  * @param suffix       Variant suffix (`thumb` | `card` | `detail`).
  */
 export function variantKey(originalKey: string, suffix: string): string {
-  const dot = originalKey.lastIndexOf(".");
-  const base = dot === -1 ? originalKey : originalKey.slice(0, dot);
-  return `${base}__${suffix}.webp`;
+  // P10a collision-fix: PRESERVE the original extension so `x.png` and `x.avif`
+  // in the same folder produce DISTINCT variant keys (`x.png__thumb.webp` vs
+  // `x.avif__thumb.webp`) instead of colliding onto one.
+  return `${originalKey}__${suffix}.webp`;
 }
 
 /** True when `key` is an image this script should resize. */

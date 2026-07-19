@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
-import { requireApiRole, apiAuthErrorResponse } from "@/lib/api-auth";
+import { requirePlatform, apiAuthErrorResponse } from "@/lib/api-auth";
 import { createPost, getPublishedPosts } from "@/lib/engines/blog";
 
 export const runtime = "nodejs";
@@ -66,7 +66,7 @@ export async function GET(request: Request) {
 // POST - create a post (super_admin only).
 export async function POST(request: Request) {
   try {
-    const profile = await requireApiRole(["super_admin"]);
+    const profile = await requirePlatform("platform.content.manage", { entity: "blog", action: "blog.create" });
     const body = await request.json();
     const parsed = createSchema.safeParse(body);
     if (!parsed.success) {

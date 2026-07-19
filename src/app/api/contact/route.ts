@@ -2,8 +2,12 @@ import { NextResponse, type NextRequest } from "next/server";
 import { contactSchema } from "@/lib/utils/validators";
 import { captureLead } from "@/lib/engines/lead";
 import { sendNewLeadAlertEmail } from "@/lib/services/email";
+import { checkRateLimit, clientIp } from "@/lib/services/rate-limit";
 
 export const runtime = "nodejs";
+
+const RL_WINDOW_SECONDS = 60 * 60;
+const RL_MAX = 10;
 
 /**
  * PUBLIC endpoint — contact form. Persists the enquiry as a lead AND alerts
@@ -16,6 +20,19 @@ export const runtime = "nodejs";
  */
 export async function POST(request: NextRequest) {
   try {
+    const { limited } = await checkRateLimit({
+      bucket: "contact",
+      identifier: clientIp(request),
+      windowSeconds: RL_WINDOW_SECONDS,
+      max: RL_MAX,
+    });
+    if (limited) {
+      return NextResponse.json(
+        { error: "rate_limited", message: "Too many submissions. Please try again later." },
+        { status: 429 },
+      );
+    }
+
     const body = await request.json().catch(() => null);
     const parsed = contactSchema.safeParse(body);
     if (!parsed.success) {

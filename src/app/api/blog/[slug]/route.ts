@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
-import { requireApiRole, apiAuthErrorResponse } from "@/lib/api-auth";
+import { requirePlatform, apiAuthErrorResponse } from "@/lib/api-auth";
 import {
   deletePost,
   getPostById,
@@ -86,7 +86,7 @@ export async function PATCH(
   { params }: { params: Promise<{ slug: string }> },
 ) {
   try {
-    await requireApiRole(["super_admin"]);
+    await requirePlatform("platform.content.manage", { entity: "blog", action: "blog.update" });
     const { slug } = await params;
     const id = await resolveId(slug);
     if (!id) {
@@ -122,7 +122,7 @@ export async function DELETE(
   { params }: { params: Promise<{ slug: string }> },
 ) {
   try {
-    await requireApiRole(["super_admin"]);
+    await requirePlatform("platform.content.manage", { entity: "blog", action: "blog.delete" });
     const { slug } = await params;
     const id = await resolveId(slug);
     if (!id) {

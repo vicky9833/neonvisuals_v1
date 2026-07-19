@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
-import { requireApiRole, apiAuthErrorResponse } from "@/lib/api-auth";
+import { requirePlatform, apiAuthErrorResponse } from "@/lib/api-auth";
 import { getAdminProduct, updateAdminProduct } from "@/lib/admin/products";
 
 export const runtime = "nodejs";
@@ -35,7 +35,7 @@ export async function GET(
   { params }: { params: Promise<{ sku: string }> },
 ) {
   try {
-    await requireApiRole(["super_admin"]);
+    await requirePlatform("platform.products.manage", { entity: "product", action: "product.read" });
     const { sku } = await params;
     const product = await getAdminProduct(sku);
     if (!product) {
@@ -61,7 +61,7 @@ export async function PATCH(
   { params }: { params: Promise<{ sku: string }> },
 ) {
   try {
-    await requireApiRole(["super_admin"]);
+    await requirePlatform("platform.products.manage", { entity: "product", action: "product.update" });
     const { sku } = await params;
     const body = await request.json().catch(() => null);
     if (body === null) {

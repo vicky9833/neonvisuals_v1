@@ -4,9 +4,11 @@
  * The upload pipeline (`scripts/generate-variants.ts`) writes three right-sized
  * WebP variants alongside every original, using a deterministic path convention:
  *
- *   .../img-1.png  →  .../img-1__thumb.webp   (~200w — tiny surfaces)
- *                     .../img-1__card.webp    (~600w — cards, tiles, blog)
- *                     .../img-1__detail.webp  (~1200w — gallery, hero)
+ *   .../img-1.png  →  .../img-1.png__thumb.webp   (~200w — tiny surfaces)
+ *                     .../img-1.png__card.webp    (~600w — cards, tiles, blog)
+ *                     .../img-1.png__detail.webp  (~1200w — gallery, hero)
+ *
+ * The original extension is PRESERVED in the key (P10a collision-fix).
  *
  * {@link variantUrl} derives the variant URL for a display size purely from the
  * original URL — no network call, no catalogue change. Surfaces MUST pair it
@@ -36,11 +38,13 @@ export function variantUrl(originalUrl: string, size: VariantSize): string {
   // Already a generated variant — leave as-is (never double-suffix).
   if (/__(?:thumb|card|detail)\.webp$/i.test(originalUrl)) return originalUrl;
 
-  const match = /\.(png|jpe?g|webp|avif)$/i.exec(originalUrl);
-  if (!match) return originalUrl;
+  // Only rewrite known raster originals.
+  if (!/\.(png|jpe?g|webp|avif)$/i.test(originalUrl)) return originalUrl;
 
-  const base = originalUrl.slice(0, originalUrl.length - match[0].length);
-  return `${base}__${size}.webp`;
+  // P10a collision-fix: PRESERVE the original extension in the key
+  // (`x.png` → `x.png__card.webp`), so `x.png` and `x.avif` in the same folder
+  // no longer collapse onto one variant key.
+  return `${originalUrl}__${size}.webp`;
 }
 
 /**
@@ -55,6 +59,7 @@ export function variantUrl(originalUrl: string, size: VariantSize): string {
  * {@link originalOnError} with the known original URL when available.
  */
 export function stripVariant(variant: string): string | null {
+  // Extension-preserving keys make this the exact inverse: `x.png__card.webp` → `x.png`.
   const m = /^(.*)__(?:thumb|card|detail)\.webp$/i.exec(variant);
   return m ? m[1] : null;
 }

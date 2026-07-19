@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { requireApiAuth, requirePlatform, apiAuthErrorResponse } from "@/lib/api-auth";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
-import { scanUploadOrThrow } from "@/lib/employees/upload-scan";
+import { scanUploadOrThrow, UploadScanError } from "@/lib/employees/upload-scan";
 import { validateProofImage, PROOF_MAX_PER_ORDER, PROOF_MAX_BYTES } from "@/lib/services/image-validate";
 import { uploadProofPhoto, countProofPhotos, listProofPhotoRows, signProofUrls } from "@/lib/services/proof-photos";
 
@@ -50,6 +50,9 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
   } catch (err) {
     const authResponse = apiAuthErrorResponse(err);
     if (authResponse) return authResponse;
+    if (err instanceof UploadScanError) {
+      return NextResponse.json({ error: err.code, message: err.message }, { status: err.status });
+    }
     console.error("[orders/proof-photos POST]"); // never log payload
     return NextResponse.json({ error: "server_error", message: "Upload failed." }, { status: 500 });
   }

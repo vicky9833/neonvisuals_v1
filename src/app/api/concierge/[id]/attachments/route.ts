@@ -3,7 +3,7 @@ import { requireTenant, apiAuthErrorResponse } from "@/lib/api-auth";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { getConciergeRequest } from "@/lib/engines/concierge";
-import { scanUploadOrThrow } from "@/lib/employees/upload-scan";
+import { scanUploadOrThrow, UploadScanError } from "@/lib/employees/upload-scan";
 import { validateConciergeAttachment, CONCIERGE_MAX_BYTES, CONCIERGE_MAX_PER_REQUEST } from "@/lib/services/image-validate";
 import { uploadConciergeAttachment, countAttachments } from "@/lib/services/concierge-attachments";
 
@@ -48,6 +48,9 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
   } catch (err) {
     const authResponse = apiAuthErrorResponse(err);
     if (authResponse) return authResponse;
+    if (err instanceof UploadScanError) {
+      return NextResponse.json({ error: err.code, message: err.message }, { status: err.status });
+    }
     console.error("[concierge/[id]/attachments POST]"); // never log payload
     return NextResponse.json({ error: "server_error", message: "Upload failed." }, { status: 500 });
   }

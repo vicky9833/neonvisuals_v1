@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
-import { requireApiRole, apiAuthErrorResponse } from "@/lib/api-auth";
+import { requirePlatform, apiAuthErrorResponse } from "@/lib/api-auth";
 import { addActivity, getActivities } from "@/lib/engines/lead";
 
 export const runtime = "nodejs";
@@ -35,7 +35,7 @@ export async function GET(
   { params }: { params: Promise<{ id: string }> },
 ) {
   try {
-    await requireApiRole(["super_admin"]);
+    await requirePlatform("platform.leads.manage", { entity: "lead", action: "lead.activity.list" });
     const { id } = await params;
     const activities = await getActivities(id);
     return NextResponse.json({ data: activities });
@@ -55,7 +55,7 @@ export async function POST(
   { params }: { params: Promise<{ id: string }> },
 ) {
   try {
-    const profile = await requireApiRole(["super_admin"]);
+    const profile = await requirePlatform("platform.leads.manage", { entity: "lead", action: "lead.activity.add" });
     const { id } = await params;
     const body = await request.json().catch(() => null);
     if (!body) {

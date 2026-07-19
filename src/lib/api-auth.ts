@@ -197,20 +197,11 @@ export function tenantCapability(
   );
 }
 
-/**
- * @deprecated Compatibility shim for platform-only admin routes (blog, catalog,
- * settings, analytics, leads CRM, etc.) not yet mapped to explicit §6B
- * capabilities. It gates on PLATFORM-STAFF MEMBERSHIP — it does NOT read
- * `profiles.role`. Per-capability mapping + audit for the full /ops admin
- * surface lands with the Stage B clamp / P3. The `roles` argument is ignored.
- */
-export async function requireApiRole(_roles: readonly string[]): Promise<ApiPrincipal> {
-  const principal = await requireApiAuth();
-  if (!principal.isPlatformStaff) {
-    throw new ApiAuthError(403, "forbidden", "Platform access required.");
-  }
-  return principal;
-}
+// P10a: the `requireApiRole(["super_admin"])` compatibility shim has been REMOVED.
+// Every former call-site now uses requirePlatform(<capability>, …) with an explicit
+// §6B capability (see the P10a rows in authz/matrix.ts). Leaving the permissive
+// staff-membership shim in place was a latent footgun (any new import would bypass
+// per-capability granularity), so it is deleted rather than deprecated-in-place.
 
 /** Maps any thrown error to a JSON response, handling ApiAuthError specially. */
 export function apiAuthErrorResponse(err: unknown): NextResponse | null {

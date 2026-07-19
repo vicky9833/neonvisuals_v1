@@ -1,12 +1,12 @@
 import { NextResponse } from "next/server";
-import { requireApiRole, apiAuthErrorResponse } from "@/lib/api-auth";
+import { requirePlatform, apiAuthErrorResponse } from "@/lib/api-auth";
 import { getPipelineData } from "@/lib/engines/lead";
 
 export const runtime = "nodejs";
 
 export async function GET() {
   try {
-    await requireApiRole(["super_admin"]);
+    await requirePlatform("platform.leads.manage", { entity: "lead", action: "lead.pipeline" });
     const data = await getPipelineData();
     return NextResponse.json({ data });
   } catch (err) {
