@@ -24,6 +24,7 @@ import {
   FormMessage,
 } from "@/components/ui/form";
 import { PHONE, SUPPORT_EMAIL, WHATSAPP_URL } from "@/lib/utils/constants";
+import { isValidIndianMobile } from "@/lib/utils/form-validation";
 import { ErrorBoundary } from "@/components/shared/error-boundary";
 
 /* ------------------------------------------------------------------ */
@@ -92,12 +93,6 @@ function resolveInitialOccasion(initial?: string): string {
   return "Other";
 }
 
-/** Indian 10-digit mobile after stripping spaces and a +91 / 91 prefix. */
-function isValidIndianMobile(value: string): boolean {
-  const digits = value.replace(/\s/g, "").replace(/^\+?91/, "");
-  return /^[6-9]\d{9}$/.test(digits);
-}
-
 /* ------------------------------------------------------------------ */
 /* Schema                                                              */
 /* ------------------------------------------------------------------ */
@@ -136,6 +131,7 @@ export function ContactForm({ initialOccasion }: ContactFormProps) {
 
   const form = useForm<ContactFormValues>({
     resolver: zodResolver(contactSchema),
+    mode: "onChange",
     defaultValues: {
       name: "",
       company: "",
@@ -356,8 +352,8 @@ export function ContactForm({ initialOccasion }: ContactFormProps) {
 
           <Button
             type="submit"
-            disabled={submitting}
-            className="h-12 w-full rounded-full bg-navy text-[15px] font-semibold text-white hover:bg-navy/90"
+            disabled={submitting || !form.formState.isValid}
+            className="h-12 w-full rounded-full bg-navy text-[15px] font-semibold text-white hover:bg-navy/90 disabled:cursor-not-allowed disabled:opacity-50"
           >
             {submitting ? "Submitting…" : "Submit Enquiry"}
           </Button>
