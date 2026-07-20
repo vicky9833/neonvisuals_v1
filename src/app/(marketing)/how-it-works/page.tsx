@@ -9,6 +9,7 @@ import {
   type LucideIcon,
 } from "lucide-react";
 import { PageHeader } from "@/components/shared/page-header";
+import { StartFreeCTA } from "@/components/marketing/StartFreeCTA";
 import { buildMetadata } from "@/lib/utils/seo";
 
 export const metadata: Metadata = buildMetadata({
@@ -90,6 +91,7 @@ export default function HowItWorksPage() {
         >
           Curate Your Kit
         </Link>
+        <StartFreeCTA className="h-12 px-2" />
       </div>
     </div>
   );

@@ -36,6 +36,7 @@ import { HeroBadge } from "@/components/marketing/hero-badge";
 import { HeroCarousel } from "@/components/marketing/hero-carousel";
 import { FeaturedProducts } from "@/components/marketing/featured-products";
 import { FaqSection } from "@/components/shared/faq-section";
+import { StartFreeCTA } from "@/components/marketing/StartFreeCTA";
 import { BUCKETS, getCollectionProductCount, PRODUCTS } from "@/lib/catalog";
 import { img } from "@/data/products";
 import type { BucketCode, Product } from "@/lib/types/product";
@@ -382,6 +383,7 @@ export default async function HomePage() {
               >
                 Request a Quote
               </Link>
+              <StartFreeCTA className="h-13 px-2" />
             </div>
             <div className="hero-anim-stats mt-8 flex flex-wrap items-center gap-x-3 gap-y-2 text-sm text-[#888888]">
               {HERO_STATS.map((stat, i) => (
