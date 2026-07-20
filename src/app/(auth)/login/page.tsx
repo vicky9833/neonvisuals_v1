@@ -16,9 +16,9 @@ export default function LoginPage() {
       subtitle="Sign in to manage your team's gifting experience."
       footer={
         <>
-          Don&apos;t have an account?{" "}
+          New here?{" "}
           <Link href="/register" className="font-medium text-gold hover:underline">
-            Register →
+            Create a free account →
           </Link>
         </>
       }

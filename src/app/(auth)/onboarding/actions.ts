@@ -3,6 +3,7 @@
 import { headers } from "next/headers";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { checkRateLimit } from "@/lib/services/rate-limit";
 import { sendWelcomeEmail } from "@/lib/services/email";
 import { DPA_VERSION } from "@/lib/authz/dpa";
 import type { OnboardingData, OnboardingResult } from "@/lib/auth-types";
@@ -54,6 +55,24 @@ export async function createCompanyAndCompleteOnboarding(
     hdrs.get("x-forwarded-for")?.split(",")[0]?.trim() ||
     hdrs.get("x-real-ip") ||
     null;
+
+  // Rate-limit self-serve org creation per IP (P10a shared-DB limiter). Opening public signup opens
+  // a public write path — this blocks junk-org scripting. Fail-open (a limiter error never blocks a
+  // legitimate signup); enforce only on a confirmed over-limit verdict. Auth (GoTrue) has its own
+  // platform-level rate limiting; this guards OUR org-creation write specifically.
+  const rl = await checkRateLimit({
+    bucket: "org_create",
+    identifier: dpaIp ?? "unknown",
+    windowSeconds: 3600,
+    max: 5,
+  });
+  if (rl.limited) {
+    return {
+      ok: false,
+      error:
+        "Too many organisations have been created from this network recently. Please try again later, or contact us to get set up.",
+    };
+  }
 
   const admin = createAdminClient();
 

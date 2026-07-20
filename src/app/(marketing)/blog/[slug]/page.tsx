@@ -16,6 +16,7 @@ import { getProductBySku } from "@/lib/catalog";
 import { formatDate } from "@/lib/utils/format";
 import { BlogContent } from "@/components/blog/BlogContent";
 import { BlogCTA } from "@/components/blog/BlogCTA";
+import { StartFreeCTA } from "@/components/marketing/StartFreeCTA";
 import { BlogTags } from "@/components/blog/BlogTags";
 import { BlogShare } from "@/components/blog/BlogShare";
 import { RelatedPosts } from "@/components/blog/RelatedPosts";
@@ -122,6 +123,11 @@ export default async function BlogPostPage({ params }: Params) {
 
       {/* CTA */}
       <BlogCTA post={post} />
+
+      {/* Secondary self-serve entry — understated, below the primary blog CTA. */}
+      <div className="mt-4">
+        <StartFreeCTA />
+      </div>
 
       {/* Tags */}
       <div className="mt-8 border-t border-border pt-6">

@@ -132,11 +132,20 @@ export function MobileNav({ links }: MobileNavProps) {
               </button>
             </div>
           ) : (
-            <Button asChild className="mt-4">
-              <Link href="/get-quote" onClick={() => setOpen(false)}>
-                Get a Quote
+            <div className="mt-4 flex flex-col gap-2 border-t border-border pt-4">
+              <Link
+                href="/login"
+                onClick={() => setOpen(false)}
+                className="rounded-button px-3 py-2 text-sm font-medium text-foreground transition-colors hover:bg-secondary"
+              >
+                Login
               </Link>
-            </Button>
+              <Button asChild>
+                <Link href="/get-quote" onClick={() => setOpen(false)}>
+                  Get a Quote
+                </Link>
+              </Button>
+            </div>
           )}
         </nav>
       </SheetContent>
