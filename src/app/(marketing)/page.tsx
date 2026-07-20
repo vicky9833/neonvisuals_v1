@@ -109,7 +109,7 @@ const HERO_SUB =
   "From employee onboarding and work anniversaries to college festivals, conferences, and client appreciation - we create premium personalized gifts that leave lasting impressions.";
 
 const HERO_STATS = [
-  "5000+ Personalized Gifts",
+  "5,000+ Gifts Delivered",
   "95+ Organizations Served",
   "98% On-Time Delivery",
   "4.9★ Client Satisfaction",
