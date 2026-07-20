@@ -6,7 +6,7 @@ import { BlogGrid } from "@/components/blog/BlogGrid";
 export const metadata: Metadata = buildMetadata({
   title: "Corporate Gifting Blog - Insights & Guides | Neon Visuals",
   description:
-    "Expert insights on corporate gifting, employee recognition, and building workplace culture. Guides, tips, and stories from Bangalore's premium gifting studio.",
+    "Expert insights on corporate gifting, employee recognition, and building workplace culture. Guides, tips, and stories from Bengaluru's premium gifting studio.",
   path: "/blog",
 });
 

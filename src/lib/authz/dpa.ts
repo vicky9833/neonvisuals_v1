@@ -14,7 +14,8 @@ export const DPA_VERSION = "2026-07-16.v1";
 
 /** Human reference to the DPA document the attestation binds to. */
 export const DPA_DOC_REF = "Neon Visuals Data Processing Agreement";
-export const DPA_DOC_URL = "https://neonvisuals.in/legal/dpa";
+/** Same-environment relative path to the DPA page (works on preview + prod). */
+export const DPA_DOC_URL = "/legal/dpa";
 
 /** §10 attestation the org creator must affirm before a company is created. */
 export const DPA_ATTESTATION =

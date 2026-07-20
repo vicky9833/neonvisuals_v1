@@ -3,6 +3,9 @@ import { getProfile } from "@/lib/auth";
 import { getAuthContext, authorizeTenant } from "@/lib/authz/context";
 import { SetPageTitle } from "@/components/dashboard/DashboardProvider";
 import { ClientBillingView } from "@/components/billing/ClientBillingView";
+import { UpgradeCard } from "@/components/billing/UpgradeCard";
+import { getCompanyPlanContext } from "@/lib/employees/queries";
+import { isProPlan } from "@/lib/employees/plan-gate";
 import {
   getBillingStats,
   listInvoices,
@@ -47,6 +50,10 @@ export default async function BillingPage() {
 
   const clientInvoices = invoicesResult.invoices.map(toClientInvoice);
 
+  // Real plan tier + who may initiate checkout (billing.manage: owner/admin/finance).
+  const isPro = companyId ? isProPlan(await getCompanyPlanContext(companyId)) : false;
+  const canUpgrade = canSeeBilling;
+
   return (
     <div className="space-y-6">
       <SetPageTitle title="Billing" />
@@ -58,6 +65,7 @@ export default async function BillingPage() {
           View your invoices, download PDFs, and pay securely online.
         </p>
       </header>
+      <UpgradeCard isPro={isPro} canUpgrade={canUpgrade} />
       <ClientBillingView initialInvoices={clientInvoices} initialStats={stats} />
     </div>
   );

@@ -32,12 +32,12 @@ export interface SystemSettings {
 export const DEFAULT_SETTINGS: SystemSettings = {
   company: {
     businessName: "Neon Visuals",
-    address: "Bengaluru, Karnataka & Mumbai, Maharashtra",
-    phone: "+91 90194 09590",
+    address: "Mumbai, Maharashtra",
+    phone: "+91 98334 50699",
     email: "contact@neonvisuals.in",
     whatsapp: "9019409590",
     website: "neonvisuals.in",
-    gstin: "",
+    gstin: "27BZSPV5411Q1ZA",
     pan: "",
     bankName: "",
     bankAccount: "",

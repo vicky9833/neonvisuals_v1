@@ -44,12 +44,12 @@ export const OCCASIONS: Occasion[] = [
     seoTitle:
       "Employee Onboarding Kits | Personalised Welcome Gifts - Neon Visuals",
     seoDescription:
-      "Premium personalised onboarding kits for new employees. Name-engraved gifts, welcome hoodies, desk name plates. Trusted by 50+ Bangalore startups.",
+      "Premium personalised onboarding kits for new employees. Name-engraved gifts, welcome hoodies, desk name plates. Trusted by 50+ Bengaluru startups.",
     seoKeywords: [
       "employee onboarding kit",
       "welcome kit for new joiners",
       "corporate onboarding gifts",
-      "day 1 gift kit bangalore",
+      "day 1 gift kit bengaluru",
     ],
     recommendedSkus: ["NV-A01", "NV-A04", "NV-A09", "NV-A03"],
     priceRange: { min: 199, max: 4999 },
@@ -107,7 +107,7 @@ export const OCCASIONS: Occasion[] = [
     seoKeywords: [
       "diwali corporate gifts",
       "diwali gifts for employees",
-      "corporate diwali gifting bangalore",
+      "corporate diwali gifting bengaluru",
       "personalised diwali gifts",
     ],
     recommendedSkus: ["NV-D01", "NV-D02", "NV-D03", "NV-D04"],

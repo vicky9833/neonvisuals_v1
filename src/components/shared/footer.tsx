@@ -6,7 +6,6 @@ import {
   BUSINESS_HOURS,
   COPYRIGHT_YEAR,
   INSTAGRAM_URL,
-  LEGACY_EMAIL,
   LINKEDIN_URL,
   PHONE,
   PHONE_2,
@@ -202,9 +201,6 @@ export function Footer() {
             <div className="flex flex-col gap-1">
               <a href={`mailto:${SUPPORT_EMAIL}`} className="transition-colors hover:text-gold">
                 {SUPPORT_EMAIL}
-              </a>
-              <a href={`mailto:${LEGACY_EMAIL}`} className="transition-colors hover:text-gold">
-                {LEGACY_EMAIL}
               </a>
             </div>
           </div>

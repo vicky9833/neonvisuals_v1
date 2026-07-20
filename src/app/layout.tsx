@@ -34,9 +34,9 @@ export const metadata: Metadata = {
     template: "%s | Neon Visuals",
   },
   description:
-    "Premium personalised corporate gifts for corporates, startups, colleges, events, and institutions across India. Every gift carries the recipient's name. Onboarding kits, milestone awards, festive gifts, client appreciation - 120+ products across 11 collections. Enquire now.",
+    "Premium personalised corporate gifts for corporates, startups, colleges, events, and institutions across India. Every gift carries the recipient's name. Onboarding kits, milestone awards, festive gifts, client appreciation - 290+ products across 11 collections. Enquire now.",
   keywords: [
-    "corporate gifting bangalore",
+    "corporate gifting bengaluru",
     "personalised corporate gifts",
     "employee onboarding kit",
     "corporate gifts india",
@@ -45,7 +45,7 @@ export const metadata: Metadata = {
     "work anniversary gifts",
     "neon visuals",
     "employee recognition gifts",
-    "custom corporate gifts bangalore",
+    "custom corporate gifts mumbai",
   ],
   authors: [{ name: "Neon Visuals", url: SITE_URL }],
   creator: "Neon Visuals",
@@ -65,13 +65,13 @@ export const metadata: Metadata = {
     siteName: "Neon Visuals",
     title: `Neon Visuals - ${TAGLINE} | Premium Corporate Gifting`,
     description:
-      "Premium personalised corporate gifts for corporates, startups, colleges, events, and institutions across India. 120+ products, 11 collections. Every gift carries the recipient's name.",
+      "Premium personalised corporate gifts for corporates, startups, colleges, events, and institutions across India. 290+ products, 11 collections. Every gift carries the recipient's name.",
   },
   twitter: {
     card: "summary_large_image",
     title: "Neon Visuals - Premium Corporate Gifting India",
     description:
-      "Personalised corporate gifts that stay on desks for years, for corporates, startups, colleges, events, and institutions across India. 120+ products across 11 collections.",
+      "Personalised corporate gifts that stay on desks for years, for corporates, startups, colleges, events, and institutions across India. 290+ products across 11 collections.",
   },
   robots: {
     index: true,
@@ -103,16 +103,16 @@ const organizationJsonLd = {
     "Premium personalised corporate gifting studio serving corporates, startups, colleges, events, and institutions across India, based in Bengaluru & Mumbai.",
   address: {
     "@type": "PostalAddress",
-    addressLocality: "Bangalore",
-    addressRegion: "Karnataka",
+    addressLocality: "Mumbai",
+    addressRegion: "Maharashtra",
     addressCountry: "IN",
   },
   contactPoint: {
     "@type": "ContactPoint",
-    telephone: "+91-9019409590",
+    telephone: "+91-9833450699",
     contactType: "sales",
     email: SUPPORT_EMAIL,
-    availableLanguage: ["English", "Hindi", "Kannada"],
+    availableLanguage: ["English", "Hindi", "Marathi"],
   },
   sameAs: [INSTAGRAM_URL, LINKEDIN_URL],
 };
@@ -124,23 +124,23 @@ const localBusinessJsonLd = {
   description:
     "Premium corporate gifting studio specialising in personalised employee experience gifts.",
   url: SITE_URL,
-  telephone: "+91-9019409590",
+  telephone: "+91-9833450699",
   email: SUPPORT_EMAIL,
   address: {
     "@type": "PostalAddress",
-    addressLocality: "Bangalore",
-    addressRegion: "Karnataka",
-    postalCode: "560001",
+    addressLocality: "Mumbai",
+    addressRegion: "Maharashtra",
+    postalCode: "400093",
     addressCountry: "IN",
   },
   geo: {
     "@type": "GeoCoordinates",
-    latitude: "12.9716",
-    longitude: "77.5946",
+    latitude: "19.1197",
+    longitude: "72.8464",
   },
   priceRange: "₹₹₹",
   openingHours: "Mo-Sa 09:00-18:00",
-  areaServed: { "@type": "City", name: "Bangalore" },
+  areaServed: { "@type": "Country", name: "India" },
 };
 
 const websiteJsonLd = {

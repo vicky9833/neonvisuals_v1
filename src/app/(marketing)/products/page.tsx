@@ -8,7 +8,7 @@ const SITE_URL = "https://neonvisuals.in";
 export const metadata: Metadata = buildMetadata({
   title: "Premium Corporate Gifts - Personalised for Your Team | Neon Visuals",
   description:
-    "Explore 120+ personalised corporate gifts across 11 collections. From onboarding kits to CEO recognition - every gift carries the recipient's name. Enquire now.",
+    "Explore 290+ personalised corporate gifts across 11 collections. From onboarding kits to CEO recognition - every gift carries the recipient's name. Enquire now.",
   path: "/products",
   image: "/og/catalog.png",
 });
@@ -42,7 +42,7 @@ export default async function ProductsPage({ searchParams }: SearchParams) {
       <section className="bg-linear-to-br from-navy to-[#2a2a4a]">
         <div className="mx-auto max-w-[1200px] px-6 py-16 text-center">
           <span className="inline-flex items-center gap-2 rounded-full border border-white/15 bg-white/5 px-4 py-1.5 text-[13px] font-medium text-cream">
-            <span className="text-gold">✦</span> 120+ Curated Products
+            <span className="text-gold">✦</span> 290+ Curated Products
           </span>
           <h1 className="mx-auto mt-6 max-w-3xl text-4xl font-extrabold tracking-tight text-[#FAFAF8] sm:text-5xl">
             Gifts That Stay on Their Desk for Years

@@ -136,7 +136,7 @@ export function MobileNav({ links }: MobileNavProps) {
               <Link
                 href="/login"
                 onClick={() => setOpen(false)}
-                className="rounded-button px-3 py-2 text-sm font-medium text-foreground transition-colors hover:bg-secondary"
+                className="inline-flex items-center justify-center rounded-full border border-gold/60 px-4 py-2 text-sm font-semibold text-navy transition-colors hover:border-gold hover:bg-gold/10"
               >
                 Login
               </Link>

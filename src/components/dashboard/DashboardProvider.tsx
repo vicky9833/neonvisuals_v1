@@ -22,6 +22,8 @@ interface DashboardContextValue {
   profile: Profile;
   company: Company | null;
   branding: ShellBranding;
+  /** Real plan tier of the viewer's org (Pro entitlement), resolved server-side. */
+  isPro: boolean;
   sidebarOpen: boolean;
   setSidebarOpen: (open: boolean) => void;
   pageTitle: string;
@@ -42,11 +44,13 @@ export function DashboardProvider({
   profile,
   company,
   branding,
+  isPro,
   children,
 }: {
   profile: Profile;
   company: Company | null;
   branding: ShellBranding;
+  isPro: boolean;
   children: ReactNode;
 }) {
   const [sidebarOpen, setSidebarOpen] = useState(false);
@@ -57,12 +61,13 @@ export function DashboardProvider({
       profile,
       company,
       branding,
+      isPro,
       sidebarOpen,
       setSidebarOpen,
       pageTitle,
       setPageTitle,
     }),
-    [profile, company, branding, sidebarOpen, pageTitle],
+    [profile, company, branding, isPro, sidebarOpen, pageTitle],
   );
 
   return (

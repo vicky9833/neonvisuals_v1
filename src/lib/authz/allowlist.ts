@@ -79,6 +79,7 @@ const ALLOWLIST: readonly Entry[] = [
   { path: "/get-started", access: "public" },
   { path: "/gift-builder", access: "public" },
   { path: "/how-it-works", access: "public" },
+  { path: "/legal", access: "public" }, // /legal/dpa (Data Processing Agreement)
   { path: "/occasions", access: "public" },
   { path: "/pricing", access: "public" },
   { path: "/privacy", access: "public" },

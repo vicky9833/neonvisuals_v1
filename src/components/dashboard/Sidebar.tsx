@@ -128,6 +128,7 @@ export function SidebarBody({
   onNavigate?: () => void;
 }) {
   const pathname = usePathname();
+  const { isPro } = useDashboard();
   const visible = (items: NavItem[]) => items;
   // P9d (R1): the viewer's OWN org identity. A validated external logo renders as a locked-down
   // <img> (no inline SVG / data-URI — sanitized at write); null → the NEON lockup (fallback ruling).
@@ -190,7 +191,7 @@ export function SidebarBody({
         >
           {companyName}
         </p>
-        <p className="text-xs text-slate-400">Free Plan</p>
+        <p className="text-xs text-slate-400">{isPro ? "Pro Plan" : "Free Plan"}</p>
       </div>
     </div>
   );

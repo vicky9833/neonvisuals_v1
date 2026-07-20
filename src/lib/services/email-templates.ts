@@ -43,8 +43,8 @@ export function baseTemplate(params: BaseTemplateParams): string {
         <tr><td style="background:#F5F0E8;padding:24px 32px;border-top:1px solid #EDE9E3;">
           ${params.footerExtra || ""}
           <p style="color:#666;font-size:12px;margin:8px 0 0;text-align:center;">
-            Neon Visuals &middot; Bengaluru, Karnataka &amp; Mumbai, Maharashtra<br>
-            +91 90194 09590 &middot; contact@neonvisuals.in<br>
+            Neon Visuals &middot; Mumbai, Maharashtra<br>
+            +91 98334 50699 &middot; contact@neonvisuals.in<br>
             <a href="https://neonvisuals.in" style="color:#C4A35A;">neonvisuals.in</a>
           </p>
         </td></tr>
@@ -75,7 +75,7 @@ export function welcomeTemplate(params: { name: string; companyName: string }) {
       p(`We're thrilled to have <strong>${params.companyName}</strong> on Neon Visuals - the home of personalised corporate gifting that your team will actually remember.`) +
       p("Here's what you can do next:") +
       `<ul style="color:#333;font-size:15px;line-height:1.7;">
-        <li>Browse 120+ products across 11 collections</li>
+        <li>Browse 290+ products across 11 collections</li>
         <li>Curate a custom Experience Kit in the Gift Builder</li>
         <li>Add your team to unlock occasion reminders and gift history</li>
       </ul>`,

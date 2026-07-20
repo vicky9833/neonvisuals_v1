@@ -70,12 +70,12 @@ const HERO_CAROUSEL_IMAGES: string[] = [
 
 export const metadata: Metadata = {
   title: {
-    absolute: "Neon Visuals - Premium Corporate Gifting Platform | Bangalore",
+    absolute: "Neon Visuals - Premium Corporate Gifting Platform | India",
   },
   description:
     "Premium personalised corporate gifts for employee recognition, onboarding, and festivals. Name-first gifting trusted by 95+ organizations across India. Enquire today.",
   keywords: [
-    "corporate gifting Bangalore",
+    "corporate gifting India",
     "employee experience gifts",
     "personalised corporate gifts India",
     "employee onboarding kits",
@@ -89,13 +89,13 @@ export const metadata: Metadata = {
     locale: "en_IN",
     siteName: "Neon Visuals",
     url: SITE_URL,
-    title: "Neon Visuals - Premium Corporate Gifting Platform | Bangalore",
+    title: "Neon Visuals - Premium Corporate Gifting Platform | India",
     description:
       "Premium personalised corporate gifts for employee recognition, onboarding, and festivals. Trusted by 95+ organizations across India.",
   },
   twitter: {
     card: "summary_large_image",
-    title: "Neon Visuals - Premium Corporate Gifting Platform | Bangalore",
+    title: "Neon Visuals - Premium Corporate Gifting Platform | India",
     description:
       "Name-first personalised corporate gifts. Nothing generic. Nothing forgettable.",
   },
@@ -318,7 +318,7 @@ const jsonLd = [
     logo: `${SITE_URL}/logo.png`,
     description: `${TAGLINE}. Premium personalised corporate gifting and employee experience platform.`,
     email: SUPPORT_EMAIL,
-    telephone: "+919019409590",
+    telephone: "+919833450699",
   },
   {
     "@context": "https://schema.org",
@@ -326,13 +326,13 @@ const jsonLd = [
     name: "Neon Visuals",
     image: `${SITE_URL}/logo.png`,
     url: SITE_URL,
-    telephone: "+919019409590",
+    telephone: "+919833450699",
     email: SUPPORT_EMAIL,
     priceRange: "₹₹₹",
     address: {
       "@type": "PostalAddress",
-      addressLocality: "Bangalore",
-      addressRegion: "Karnataka",
+      addressLocality: "Mumbai",
+      addressRegion: "Maharashtra",
       addressCountry: "IN",
     },
     areaServed: "IN",
