@@ -9,7 +9,7 @@ const SITE_URL = "https://neonvisuals.in";
 export const metadata: Metadata = buildMetadata({
   title: "Curate Your Experience Kit - Custom Corporate Gifting | Neon Visuals",
   description:
-    "Build a personalised corporate gift kit for your team. Choose from 120+ products, select premium packaging, and submit your enquiry. Response within 2 hours.",
+    "Build a personalised corporate gift kit for your team. Choose from 290+ products, select premium packaging, and submit your enquiry. Response within 2 hours.",
   path: "/gift-builder",
 });
 

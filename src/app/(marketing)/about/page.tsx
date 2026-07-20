@@ -15,7 +15,6 @@ import {
 import { Reveal } from "@/components/marketing/reveal";
 import { TeamAvatar } from "@/components/marketing/team-avatar";
 import {
-  LEGACY_EMAIL,
   LINKEDIN_URL,
   PHONE,
   PHONE_2,
@@ -79,11 +78,10 @@ const INDUSTRIES: readonly { icon: LucideIcon; label: string }[] = [
 const TRUST_ROWS: readonly { label: string; value: string; href?: string }[] = [
   { label: "GSTIN", value: "27BZSPV5411Q1ZA" },
   { label: "Established", value: "2024" },
-  { label: "Headquarters", value: "Bengaluru, Karnataka, India" },
+  { label: "Headquarters", value: "Mumbai, Maharashtra, India" },
   { label: "Delivery", value: "PAN India Available" },
   { label: "Business Hours", value: "Monday - Saturday · 9:00 AM - 7:00 PM" },
   { label: "Email", value: SUPPORT_EMAIL, href: `mailto:${SUPPORT_EMAIL}` },
-  { label: "Alternate Email", value: LEGACY_EMAIL, href: `mailto:${LEGACY_EMAIL}` },
   { label: "Phone", value: `${PHONE} · ${PHONE_2}` },
   { label: "Google Reviews", value: "★ 5.0" },
 ] as const;

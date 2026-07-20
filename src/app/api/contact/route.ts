@@ -104,7 +104,7 @@ export async function POST(request: NextRequest) {
       {
         error: "capture_failed",
         message:
-          "Sorry — something went wrong saving your enquiry. Please reach us directly on WhatsApp at https://wa.me/919019409590 or email contact.neonvisuals@gmail.com and we'll respond right away.",
+          "Sorry — something went wrong saving your enquiry. Please reach us directly on WhatsApp at https://wa.me/919019409590 or email contact@neonvisuals.in and we'll respond right away.",
       },
       { status: 500 },
     );

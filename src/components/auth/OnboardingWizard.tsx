@@ -8,7 +8,6 @@ import {
   LayoutDashboard,
   Loader2,
   PackageOpen,
-  Sparkles,
 } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
@@ -19,12 +18,12 @@ import { cn } from "@/lib/utils";
 import {
   EMPLOYEE_COUNTS,
   GIFTING_BUDGETS,
-  GIFTING_FREQUENCIES,
   GIFTING_OCCASIONS,
   INDUSTRIES,
   type OnboardingData,
 } from "@/lib/auth-types";
 import { DPA_ATTESTATION, DPA_DOC_URL } from "@/lib/authz/dpa";
+import { Logo } from "@/components/brand/logo";
 import { createCompanyAndCompleteOnboarding } from "@/app/(auth)/onboarding/actions";
 
 interface FormState {
@@ -35,7 +34,6 @@ interface FormState {
   website: string;
   giftingOccasions: string[];
   giftingBudget: string;
-  giftingFrequency: string;
   dpaAccepted: boolean;
 }
 
@@ -47,9 +45,18 @@ const INITIAL: FormState = {
   website: "",
   giftingOccasions: [],
   giftingBudget: "",
-  giftingFrequency: "",
   dpaAccepted: false,
 };
+
+/** Accepts a bare or fully-qualified domain; rejects junk. */
+function isValidWebsite(value: string): boolean {
+  try {
+    const url = new URL(/^https?:\/\//i.test(value) ? value : `https://${value}`);
+    return url.hostname.includes(".");
+  } catch {
+    return false;
+  }
+}
 
 export function OnboardingWizard() {
   const [step, setStep] = useState<1 | 2 | 3>(1);
@@ -73,13 +80,18 @@ export function OnboardingWizard() {
 
   function handleStep1() {
     setError(null);
-    if (
-      !form.companyName.trim() ||
-      !form.industry ||
-      !form.employeeCount ||
-      !form.city.trim()
-    ) {
+    const name = form.companyName.trim();
+    if (!name || !form.industry || !form.employeeCount || !form.city.trim()) {
       setError("Please fill in all required fields.");
+      return;
+    }
+    // No-junk company name: min length + not a single repeated character ("aaaa").
+    if (name.length < 2 || /^(.)\1+$/.test(name.replace(/\s+/g, ""))) {
+      setError("Please enter a valid company name.");
+      return;
+    }
+    if (form.website.trim() && !isValidWebsite(form.website.trim())) {
+      setError("Please enter a valid website URL (e.g. https://yourcompany.com).");
       return;
     }
     setStep(2);
@@ -264,15 +276,6 @@ export function OnboardingWizard() {
               />
             </div>
 
-            <div className="space-y-2">
-              <Label>How many gifting events per year?</Label>
-              <PillGroup
-                options={GIFTING_FREQUENCIES}
-                value={form.giftingFrequency}
-                onSelect={(v) => update("giftingFrequency", v)}
-              />
-            </div>
-
             {/* §10 DPA consent — mandatory; org creation is blocked without it. */}
             <label className="flex cursor-pointer items-start gap-3 rounded-lg border border-[#EDE9E3] bg-secondary/40 px-4 py-3">
               <Checkbox
@@ -330,7 +333,9 @@ export function OnboardingWizard() {
         {step === 3 ? (
           <div className="space-y-6">
             <header className="text-center">
-              <Sparkles className="mx-auto size-8 text-gold" />
+              <div className="flex justify-center">
+                <Logo variant="full" asLink={false} iconSize={56} />
+              </div>
               <h1 className="mt-3 font-heading text-2xl font-bold text-navy">
                 Welcome to Neon Visuals, {savedName}!
               </h1>
@@ -344,7 +349,7 @@ export function OnboardingWizard() {
                 href="/products"
                 icon={<PackageOpen className="size-5" />}
                 title="Explore Products"
-                description="Browse 120+ personalised gifts across 11 collections"
+                description="Browse 290+ personalised gifts across 11 collections"
               />
               <ActionCard
                 href="/gift-builder"

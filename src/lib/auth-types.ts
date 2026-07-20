@@ -90,6 +90,7 @@ export const INDUSTRIES = [
 
 /** Employee-count ranges (stored as the label string). */
 export const EMPLOYEE_COUNTS = [
+  "Under 10",
   "10-50",
   "50-200",
   "200-500",

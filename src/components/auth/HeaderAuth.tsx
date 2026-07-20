@@ -22,10 +22,10 @@ export function HeaderAuth() {
 
   return (
     <div className="hidden items-center gap-4 md:flex">
-      {/* Quiet secondary entry for existing clients — sits left of the primary CTA. */}
+      {/* Secondary outlined pill for existing clients — sits left of the primary CTA. */}
       <Link
         href="/login"
-        className="text-[13px] font-medium text-navy/70 transition-colors hover:text-navy"
+        className="inline-flex h-10 items-center rounded-full border border-gold/60 px-5 text-[13px] font-semibold text-navy transition-colors hover:border-gold hover:bg-gold/10"
       >
         Login
       </Link>

@@ -22,6 +22,8 @@ export function SearchOverlay() {
   }, []);
 
   useEffect(() => {
+    // Reset the query when the overlay closes (intentional state sync on an external trigger).
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     if (!open) setQuery("");
   }, [open]);
 
@@ -61,7 +63,7 @@ export function SearchOverlay() {
                 type="search"
                 value={query}
                 onChange={(e) => setQuery(e.target.value)}
-                placeholder="Search 120+ products…"
+                placeholder="Search 290+ products…"
                 aria-label="Search products"
                 className="h-16 w-full bg-transparent pl-12 pr-12 text-base text-[#333333] focus-visible:outline-none"
               />
@@ -125,7 +127,7 @@ export function SearchOverlay() {
               </div>
             ) : (
               <p className="px-5 py-8 text-sm text-[#888888]">
-                Start typing to search across all 120+ products.
+                Start typing to search across all 290+ products.
               </p>
             )}
           </div>

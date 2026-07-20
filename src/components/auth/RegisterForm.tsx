@@ -7,9 +7,11 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
+import Link from "next/link";
 import { signUp } from "@/lib/auth-client";
 import { GoogleButton } from "@/components/auth/GoogleButton";
 import { GOOGLE_OAUTH_ENABLED } from "@/lib/auth-types";
+import { isValidIndianMobile, isValidEmail } from "@/lib/utils/form-validation";
 
 export function RegisterForm() {
   const router = useRouter();
@@ -24,10 +26,30 @@ export function RegisterForm() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  const isFormValid =
+    fullName.trim().length > 0 &&
+    isValidEmail(email) &&
+    isValidIndianMobile(phone) &&
+    password.length >= 8 &&
+    password === confirm &&
+    agreed;
+
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     setError(null);
 
+    if (!fullName.trim()) {
+      setError("Please enter your full name.");
+      return;
+    }
+    if (!isValidEmail(email)) {
+      setError("Please enter a valid email address.");
+      return;
+    }
+    if (!isValidIndianMobile(phone)) {
+      setError("Please enter a valid 10-digit Indian mobile number.");
+      return;
+    }
     if (password.length < 8) {
       setError("Password must be at least 8 characters.");
       return;
@@ -170,7 +192,25 @@ export function RegisterForm() {
             className="mt-0.5"
           />
           <span>
-            I agree to the Terms of Service and Privacy Policy.
+            I agree to the{" "}
+            <Link
+              href="/terms"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="font-medium text-gold underline underline-offset-2 hover:text-gold/80"
+            >
+              Terms of Service
+            </Link>{" "}
+            and{" "}
+            <Link
+              href="/privacy"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="font-medium text-gold underline underline-offset-2 hover:text-gold/80"
+            >
+              Privacy Policy
+            </Link>
+            .
           </span>
         </label>
 
@@ -180,7 +220,7 @@ export function RegisterForm() {
 
         <Button
           type="submit"
-          disabled={loading}
+          disabled={loading || !isFormValid}
           className="h-11 w-full rounded-lg bg-navy text-white hover:bg-navy/90"
         >
           {loading ? (

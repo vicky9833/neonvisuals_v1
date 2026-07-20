@@ -27,11 +27,10 @@ export const SAC_CODE = "998396";
 export const DEFAULT_GST_RATE = 18;
 
 /**
- * PLACEHOLDER seller GSTIN (Karnataka, state code 29) for test-mode subscription invoices.
- * ⚠️ A real GST tax invoice is legally INVALID without the true seller GSTIN — replacing this
- * with Neon Visuals' registered GSTIN in prod is a HARD go-live prerequisite (see GO_LIVE_GATE.md).
+ * Neon Visuals' registered seller GSTIN (Maharashtra, state code 27) — sole proprietorship of
+ * Vikas Vishwakarma, Mumbai. Used on GST tax invoices.
  */
-export const SELLER_GSTIN_PLACEHOLDER = "29AAAAA0000A1Z5";
+export const SELLER_GSTIN = "27BZSPV5411Q1ZA";
 /** Neon Visuals Pro subscription price (₹, GST-INCLUSIVE — the all-in amount the customer pays). */
 export const PRO_SUBSCRIPTION_PRICE_RUPEES = 1999;
 
@@ -312,7 +311,7 @@ function mapInvoice(row: any): Invoice {
     due_date: row.due_date,
     paid_date: row.paid_date ?? null,
     seller_name: row.seller_name ?? "Neon Visuals",
-    seller_address: row.seller_address ?? "Bangalore, Karnataka, India",
+    seller_address: row.seller_address ?? "Mumbai, Maharashtra, India",
     seller_gstin: row.seller_gstin ?? null,
     seller_pan: row.seller_pan ?? null,
     buyer_name: row.buyer_name,
@@ -848,8 +847,8 @@ export async function createSubscriptionInvoice(
     due_date: today,
     paid_date: today,
     seller_name: "Neon Visuals",
-    seller_address: "Bangalore, Karnataka, India",
-    seller_gstin: SELLER_GSTIN_PLACEHOLDER, // TODO: real GSTIN before live billing (GO_LIVE_GATE.md)
+    seller_address: "Mumbai, Maharashtra, India",
+    seller_gstin: SELLER_GSTIN,
     buyer_name:
       (company?.primary_contact_name as string) ?? (company?.name as string) ?? "Client",
     buyer_company: (company?.name as string) ?? "Client",

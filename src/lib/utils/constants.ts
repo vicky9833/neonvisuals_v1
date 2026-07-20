@@ -10,13 +10,13 @@ export const DOMAIN = "neonvisuals.in";
 export const SUPPORT_EMAIL = "contact@neonvisuals.in";
 /** Primary inbox (alias of SUPPORT_EMAIL) used where copy prefers PRIMARY_EMAIL. */
 export const PRIMARY_EMAIL = "contact@neonvisuals.in";
-/** Legacy inbox kept as a secondary contact where explicitly listed. */
-export const LEGACY_EMAIL = "contact.neonvisuals@gmail.com";
-export const PHONE = "+91 90194 09590";
+/** Secondary/alternate inbox (same canonical address — no legacy gmail). */
+export const LEGACY_EMAIL = "contact@neonvisuals.in";
+/** Canonical legal/contact phone (Neon Visuals, Mumbai). */
+export const PHONE = "+91 98334 50699";
 export const PHONE_2 = "+91 72402 23607";
-export const PHONE_3 = "+91 98334 50699";
 /** All display phone numbers, in order. */
-export const PHONES = [PHONE, PHONE_2, PHONE_3] as const;
+export const PHONES = [PHONE, PHONE_2] as const;
 
 /** Social + web presence. */
 export const INSTAGRAM_HANDLE = "@neonvisuals.co";

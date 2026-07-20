@@ -39,10 +39,10 @@ export default function OgImage() {
           Premium Corporate Gifting
         </div>
         <div style={{ fontSize: 28, marginTop: 8, color: "#94A3B8" }}>
-          Bangalore, India
+          Bengaluru · Mumbai, India
         </div>
         <div style={{ fontSize: 26, marginTop: 32, color: "#FAFAF8" }}>
-          120+ Products · 11 Collections
+          290+ Products · 11 Collections
         </div>
         <div style={{ fontSize: 24, marginTop: 6, color: "#94A3B8" }}>
           Every gift carries the recipient&apos;s name.

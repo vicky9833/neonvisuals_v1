@@ -1,6 +1,8 @@
 import { redirect } from "next/navigation";
 import { getProfile } from "@/lib/auth";
 import { brandingFromCompany } from "@/lib/engines/branding";
+import { getCompanyPlanContext } from "@/lib/employees/queries";
+import { isProPlan } from "@/lib/employees/plan-gate";
 import { DashboardProvider } from "@/components/dashboard/DashboardProvider";
 import { Sidebar } from "@/components/dashboard/Sidebar";
 import { MobileSidebar } from "@/components/dashboard/MobileSidebar";
@@ -28,8 +30,12 @@ export default async function DashboardLayout({
   // Null/invalid columns → NEON fallback. Company-scoped by construction → no cross-org bleed.
   const branding = brandingFromCompany(company);
 
+  // Real plan tier for the portal shell (sidebar label). Free unless an entitled Pro plan.
+  const companyId = profile.company_id;
+  const isPro = companyId ? isProPlan(await getCompanyPlanContext(companyId)) : false;
+
   return (
-    <DashboardProvider profile={profile} company={company} branding={branding}>
+    <DashboardProvider profile={profile} company={company} branding={branding} isPro={isPro}>
       <div className="min-h-screen bg-background">
         <Sidebar />
         <MobileSidebar />
