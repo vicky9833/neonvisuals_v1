@@ -1,35 +1,7 @@
-import { describe, it, expect, vi, beforeEach } from "vitest";
-
-// pricing.ts imports @/lib/supabase/admin (which begins with `import "server-only"`).
-vi.mock("server-only", () => ({}));
-
-// Fake the DB price lookup: getProductPricing does supa.from("products").select(...).in("sku", skus).
-const h = vi.hoisted(() => ({
-  rows: [] as Array<Record<string, unknown>>,
-}));
-vi.mock("@/lib/supabase/admin", () => ({
-  createAdminClient: () => ({
-    from: () => ({
-      select: () => ({
-        in: (_col: string, skus: string[]) =>
-          Promise.resolve({ data: h.rows.filter((r) => skus.includes(r.sku as string)), error: null }),
-      }),
-    }),
-  }),
-}));
-
+import { describe, it, expect } from "vitest";
 import { calculatePricing, PricingError, type PricingInput } from "./pricing";
 
-const PROD_A = {
-  sku: "SKU-A",
-  name: "Product A",
-  cogs: 100,
-  price_single: 500,
-  price_bulk_25: 450,
-  price_bulk_100: 400,
-  margin_percent: 60,
-};
-
+// Phase 5B: pricing is manual + pure (no DB). No mocks needed.
 function baseInput(products: PricingInput["products"]): PricingInput {
   return {
     products,
@@ -37,93 +9,74 @@ function baseInput(products: PricingInput["products"]): PricingInput {
     packagingTier: "essential", // 125/kit
     rushOrder: false,
     personalisation: "name_only", // 0
-    resumeIntelligence: false, // 0
+    resumeIntelligence: false,
   };
 }
 
-beforeEach(() => {
-  h.rows = [PROD_A];
-});
+describe("pricing is always manual", () => {
+  it("catalogue line WITHOUT a typed price is rejected (fail loud, never silent 0)", async () => {
+    await expect(
+      calculatePricing(baseInput([{ sku: "NV-A-001", quantity: 10 }])),
+    ).rejects.toBeInstanceOf(PricingError);
+    try {
+      await calculatePricing(baseInput([{ sku: "NV-A-001", quantity: 10 }]));
+      throw new Error("should have thrown");
+    } catch (e) {
+      expect(e).toBeInstanceOf(PricingError);
+      expect((e as PricingError).code).toBe("missing_line_price");
+    }
+  });
 
-describe("pricing: custom/charge use their own price (no DB lookup)", () => {
-  it("custom line uses its typed unitPrice", async () => {
+  it("catalogue line WITH a typed price and an UNRESOLVABLE SKU succeeds at the typed price", async () => {
+    const r = await calculatePricing(baseInput([{ sku: "GHOST-SKU-999", quantity: 4, unitPrice: 250 }]));
+    expect(r.lineItems[0].source).toBe("catalogue");
+    expect(r.lineItems[0].unitPrice).toBe(250); // typed price is authoritative; SKU is a label
+    expect(r.lineItems[0].lineTotal).toBe(1000);
+    expect(r.subtotal).toBe(1000);
+  });
+
+  it("custom line uses its typed price + name", async () => {
     const r = await calculatePricing(
       baseInput([{ sku: "CUSTOM-1", source: "custom", name: "Bespoke", unitPrice: 1234, quantity: 2 }]),
     );
-    expect(r.lineItems).toHaveLength(1);
-    expect(r.lineItems[0].source).toBe("custom");
     expect(r.lineItems[0].productName).toBe("Bespoke");
     expect(r.lineItems[0].unitPrice).toBe(1234);
     expect(r.lineItems[0].lineTotal).toBe(2468);
-    expect(r.subtotal).toBe(2468);
   });
 
-  it("charge line forces quantity 1 and uses its amount", async () => {
+  it("charge forces quantity 1", async () => {
     const r = await calculatePricing(
       baseInput([{ sku: "CHARGE-1", source: "charge", name: "Freight", unitPrice: 900, quantity: 5 }]),
     );
-    expect(r.lineItems[0].source).toBe("charge");
     expect(r.lineItems[0].quantity).toBe(1);
     expect(r.lineItems[0].lineTotal).toBe(900);
   });
 
-  it("custom/charge without a positive unitPrice throws PricingError", async () => {
-    await expect(
-      calculatePricing(baseInput([{ sku: "CUSTOM-1", source: "custom", name: "X", quantity: 1 }])),
-    ).rejects.toBeInstanceOf(PricingError);
-    await expect(
-      calculatePricing(baseInput([{ sku: "C", source: "charge", name: "X", unitPrice: 0, quantity: 1 }])),
-    ).rejects.toBeInstanceOf(PricingError);
-  });
-});
-
-describe("pricing: catalogue fail-loud + override", () => {
-  it("unknown catalogue SKU throws, naming the SKU", async () => {
-    await expect(
-      calculatePricing(baseInput([{ sku: "NOPE-404", quantity: 1 }])),
-    ).rejects.toThrow(/NOPE-404/);
-    // and it is the typed error with the right code
-    try {
-      await calculatePricing(baseInput([{ sku: "NOPE-404", quantity: 1 }]));
-      throw new Error("should have thrown");
-    } catch (e) {
-      expect(e).toBeInstanceOf(PricingError);
-      expect((e as PricingError).code).toBe("unknown_sku");
+  it("no code path yields a 0 unit price silently: 0 / negative / undefined all throw for any source", async () => {
+    for (const bad of [0, -5, undefined]) {
+      await expect(
+        calculatePricing(baseInput([{ sku: "X", quantity: 1, unitPrice: bad as number | undefined }])),
+      ).rejects.toBeInstanceOf(PricingError);
+    }
+    for (const src of ["custom", "charge"] as const) {
+      await expect(
+        calculatePricing(baseInput([{ sku: "X", source: src, name: "n", quantity: 1, unitPrice: 0 }])),
+      ).rejects.toBeInstanceOf(PricingError);
     }
   });
 
-  it("no silent 0: a catalogue line never prices at 0 for a missing SKU", async () => {
-    await expect(
-      calculatePricing(baseInput([{ sku: "GHOST", quantity: 3 }])),
-    ).rejects.toBeInstanceOf(PricingError);
-  });
-
-  it("explicit unitPrice overrides the DB price and records the override", async () => {
-    const r = await calculatePricing(baseInput([{ sku: "SKU-A", quantity: 1, unitPrice: 999 }]));
-    expect(r.lineItems[0].unitPrice).toBe(999); // override, not price_single 500
-    expect(r.lineItems[0].priceOverridden).toBe(true);
-
-    const noOverride = await calculatePricing(baseInput([{ sku: "SKU-A", quantity: 1 }]));
-    expect(noOverride.lineItems[0].unitPrice).toBe(500); // price_single tier
-    expect(noOverride.lineItems[0].priceOverridden).toBe(false);
-  });
-});
-
-describe("pricing: mixed catalogue + custom + charge reconciles exactly", () => {
-  it("subtotal and grand total include every line", async () => {
+  it("mixed catalogue + custom + charge totals reconcile exactly", async () => {
     const r = await calculatePricing(
       baseInput([
-        { sku: "SKU-A", quantity: 25 }, // catalogue -> price_bulk_25 450 * 25 = 11250
+        { sku: "NV-A-001", quantity: 25, unitPrice: 450 }, // catalogue typed price -> 11250
         { sku: "CUSTOM-1", source: "custom", name: "Bespoke", unitPrice: 1000, quantity: 2 }, // 2000
         { sku: "CHARGE-1", source: "charge", name: "Design fee", unitPrice: 500, quantity: 1 }, // 500
       ]),
     );
-    expect(r.lineItems).toHaveLength(3);
     const sumLines = r.lineItems.reduce((s, li) => s + li.lineTotal, 0);
-    expect(sumLines).toBe(11250 + 2000 + 500);
-    expect(r.subtotal).toBe(sumLines);
-    // essential packaging 125 * kitCount(1); no personalisation/resume/rush.
-    expect(r.packagingTotal).toBe(125);
+    expect(sumLines).toBe(13750);
+    expect(r.subtotal).toBe(13750);
+    expect(r.packagingTotal).toBe(125); // essential 125 * 1 kit
     expect(r.grandTotal).toBe(r.subtotal + r.packagingTotal);
   });
 });

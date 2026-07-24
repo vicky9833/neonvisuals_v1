@@ -2,6 +2,8 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 import { requirePlatform, apiAuthErrorResponse } from "@/lib/api-auth";
 import { convertQuoteToOrder } from "@/lib/engines/order";
+import { PricingError } from "@/lib/engines/pricing";
+import { QuoteValidationError } from "@/lib/engines/quote";
 
 export const runtime = "nodejs";
 
@@ -40,6 +42,10 @@ export async function POST(request: Request) {
   } catch (err) {
     const authResponse = apiAuthErrorResponse(err);
     if (authResponse) return authResponse;
+    // Custom-line block + fail-loud pricing errors are client-actionable -> 400 (not 500).
+    if (err instanceof PricingError || err instanceof QuoteValidationError) {
+      return NextResponse.json({ error: err.code, message: err.message }, { status: 400 });
+    }
     const message = err instanceof Error ? err.message : "Unknown error";
     // Known client error: quote has no company and none was provided.
     if (message.includes("Could not resolve a company")) {

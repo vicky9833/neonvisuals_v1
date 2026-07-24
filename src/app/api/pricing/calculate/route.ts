@@ -19,7 +19,8 @@ const lineSchema = z
     sku: z.string().optional(),
     source: z.enum(["catalogue", "custom", "charge"]).optional(),
     name: z.string().optional(),
-    unitPrice: z.number().positive("unitPrice must be greater than 0").optional(),
+    // Phase 5B: a typed unit price is REQUIRED on EVERY line (prices are always manual).
+    unitPrice: z.number().positive("unitPrice must be a number greater than 0"),
     quantity: z.number().int().positive("quantity must be a positive integer").optional(),
     gstRate: gstRateSchema.optional(),
     hsn: z.string().regex(/^\d{4,8}$/, "hsn must be 4-8 digits").optional(),
@@ -38,9 +39,6 @@ const lineSchema = z
     } else {
       if (!line.name || line.name.trim() === "") {
         ctx.addIssue({ code: "custom", path: ["name"], message: `${source} line requires a name` });
-      }
-      if (line.unitPrice == null) {
-        ctx.addIssue({ code: "custom", path: ["unitPrice"], message: `${source} line requires a unitPrice` });
       }
       if (source === "custom" && line.quantity == null) {
         ctx.addIssue({ code: "custom", path: ["quantity"], message: "custom line requires a positive quantity" });

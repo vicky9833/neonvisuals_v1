@@ -61,6 +61,15 @@ export type RecipientDeliveryStatus =
 export interface OrderProductInput {
   sku: string;
   quantity: number;
+  /** Absent = catalogue (back-compat). Phase 5B: staff custom + charge lines. */
+  source?: "catalogue" | "custom" | "charge";
+  /** REQUIRED for custom/charge; a display name for catalogue lines. */
+  name?: string;
+  /** Rupees. Prices are manual: REQUIRED on every line. */
+  unitPrice?: number;
+  gstRate?: number;
+  hsn?: string;
+  uqc?: string;
   personalisationType?: string;
   engravingTextTemplate?: string;
   notes?: string;
@@ -111,6 +120,11 @@ export interface OrderItem {
   unit_price: number | null;
   /** INTERNAL ONLY. */
   line_total: number | null;
+  /** Absent/"catalogue" for catalogue lines; "custom"/"charge" for staff-added lines (5B). */
+  source: string | null;
+  hsn: string | null;
+  gst_rate: number | null;
+  uqc: string | null;
   personalisation_type: string | null;
   engraving_text_template: string | null;
   notes: string | null;
@@ -223,6 +237,10 @@ function mapItem(row: any): OrderItem {
     quantity: Number(row.quantity ?? 1),
     unit_price: row.unit_price ?? null,
     line_total: row.line_total ?? null,
+    source: row.source ?? null,
+    hsn: row.hsn ?? null,
+    gst_rate: row.gst_rate ?? null,
+    uqc: row.uqc ?? null,
     personalisation_type: row.personalisation_type ?? null,
     engraving_text_template: row.engraving_text_template ?? null,
     notes: row.notes ?? null,
@@ -330,7 +348,17 @@ export async function createOrder(
   const supa = await userDb();
 
   const pricing = await calculatePricing({
-    products: input.products.map((p) => ({ sku: p.sku, quantity: p.quantity })),
+    products: input.products.map((p) => ({
+      sku: p.sku,
+      quantity: p.quantity,
+      source: p.source,
+      name: p.name,
+      unitPrice: p.unitPrice,
+      gstRate: p.gstRate,
+      hsn: p.hsn,
+      uqc: p.uqc,
+      notes: p.notes,
+    })),
     kitCount: input.kitCount,
     packagingTier: input.packagingTier,
     rushOrder: input.isRush ?? false,
@@ -382,22 +410,26 @@ export async function createOrder(
 
   const orderId = orderRow.id as string;
 
-  // Line items (price snapshot from the pricing engine).
-  const priceBySku = new Map(pricing.lineItems.map((li) => [li.sku, li]));
-  const itemRows = input.products.map((p, idx) => {
-    const li = priceBySku.get(p.sku);
-    const product = getProductBySku(p.sku);
+  // Line items (price snapshot from the pricing engine). pricing.lineItems is 1:1 with
+  // input.products in order, so we align by index (SKUs are labels and may repeat for custom lines).
+  const itemRows = pricing.lineItems.map((li, idx) => {
+    const p = input.products[idx];
+    const product = getProductBySku(li.sku);
     return {
       order_id: orderId,
-      product_sku: p.sku,
-      product_name: li?.productName ?? product?.name ?? p.sku,
+      product_sku: li.sku,
+      product_name: li.productName,
       collection_code: product?.bucket ?? null,
-      quantity: p.quantity,
-      unit_price: li?.unitPrice ?? null,
-      line_total: li?.lineTotal ?? null,
-      personalisation_type: p.personalisationType ?? null,
-      engraving_text_template: p.engravingTextTemplate ?? null,
-      notes: p.notes ?? null,
+      quantity: li.quantity,
+      unit_price: li.unitPrice,
+      line_total: li.lineTotal,
+      source: li.source,
+      hsn: li.hsn ?? null,
+      gst_rate: li.gstRate ?? null,
+      uqc: li.uqc ?? null,
+      personalisation_type: p?.personalisationType ?? null,
+      engraving_text_template: p?.engravingTextTemplate ?? null,
+      notes: li.notes ?? p?.notes ?? null,
       sort_order: idx,
     };
   });
@@ -771,9 +803,31 @@ export async function convertQuoteToOrder(
     );
   }
 
+  // Carry EVERY line across intact — catalogue, custom and charge — with its manual price + tax
+  // metadata. Prices are authoritative (no re-derivation).
   const products: OrderProductInput[] = (
-    (quote.products as Array<{ sku: string; quantity: number }> | null) ?? []
-  ).map((p) => ({ sku: p.sku, quantity: p.quantity }));
+    (quote.products as Array<{
+      sku: string;
+      quantity: number;
+      source?: "catalogue" | "custom" | "charge";
+      name?: string;
+      unitPrice?: number;
+      gstRate?: number;
+      hsn?: string;
+      uqc?: string;
+      notes?: string;
+    }> | null) ?? []
+  ).map((p) => ({
+    sku: p.sku,
+    quantity: p.quantity,
+    source: p.source ?? "catalogue",
+    name: p.name,
+    unitPrice: p.unitPrice,
+    gstRate: p.gstRate,
+    hsn: p.hsn,
+    uqc: p.uqc,
+    notes: p.notes,
+  }));
 
   const order = await createOrder(
     {

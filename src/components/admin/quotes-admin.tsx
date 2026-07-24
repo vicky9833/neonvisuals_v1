@@ -149,7 +149,9 @@ export function QuotesAdmin() {
             ...f,
             selected: [
               ...f.selected,
-              { key: nextKey(), source: "catalogue", sku, name, quantity: f.kitCount },
+              // Prices are manual: a catalogue line starts with NO price (staff must type it) and
+              // GST% defaulted to 18. The SKU/name are just labels.
+              { key: nextKey(), source: "catalogue", sku, name, quantity: f.kitCount, gstRate: 18 },
             ],
           },
     );
@@ -166,14 +168,29 @@ export function QuotesAdmin() {
       selected: f.selected.map((s) => (s.key === key ? { ...s, quantity } : s)),
     }));
   }
+  function setUnitPrice(key: string, unitPrice: number | undefined) {
+    setForm((f) => ({
+      ...f,
+      selected: f.selected.map((s) => (s.key === key ? { ...s, unitPrice } : s)),
+    }));
+  }
+  function setGstRate(key: string, gstRate: number | undefined) {
+    setForm((f) => ({
+      ...f,
+      selected: f.selected.map((s) => (s.key === key ? { ...s, gstRate } : s)),
+    }));
+  }
 
-  /** Build the API line payload for one selected item (omit undefined fields). */
+  /** Build the API line payload for one selected item (omit undefined fields). Price is manual, so
+   *  name + unitPrice are sent for EVERY line. */
   function toLinePayload(s: SelItem) {
-    const line: Record<string, unknown> = { sku: s.sku, quantity: s.quantity, source: s.source };
-    if (s.source !== "catalogue") {
-      line.name = s.name;
-      line.unitPrice = s.unitPrice;
-    }
+    const line: Record<string, unknown> = {
+      sku: s.sku,
+      quantity: s.quantity,
+      source: s.source,
+      name: s.name,
+      unitPrice: s.unitPrice,
+    };
     if (s.gstRate != null) line.gstRate = s.gstRate;
     if (s.hsn) line.hsn = s.hsn;
     if (s.uqc) line.uqc = s.uqc;
@@ -181,15 +198,15 @@ export function QuotesAdmin() {
     return line;
   }
 
-  /** Client-side validation: which custom/charge lines are incomplete. Returns key -> message. */
+  /** Client-side validation: EVERY line needs a positive unit price (prices are manual); custom/
+   *  charge also need a description; custom needs a quantity. Returns key -> message. */
   const lineErrors = useMemo(() => {
     const errs: Record<string, string> = {};
     for (const s of form.selected) {
-      if (s.source === "catalogue") continue;
       const problems: string[] = [];
-      if (!s.name || s.name.trim() === "") problems.push("description");
+      if (s.source !== "catalogue" && (!s.name || s.name.trim() === "")) problems.push("description");
       if (s.unitPrice == null || !(s.unitPrice > 0)) problems.push("unit price");
-      if (s.source === "custom" && !(s.quantity > 0)) problems.push("quantity");
+      if (s.source !== "charge" && !(s.quantity > 0)) problems.push("quantity");
       if (problems.length > 0) errs[s.key] = `Missing/invalid: ${problems.join(", ")}`;
     }
     return errs;
@@ -367,11 +384,12 @@ export function QuotesAdmin() {
           source,
           sku: p.sku,
           name:
-            source === "catalogue"
-              ? (PRODUCTS.find((x) => x.sku === p.sku)?.name ?? p.sku)
-              : (p.name ?? p.sku),
+            p.name ??
+            (source === "catalogue" ? (PRODUCTS.find((x) => x.sku === p.sku)?.name ?? p.sku) : p.sku),
           quantity: p.quantity,
-          unitPrice: source === "catalogue" ? undefined : p.unitPrice,
+          // Prices are manual: load the stored typed price for every line (0/absent -> staff must
+          // re-enter). A stored 0 shows as blank so it fails the "unit price required" check.
+          unitPrice: p.unitPrice && p.unitPrice > 0 ? p.unitPrice : undefined,
           gstRate: p.gstRate,
           hsn: p.hsn,
           uqc: p.uqc,
@@ -405,11 +423,14 @@ export function QuotesAdmin() {
       occasion: q.occasion,
       products: (q.products ?? []).map((p: QuoteProductRow) => {
         const source: LineSource = p.source ?? "catalogue";
-        const line: Record<string, unknown> = { sku: p.sku, quantity: p.quantity, source };
-        if (source !== "catalogue") {
-          line.name = p.name;
-          line.unitPrice = p.unitPrice;
-        }
+        // Prices are manual: carry the stored typed price + name for EVERY line.
+        const line: Record<string, unknown> = {
+          sku: p.sku,
+          quantity: p.quantity,
+          source,
+          name: p.name,
+          unitPrice: p.unitPrice,
+        };
         if (p.gstRate != null) line.gstRate = p.gstRate;
         if (p.hsn) line.hsn = p.hsn;
         if (p.uqc) line.uqc = p.uqc;
@@ -530,19 +551,37 @@ export function QuotesAdmin() {
           <ul className="mt-3 space-y-2">
             {form.selected.map((s) => (
               <li key={s.key} className="rounded-lg border border-[#EDE9E3] px-3 py-2 text-sm">
-                <div className="flex items-center gap-2">
-                  <span className="flex-1">
+                <div className="flex flex-wrap items-center gap-2">
+                  <span className="min-w-[160px] flex-1">
                     <SourceBadge source={s.source} />
                     {s.name} <span className="text-[#999]">({s.sku || "-"})</span>
-                    {s.source !== "catalogue" ? (
-                      <span className="text-[#999]"> · Rs {Math.round(s.unitPrice ?? 0).toLocaleString("en-IN")}{s.source === "custom" ? "/unit" : ""}</span>
-                    ) : null}
-                    {s.gstRate != null ? <span className="text-[#bbb]"> · GST {s.gstRate}%</span> : null}
                   </span>
+                  {/* Manual unit price (required on every line). */}
+                  <label className="flex items-center gap-1 text-xs text-[#999]">
+                    Rs
+                    <input
+                      type="number"
+                      min={0}
+                      placeholder="price *"
+                      value={s.unitPrice ?? ""}
+                      onChange={(e) => setUnitPrice(s.key, e.target.value === "" ? undefined : Number(e.target.value))}
+                      className="h-8 w-24 rounded border border-[#EDE9E3] px-2 text-sm text-navy"
+                    />
+                  </label>
+                  {/* Per-line GST% (default 18). */}
+                  <select
+                    value={s.gstRate ?? ""}
+                    onChange={(e) => setGstRate(s.key, e.target.value === "" ? undefined : Number(e.target.value))}
+                    className="h-8 w-20 rounded border border-[#EDE9E3] px-1 text-xs"
+                    title="GST %"
+                  >
+                    <option value="">GST</option>
+                    {GST_RATE_OPTIONS.map((r) => <option key={r} value={r}>{r}%</option>)}
+                  </select>
                   {s.source !== "charge" ? (
-                    <input type="number" min={1} value={s.quantity} onChange={(e) => setQty(s.key, Math.max(1, Number(e.target.value) || 1))} className="h-8 w-20 rounded border border-[#EDE9E3] px-2 text-sm" />
+                    <input type="number" min={1} value={s.quantity} onChange={(e) => setQty(s.key, Math.max(1, Number(e.target.value) || 1))} className="h-8 w-16 rounded border border-[#EDE9E3] px-2 text-sm" title="Qty" />
                   ) : (
-                    <span className="w-20 text-center text-xs text-[#999]">qty 1</span>
+                    <span className="w-16 text-center text-xs text-[#999]">qty 1</span>
                   )}
                   <button type="button" onClick={() => removeLine(s.key)} className="text-destructive">✕</button>
                 </div>

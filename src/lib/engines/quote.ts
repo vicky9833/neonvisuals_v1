@@ -250,10 +250,12 @@ function buildInsertPayload(input: QuoteInput, pricing: PricingResult) {
       quantity: li.quantity,
       unitPrice: li.unitPrice,
       lineTotal: li.lineTotal,
+      // Name is stored for EVERY line now (prices are manual; there is no DB to re-derive a
+      // catalogue name/price from on reload or duplicate).
+      name: li.productName,
     };
     if (li.source !== "catalogue") {
       line.source = li.source;
-      line.name = li.productName;
     }
     if (li.hsn != null) line.hsn = li.hsn;
     if (li.gstRate != null) line.gstRate = li.gstRate;
@@ -389,13 +391,10 @@ function quoteToInput(quote: Quote): QuoteInput {
     occasion: quote.occasion,
     products: quote.products.map((p) => {
       const src: QuoteLineSource = p.source ?? "catalogue";
-      const line: PricingProductInput = { sku: p.sku, quantity: p.quantity, source: src };
-      // Custom/charge lines carry their own price + name (no catalogue lookup); catalogue lines are
-      // re-priced from the DB on duplicate/update, so we do NOT freeze their unitPrice here.
-      if (src !== "catalogue") {
-        line.name = p.name;
-        line.unitPrice = p.unitPrice;
-      }
+      // Prices are manual: the stored typed unitPrice is authoritative for EVERY line (there is no
+      // DB re-derivation). A stored 0/absent price will fail loud on re-price, as intended.
+      const line: PricingProductInput = { sku: p.sku, quantity: p.quantity, source: src, unitPrice: p.unitPrice };
+      if (p.name != null) line.name = p.name;
       if (p.hsn != null) line.hsn = p.hsn;
       if (p.gstRate != null) line.gstRate = p.gstRate;
       if (p.uqc != null) line.uqc = p.uqc;
