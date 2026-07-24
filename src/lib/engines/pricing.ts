@@ -1,10 +1,11 @@
 /**
  * Pricing Engine - INTERNAL USE ONLY.
- * Never import from public routes or client components. Reads prices ONLY from
- * the Supabase database (service role), never from products.ts.
+ *
+ * Phase 5B: PRICES ARE ALWAYS MANUAL. Every line carries a typed unitPrice (rupees). The engine
+ * NEVER reads a price from the database (the catalogue has no prices by design) and NEVER produces
+ * a 0 unit price silently — a line without a positive unitPrice is rejected (fail loud). The SKU on
+ * a catalogue line is a label, not a price key.
  */
-import { createAdminClient } from "@/lib/supabase/admin";
-
 export type PackagingTierId = "essential" | "standard" | "premium" | "flagship";
 export type PersonalisationLevelId = "name_only" | "name_occasion" | "full_personal";
 
@@ -106,47 +107,6 @@ export const PERSONALISATION_PREMIUM: Record<PersonalisationLevelId, number> = {
 
 export const RESUME_INTELLIGENCE_PER_PERSON = 300;
 
-interface ProductPricing {
-  name: string;
-  cogs: number;
-  price_single: number;
-  price_bulk_25: number;
-  price_bulk_100: number;
-  margin_percent: number;
-}
-
-/** Fetches only the price columns for the given SKUs from the database. */
-export async function getProductPricing(
-  skus: string[],
-): Promise<Record<string, ProductPricing>> {
-  if (skus.length === 0) return {};
-  const supa = createAdminClient();
-  const { data, error } = await supa
-    .from("products")
-    .select("sku, name, cogs, price_single, price_bulk_25, price_bulk_100, margin_percent")
-    .in("sku", skus);
-  if (error) throw new Error(`Pricing fetch failed: ${error.message}`);
-  const map: Record<string, ProductPricing> = {};
-  for (const row of data ?? []) {
-    map[row.sku as string] = {
-      name: (row.name as string) ?? row.sku,
-      cogs: Number(row.cogs ?? 0),
-      price_single: Number(row.price_single ?? 0),
-      price_bulk_25: Number(row.price_bulk_25 ?? 0),
-      price_bulk_100: Number(row.price_bulk_100 ?? 0),
-      margin_percent: Number(row.margin_percent ?? 0),
-    };
-  }
-  return map;
-}
-
-/** Selects the unit price for a given order quantity tier. */
-function unitPriceForQuantity(p: ProductPricing, quantity: number): number {
-  if (quantity >= 100) return p.price_bulk_100;
-  if (quantity >= 25) return p.price_bulk_25;
-  return p.price_single;
-}
-
 function rushPercent(rushOrder: boolean, rushDays?: number): number {
   if (!rushOrder) return 0;
   if (rushDays === undefined || rushDays === null) return 20;
@@ -157,69 +117,36 @@ function rushPercent(rushOrder: boolean, rushDays?: number): number {
 }
 
 /**
- * Builds a single priced line. Custom/charge lines use their OWN unitPrice (no DB lookup); a
- * catalogue line MUST resolve in the DB price map (else throws), and an explicit unitPrice on a
- * catalogue line is a recorded staff override of the DB price.
+ * Builds a single priced line. PRICE IS ALWAYS MANUAL: every line (catalogue, custom or charge)
+ * must carry a positive typed unitPrice or it is REJECTED (fail loud) — there is no DB lookup and
+ * no silent 0. For a catalogue line the SKU is a label only: a typed price is honoured even if the
+ * SKU does not resolve in the catalogue.
+ *
+ * NOTE: PricingError code "unknown_sku" is retained for callers/back-compat, but with manual
+ * pricing it is superseded by the "missing_line_price" rejection (a priced line is always accepted;
+ * an unpriced line fails on price before any SKU concern).
  */
-function buildLineItem(
-  item: PricingProductInput,
-  pricingMap: Record<string, ProductPricing>,
-): PricingLineItem {
+function buildLineItem(item: PricingProductInput): PricingLineItem {
   const source: QuoteLineSource = item.source ?? "catalogue";
+  const quantity = source === "charge" ? 1 : Math.max(1, item.quantity || 1);
 
-  if (source === "custom" || source === "charge") {
-    if (item.unitPrice == null || !Number.isFinite(item.unitPrice) || item.unitPrice <= 0) {
-      throw new PricingError(
-        "missing_line_price",
-        `${source} line "${item.name ?? item.sku}" requires a positive unitPrice.`,
-      );
-    }
-    // A charge (freight/packing/design) is a single non-product fee; quantity is forced to 1.
-    const quantity = source === "charge" ? 1 : Math.max(1, item.quantity || 1);
-    return {
-      sku: item.sku,
-      source,
-      productName: item.name ?? item.sku,
-      unitPrice: item.unitPrice,
-      quantity,
-      lineTotal: item.unitPrice * quantity,
-      cogs: 0,
-      marginPercent: 0,
-      priceOverridden: false,
-      gstRate: item.gstRate,
-      hsn: item.hsn,
-      uqc: item.uqc,
-      notes: item.notes,
-    };
-  }
-
-  // Catalogue line: the SKU MUST resolve — fail loud, never price at 0.
-  const p = pricingMap[item.sku];
-  const quantity = Math.max(1, item.quantity || 1);
-  if (!p) {
+  if (item.unitPrice == null || !Number.isFinite(item.unitPrice) || item.unitPrice <= 0) {
     throw new PricingError(
-      "unknown_sku",
-      `Unknown product SKU "${item.sku}": not found in the catalogue price list. Use a custom line for off-catalogue items.`,
+      "missing_line_price",
+      `Line "${item.name ?? item.sku}" (${source}) requires a typed unit price greater than 0.`,
     );
   }
-  const overridden = item.unitPrice != null;
-  if (overridden && (!Number.isFinite(item.unitPrice as number) || (item.unitPrice as number) <= 0)) {
-    throw new PricingError(
-      "invalid_override_price",
-      `Override price for SKU "${item.sku}" must be a positive number.`,
-    );
-  }
-  const unitPrice = overridden ? (item.unitPrice as number) : unitPriceForQuantity(p, quantity);
+
   return {
     sku: item.sku,
-    source: "catalogue",
-    productName: p.name,
-    unitPrice,
+    source,
+    productName: item.name ?? item.sku,
+    unitPrice: item.unitPrice,
     quantity,
-    lineTotal: unitPrice * quantity,
-    cogs: p.cogs,
-    marginPercent: p.margin_percent,
-    priceOverridden: overridden,
+    lineTotal: item.unitPrice * quantity,
+    cogs: 0,
+    marginPercent: 0,
+    priceOverridden: false,
     gstRate: item.gstRate,
     hsn: item.hsn,
     uqc: item.uqc,
@@ -227,16 +154,10 @@ function buildLineItem(
   };
 }
 
-/** Calculates the full pricing result (server-side; fetches DB prices for catalogue lines only). */
+/** Calculates the full pricing result. Prices are manual (no DB access); pure + synchronous work. */
 export async function calculatePricing(input: PricingInput): Promise<PricingResult> {
   const kitCount = Math.max(1, input.kitCount || 1);
-  // Only catalogue lines are looked up in the DB; custom/charge lines carry their own price.
-  const catalogueSkus = input.products
-    .filter((p) => (p.source ?? "catalogue") === "catalogue")
-    .map((p) => p.sku);
-  const pricingMap = await getProductPricing(catalogueSkus);
-
-  const lineItems: PricingLineItem[] = input.products.map((item) => buildLineItem(item, pricingMap));
+  const lineItems: PricingLineItem[] = input.products.map((item) => buildLineItem(item));
 
   const subtotal = lineItems.reduce((s, li) => s + li.lineTotal, 0);
   const totalCogs = lineItems.reduce((s, li) => s + li.cogs * li.quantity, 0);

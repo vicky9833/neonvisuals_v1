@@ -17,13 +17,47 @@ import { QuoteValidationError } from "@/lib/engines/quote";
 
 export const runtime = "nodejs";
 
-const productSchema = z.object({
-  sku: z.string().min(1),
-  quantity: z.number().int().positive(),
-  personalisationType: z.string().optional(),
-  engravingTextTemplate: z.string().optional(),
-  notes: z.string().optional(),
-});
+// Phase 5B: catalogue | custom | charge lines. A typed unit price is REQUIRED on EVERY line
+// (prices are manual). REJECTS: custom/charge without name; bad gstRate; hsn not 4-8 digits;
+// non-positive quantity/unitPrice.
+const gstRateSchema = z
+  .number()
+  .refine((v) => [0, 0.25, 3, 5, 12, 18, 28].includes(v), {
+    message: "gstRate must be one of 0, 0.25, 3, 5, 12, 18, 28",
+  });
+
+const productSchema = z
+  .object({
+    sku: z.string().optional(),
+    source: z.enum(["catalogue", "custom", "charge"]).optional(),
+    name: z.string().optional(),
+    unitPrice: z.number().positive("unitPrice must be a number greater than 0"),
+    quantity: z.number().int().positive("quantity must be a positive integer").optional(),
+    gstRate: gstRateSchema.optional(),
+    hsn: z.string().regex(/^\d{4,8}$/, "hsn must be 4-8 digits").optional(),
+    uqc: z.enum(["PCS", "BOX", "SET", "KGS", "NOS", "PKT", "DOZ"]).optional(),
+    personalisationType: z.string().optional(),
+    engravingTextTemplate: z.string().optional(),
+    notes: z.string().optional(),
+  })
+  .superRefine((line, ctx) => {
+    const source = line.source ?? "catalogue";
+    if (source === "catalogue") {
+      if (!line.sku || line.sku.trim() === "") {
+        ctx.addIssue({ code: "custom", path: ["sku"], message: "catalogue line requires a sku" });
+      }
+      if (line.quantity == null) {
+        ctx.addIssue({ code: "custom", path: ["quantity"], message: "catalogue line requires a positive quantity" });
+      }
+    } else {
+      if (!line.name || line.name.trim() === "") {
+        ctx.addIssue({ code: "custom", path: ["name"], message: `${source} line requires a name` });
+      }
+      if (source === "custom" && line.quantity == null) {
+        ctx.addIssue({ code: "custom", path: ["quantity"], message: "custom line requires a positive quantity" });
+      }
+    }
+  });
 
 const createSchema = z.object({
   companyId: z.string().uuid(),
@@ -67,7 +101,25 @@ export async function POST(request: Request) {
         { status: 400 },
       );
     }
-    const order = await createOrder(parsed.data, profile.id);
+    const order = await createOrder(
+      {
+        ...parsed.data,
+        products: parsed.data.products.map((l) => ({
+          sku: l.sku ?? "",
+          quantity: l.quantity ?? 1,
+          source: l.source,
+          name: l.name,
+          unitPrice: l.unitPrice,
+          gstRate: l.gstRate,
+          hsn: l.hsn,
+          uqc: l.uqc,
+          personalisationType: l.personalisationType,
+          engravingTextTemplate: l.engravingTextTemplate,
+          notes: l.notes,
+        })),
+      },
+      profile.id,
+    );
     return NextResponse.json({ data: order }, { status: 201 });
   } catch (err) {
     const authResponse = apiAuthErrorResponse(err);
