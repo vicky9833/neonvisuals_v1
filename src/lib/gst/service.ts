@@ -209,10 +209,11 @@ export function computeGst(params: ComputeGstParams): GstComputation {
   const totalTaxPaise = totalCgstPaise + totalSgstPaise + totalIgstPaise;
   const grandTotalBeforeRoundingPaise = totalTaxableValuePaise + totalTaxPaise;
 
-  // Round to the nearest rupee. A tie at exactly 50 paise resolves DOWN so roundOffPaise stays in
-  // [-50, +49] (see completion report note: the spec text says "half-up" but the required range
-  // [-50, 49] is only satisfiable with ties-down on this final step; per-line GST above is half-up).
-  const rupees = -Math.round(-grandTotalBeforeRoundingPaise / 100); // half-down on ties
+  // Round the grand total to the nearest rupee per Section 170 of the CGST Act, 2017: any fraction
+  // of a rupee is rounded to the nearest rupee, and a tie (exactly 50 paise) is rounded UP. Since
+  // grandTotalBeforeRoundingPaise is always non-negative, Math.round gives exactly this behaviour
+  // (nearest integer, ties toward +Infinity). Resulting invariant: roundOffPaise ∈ [-49, +50].
+  const rupees = Math.round(grandTotalBeforeRoundingPaise / 100); // half-up, ties up
   const grandTotalPaise = rupees * 100;
   const roundOffPaise = grandTotalPaise - grandTotalBeforeRoundingPaise;
 

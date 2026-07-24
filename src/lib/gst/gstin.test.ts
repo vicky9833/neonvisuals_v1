@@ -34,14 +34,34 @@ describe("GSTIN checksum + parsing", () => {
     expect(validateGstin("27bzspv5411q1za").ok).toBe(true);
   });
 
-  it("rejects EVERY single-character mutation", () => {
+  it("rejects EVERY single-character mutation, split into checksum vs format buckets", () => {
+    // Every one of the 15 * 35 = 525 single-character mutations of a valid GSTIN must be rejected.
+    // We separate them by WHY they are invalid, determined at runtime:
+    //   - shape-preserving mutation (still matches the structural regex) → must fail the CHECKSUM.
+    //   - shape-breaking mutation (breaks the regex, e.g. a letter where a digit belongs) → must
+    //     fail the FORMAT check.
+    let checksumBucket = 0;
+    let formatBucket = 0;
     for (let pos = 0; pos < VALID.length; pos += 1) {
       for (const ch of ALPHABET) {
         if (ch === VALID[pos]) continue;
         const mutated = VALID.slice(0, pos) + ch + VALID.slice(pos + 1);
+        if (isValidGstinFormat(mutated)) {
+          // Structure intact → the ONLY thing that can reject it is the checksum.
+          expect(isValidGstinChecksum(mutated), `${mutated} must fail checksum`).toBe(false);
+          checksumBucket += 1;
+        } else {
+          // Structure broken → the format gate must reject it.
+          expect(isValidGstinFormat(mutated), `${mutated} must fail format`).toBe(false);
+          formatBucket += 1;
+        }
+        // Either way, the full validator rejects it.
         expect(validateGstin(mutated).ok, `mutation ${mutated} must be invalid`).toBe(false);
       }
     }
+    expect(checksumBucket).toBe(309);
+    expect(formatBucket).toBe(216);
+    expect(checksumBucket + formatBucket).toBe(525);
   });
 
   it("rejects wrong length", () => {

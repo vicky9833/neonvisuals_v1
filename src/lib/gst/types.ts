@@ -62,7 +62,7 @@ export interface GstComputation {
   totalIgstPaise: number;
   totalTaxPaise: number;
   grandTotalBeforeRoundingPaise: number;
-  /** Signed, range [-50, +49]. */
+  /** Signed, range [-49, +50] (Section 170 CGST Act 2017: ties round up). */
   roundOffPaise: number;
   /** Multiple of 100. */
   grandTotalPaise: number;

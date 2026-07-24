@@ -154,17 +154,168 @@ describe("property [#5] taxable values reconcile", () => {
 });
 
 describe("property [#6] round-off invariants", () => {
-  it("grandTotalPaise is a multiple of 100 and roundOffPaise ∈ [-50, 49]", () => {
+  it("grandTotalPaise is a multiple of 100 and roundOffPaise ∈ [-49, +50] (S.170 half-up)", () => {
     fc.assert(
       fc.property(fc.array(lineArb, { minLength: 1, maxLength: 8 }), fc.constantFrom(...VALID_CODES), (lines, pos) => {
         const c = computeGst({ placeOfSupplyStateCode: pos, lines });
         expect(c.grandTotalPaise % 100).toBe(0);
-        expect(c.roundOffPaise).toBeGreaterThanOrEqual(-50);
-        expect(c.roundOffPaise).toBeLessThanOrEqual(49);
+        expect(c.roundOffPaise).toBeGreaterThanOrEqual(-49);
+        expect(c.roundOffPaise).toBeLessThanOrEqual(50);
         expect(c.grandTotalPaise).toBe(c.grandTotalBeforeRoundingPaise + c.roundOffPaise);
       }),
       { numRuns: 500 },
     );
+  });
+
+  it("[S.170] a total ending in exactly 50 paise rounds UP (roundOff +50)", () => {
+    // 0% GST so grand total == taxable == unitPrice; 199950 paise ends in 50 → rounds up to 200000.
+    const c = computeGst({
+      placeOfSupplyStateCode: "27",
+      lines: [line({ gstRatePercent: 0, unitPricePaise: 199950, quantity: 1 })],
+    });
+    expect(c.grandTotalBeforeRoundingPaise).toBe(199950);
+    expect(c.roundOffPaise).toBe(50);
+    expect(c.grandTotalPaise).toBe(200000);
+  });
+
+  it("[S.170] a total ending in 49 paise rounds DOWN (roundOff -49)", () => {
+    const c = computeGst({
+      placeOfSupplyStateCode: "27",
+      lines: [line({ gstRatePercent: 0, unitPricePaise: 199949, quantity: 1 })],
+    });
+    expect(c.grandTotalBeforeRoundingPaise).toBe(199949);
+    expect(c.roundOffPaise).toBe(-49);
+    expect(c.grandTotalPaise).toBe(199900);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// totalTax = sum of independently-rounded heads (CORRECTION 2)
+// ---------------------------------------------------------------------------
+
+describe("totalTax is the sum of independently-rounded CGST/SGST/IGST heads", () => {
+  it("taxable=5 paise @18%: INTRA heads each round to 0 → totalTax 0", () => {
+    // taxable = quantity(1) * unitPrice(5) = 5 paise. CGST = roundHalfUp(5*9/100)=roundHalfUp(0.45)=0,
+    // SGST = 0, so totalTax = 0 — each head rounded on its own, not from a combined 0.90.
+    const c = computeGst({
+      placeOfSupplyStateCode: "27",
+      lines: [line({ gstRatePercent: 18, unitPricePaise: 5, quantity: 1 })],
+    });
+    expect(c.lines[0].taxableValuePaise).toBe(5);
+    expect(c.lines[0].cgstPaise).toBe(0);
+    expect(c.lines[0].sgstPaise).toBe(0);
+    expect(c.lines[0].totalTaxPaise).toBe(0);
+    expect(c.totalTaxPaise).toBe(0);
+  });
+
+  it("taxable=5 paise @18%: INTER igst rounds 0.90 → 1 → totalTax 1 (diverges from intra)", () => {
+    // The SAME taxable value produces a DIFFERENT total tax inter-state, because IGST rounds the full
+    // 0.90 to 1, whereas the two intra heads each round 0.45 down to 0. This divergence is correct.
+    const c = computeGst({
+      placeOfSupplyStateCode: "29",
+      lines: [line({ gstRatePercent: 18, unitPricePaise: 5, quantity: 1 })],
+    });
+    expect(c.lines[0].taxableValuePaise).toBe(5);
+    expect(c.lines[0].igstPaise).toBe(1);
+    expect(c.lines[0].totalTaxPaise).toBe(1);
+    expect(c.totalTaxPaise).toBe(1);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Additional coverage (CORRECTION 4)
+// ---------------------------------------------------------------------------
+
+describe("additional coverage", () => {
+  it("(a) 0% line: all heads 0 but taxable is still carried into totals + summaries", () => {
+    const c = computeGst({
+      placeOfSupplyStateCode: "27",
+      lines: [line({ gstRatePercent: 0, unitPricePaise: 100000, quantity: 1, hsnOrSac: "4901" })],
+    });
+    expect(c.totalCgstPaise).toBe(0);
+    expect(c.totalSgstPaise).toBe(0);
+    expect(c.totalIgstPaise).toBe(0);
+    expect(c.totalTaxableValuePaise).toBe(100000);
+    expect(c.rateSummary.find((r) => r.gstRatePercent === 0)!.taxableValuePaise).toBe(100000);
+    expect(c.hsnSummary.find((h) => h.hsnOrSac === "4901")!.taxableValuePaise).toBe(100000);
+  });
+
+  it("(b) 0.25% and 3% rates with fractional-paise amounts reconcile", () => {
+    const c = computeGst({
+      placeOfSupplyStateCode: "29", // inter → IGST
+      lines: [
+        line({ lineId: "Q", gstRatePercent: 0.25, unitPricePaise: 333333, quantity: 1, hsnOrSac: "7113" }),
+        line({ lineId: "D", gstRatePercent: 3, unitPricePaise: 777777, quantity: 1, hsnOrSac: "7108" }),
+      ],
+    });
+    const sumTax = c.lines.reduce((s, l) => s + l.totalTaxPaise, 0);
+    const sumTaxable = c.lines.reduce((s, l) => s + l.taxableValuePaise, 0);
+    expect(sumTax).toBe(c.totalTaxPaise);
+    expect(sumTaxable).toBe(c.totalTaxableValuePaise);
+    expect(c.grandTotalBeforeRoundingPaise).toBe(sumTaxable + sumTax);
+    // Spot-check the independent rounding.
+    expect(c.lines[0].igstPaise).toBe(Math.floor((333333 * 0.25) / 100 + 0.5));
+    expect(c.lines[1].igstPaise).toBe(Math.floor((777777 * 3) / 100 + 0.5));
+  });
+
+  it("(c) discount == line value (taxable 0) allowed; discount > line value rejected", () => {
+    const ok = computeGst({
+      placeOfSupplyStateCode: "27",
+      lines: [line({ unitPricePaise: 100, quantity: 1, discountPaise: 100, gstRatePercent: 18 })],
+    });
+    expect(ok.lines[0].taxableValuePaise).toBe(0);
+    expect(ok.lines[0].totalTaxPaise).toBe(0);
+    expect(() =>
+      computeGst({
+        placeOfSupplyStateCode: "27",
+        lines: [line({ unitPricePaise: 100, quantity: 1, discountPaise: 101 })],
+      }),
+    ).toThrow(GstValidationError);
+  });
+
+  it("(d) hsnSummary: 3 lines, 2 sharing HSN+rate → 2 rows; taxable sums to total", () => {
+    const c = computeGst({
+      placeOfSupplyStateCode: "29",
+      lines: [
+        line({ lineId: "A", hsnOrSac: "9503", gstRatePercent: 18, unitPricePaise: 100000 }),
+        line({ lineId: "B", hsnOrSac: "9503", gstRatePercent: 18, unitPricePaise: 250000 }),
+        line({ lineId: "C", hsnOrSac: "4820", gstRatePercent: 12, unitPricePaise: 50000 }),
+      ],
+    });
+    expect(c.hsnSummary).toHaveLength(2);
+    const merged = c.hsnSummary.find((h) => h.hsnOrSac === "9503" && h.gstRatePercent === 18)!;
+    expect(merged.taxableValuePaise).toBe(350000);
+    const sumRows = c.hsnSummary.reduce((s, h) => s + h.taxableValuePaise, 0);
+    expect(sumRows).toBe(c.totalTaxableValuePaise);
+  });
+
+  it("(e) rateSummary across multiple slabs reconciles taxable + tax to totals", () => {
+    const c = computeGst({
+      placeOfSupplyStateCode: "29",
+      lines: [
+        line({ lineId: "A", gstRatePercent: 5, unitPricePaise: 100000 }),
+        line({ lineId: "B", gstRatePercent: 12, unitPricePaise: 100000 }),
+        line({ lineId: "C", gstRatePercent: 18, unitPricePaise: 100000 }),
+        line({ lineId: "D", gstRatePercent: 5, unitPricePaise: 40000 }),
+      ],
+    });
+    const sumTaxable = c.rateSummary.reduce((s, r) => s + r.taxableValuePaise, 0);
+    const sumTax = c.rateSummary.reduce((s, r) => s + r.totalTaxPaise, 0);
+    expect(sumTaxable).toBe(c.totalTaxableValuePaise);
+    expect(sumTax).toBe(c.totalTaxPaise);
+    expect(c.rateSummary.find((r) => r.gstRatePercent === 5)!.taxableValuePaise).toBe(140000);
+  });
+
+  it("(f) 500 lines near ₹1 crore: sum of line totals === computed total exactly (no precision loss)", () => {
+    const lines: GstLineInput[] = [];
+    for (let i = 0; i < 500; i += 1) {
+      lines.push(line({ lineId: `L${i}`, unitPricePaise: 199999, quantity: 1, gstRatePercent: 18 }));
+    }
+    const c = computeGst({ placeOfSupplyStateCode: "29", lines });
+    const sumLineTotals = c.lines.reduce((s, l) => s + l.lineTotalPaise, 0);
+    expect(sumLineTotals).toBe(c.grandTotalBeforeRoundingPaise);
+    // 500 * 199999 taxable ≈ ₹10 lakh taxable + tax → still well within Number.MAX_SAFE_INTEGER.
+    expect(Number.isSafeInteger(c.grandTotalBeforeRoundingPaise)).toBe(true);
   });
 });
 
