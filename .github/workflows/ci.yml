@@ -1,0 +1,61 @@
+name: CI
+
+# Gate for a module that computes tax: type-check, a homoglyph guard, and the
+# known-green deterministic test suites must all pass before code reaches main.
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main]
+
+# Cancel a superseded run when new commits are pushed to the same ref.
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  ci:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      # Node 20 LTS: the repo has no .nvmrc and no package.json "engines" field;
+      # @types/node is ^20, and Node 20 satisfies Next 16 (>= 20.9) and Vitest 4
+      # (>= 20.19). Bump this in lockstep if an engines field is added later.
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Type-check
+        run: npx tsc --noEmit
+
+      # Homoglyph guard: fail if a confusable letter (Cyrillic/Greek/fullwidth/...
+      # look-alike) appears in CODE anywhere under src/. Repo-wide generalisation
+      # of the Phase 2b defence (src/lib/gst/no-homoglyph.test.ts). Legitimate
+      # display typography (arrows, dashes, the rupee sign, emoji) is NOT flagged.
+      - name: Homoglyph guard (confusable letters in code)
+        run: node .github/scripts/check-homoglyphs.mjs src
+
+      # Tests: run ONLY the known-green, deterministic suites for now (185 tests:
+      # src/lib/gst + src/lib/engines). A red CI is a useless CI.
+      #
+      # TODO(Phase 3a triage): the following pre-existing suites are EXCLUDED from
+      # CI pending triage. They are excluded because they are currently
+      # flaky/environment-dependent, NOT because they are unimportant. Each must be
+      # restored to CI once fixed:
+      #   - scripts/product-copy.test.ts
+      #       seed-dependent fast-check; needs deterministic seed/fixtures.
+      #   - src/components/products/product-gallery.test.tsx
+      #       jsdom/browser-env test; needs the jsdom environment wired in CI.
+      #   - src/lib/authz/tenancy.test.ts
+      #       MULTI-TENANT ISOLATION suite (DB-integration, needs Supabase
+      #       credentials). This one is security-critical and MUST be restored to
+      #       CI once test credentials/a test database are available.
+      - name: Test (known-green suites)
+        run: npx vitest run src/lib/gst src/lib/engines
