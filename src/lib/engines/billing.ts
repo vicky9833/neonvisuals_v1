@@ -21,16 +21,21 @@ import {
   createPaymentLink as rzpCreatePaymentLink,
   isRazorpayConfigured,
 } from "@/lib/services/razorpay";
-import { sendPaymentConfirmationEmail } from "@/lib/services/email";
+import { sendPaymentConfirmationEmail, sendNotificationEmail } from "@/lib/services/email";
+import {
+  getDefaultRegistration,
+  formatRegisteredAddress,
+  determineSupplyType,
+  validateGstin,
+  stateCodeFromGstin,
+  type StateCode,
+  type SupplyType,
+} from "@/lib/gst";
+import { cityToStateCode } from "@/lib/gst/city-state";
 
 export const SAC_CODE = "998396";
 export const DEFAULT_GST_RATE = 18;
 
-/**
- * Neon Visuals' registered seller GSTIN (Maharashtra, state code 27) — sole proprietorship of
- * Vikas Vishwakarma, Mumbai. Used on GST tax invoices.
- */
-export const SELLER_GSTIN = "27BZSPV5411Q1ZA";
 /** Neon Visuals Pro subscription price (₹, GST-INCLUSIVE — the all-in amount the customer pays). */
 export const PRO_SUBSCRIPTION_PRICE_RUPEES = 1999;
 
@@ -212,25 +217,171 @@ export function calculateGSTInclusive(
   return { base, cgst: 0, sgst: 0, igst: totalGst, totalGst, grandTotal: total };
 }
 
-/** Karnataka GSTIN state code is 29; otherwise infer from city. */
-export function isIntraStateSupply(
+/** How the buyer's place-of-supply state was determined. */
+export type SupplyBasis = "buyer_gstin" | "city_lookup" | "unknown";
+
+/** Full place-of-supply decision (never just a boolean). */
+export interface SupplyDecision {
+  /** INTRA_STATE -> CGST+SGST; INTER_STATE -> IGST. */
+  supplyType: SupplyType;
+  /** Resolved buyer state code, or null when unresolved. */
+  buyerStateCode: StateCode | null;
+  basis: SupplyBasis;
+  confidence: "high" | "low";
+}
+
+/**
+ * Decide the supply type by comparing the SELLER's registered state (from the GST registrations
+ * config -- never a literal) against the BUYER's state, resolved in strict precedence:
+ *
+ *   1. Buyer GSTIN present AND fully valid  -> its state code   (basis buyer_gstin, high)
+ *   2. Else city/state string maps to a code -> that code       (basis city_lookup,  low)
+ *   3. Else UNKNOWN -> INTER_STATE (IGST) fallback              (basis unknown,      low)
+ *
+ * A GSTIN that is present but INVALID falls through to the city lookup; it never derives a state
+ * from an unvalidated prefix. "Fully valid" means validateGstin() passed: all 15 characters
+ * checked -- length, structural regex, state-code, and the mod-36 checksum digit -- not a 2-char
+ * prefix test. This never throws (it runs inside the Razorpay webhook and must never block a
+ * payment); the unresolved case is surfaced by the caller via flagUnresolvedPlaceOfSupply.
+ */
+export function resolveSupplyDecision(
   buyerGstin?: string | null,
   city?: string | null,
-): boolean {
-  if (buyerGstin && buyerGstin.trim().length >= 2) {
-    return buyerGstin.trim().slice(0, 2) === "29";
+): SupplyDecision {
+  const sellerStateCode = getDefaultRegistration().stateCode;
+
+  // 1. Valid buyer GSTIN wins.
+  const gstin = (buyerGstin ?? "").trim();
+  if (gstin !== "" && validateGstin(gstin).ok) {
+    const buyerStateCode = stateCodeFromGstin(gstin);
+    if (buyerStateCode) {
+      return {
+        supplyType: determineSupplyType(sellerStateCode, buyerStateCode),
+        buyerStateCode,
+        basis: "buyer_gstin",
+        confidence: "high",
+      };
+    }
   }
-  const c = (city ?? "").toLowerCase();
-  return (
-    c.includes("bangalore") ||
-    c.includes("bengaluru") ||
-    c.includes("karnataka") ||
-    c.includes("mysore") ||
-    c.includes("mysuru") ||
-    c.includes("mangalore") ||
-    c.includes("hubli") ||
-    c.includes("belgaum")
-  );
+
+  // 2. City / state-name lookup (low confidence). An invalid GSTIN reaches here.
+  const cityStateCode = cityToStateCode(city);
+  if (cityStateCode) {
+    return {
+      supplyType: determineSupplyType(sellerStateCode, cityStateCode),
+      buyerStateCode: cityStateCode,
+      basis: "city_lookup",
+      confidence: "low",
+    };
+  }
+
+  // 3. Unresolved -> IGST fallback, flagged for review by the caller. Never throws.
+  return {
+    supplyType: "INTER_STATE",
+    buyerStateCode: null,
+    basis: "unknown",
+    confidence: "low",
+  };
+}
+
+/**
+ * Best-effort, NON-BLOCKING flag for an invoice whose place of supply is LOW-CONFIDENCE. Two cases:
+ *
+ *   - basis "unknown"     -> place of supply could NOT be resolved; IGST was applied as the fallback.
+ *                            Audited as "invoice.place_of_supply_unresolved" AND an email alert is
+ *                            sent (a wrong tax head is possible; a human must confirm).
+ *   - basis "city_lookup" -> the state was INFERRED from a city string (a guess). Audited as
+ *                            "invoice.place_of_supply_inferred". Audit-only, NO email (otherwise the
+ *                            inbox would flood on every city-based invoice).
+ *
+ * Every step is wrapped so NO throw can escape into the invoice/payment/webhook path.
+ *
+ * Audit routing:
+ *   - Authenticated path (actorUserId present, e.g. an admin creating an order invoice): writeAudit
+ *     on the request-scoped client (its audit_log_insert_self RLS policy requires
+ *     actor_user_id = auth.uid()). writeAudit is imported DYNAMICALLY so this engine stays
+ *     import-safe from client components (see file header).
+ *   - Webhook path (no session, service-role `db` in scope): a DIRECT service_role insert into
+ *     audit_log with actor_user_id NULL (service_role bypasses RLS; migration 018 permits this).
+ */
+export async function flagPlaceOfSupply(params: {
+  db?: SupabaseClient;
+  invoiceId: string;
+  invoiceNumber?: string | null;
+  companyId: string;
+  companyName?: string | null;
+  rawCity?: string | null;
+  buyerStateCode?: string | null;
+  basis: SupplyBasis;
+  actorUserId?: string | null;
+}): Promise<void> {
+  try {
+    const isUnknown = params.basis === "unknown";
+    const action = isUnknown
+      ? "invoice.place_of_supply_unresolved"
+      : "invoice.place_of_supply_inferred";
+    const after = {
+      invoiceId: params.invoiceId,
+      companyId: params.companyId,
+      rawCity: params.rawCity ?? null,
+      ...(isUnknown
+        ? { fallback: "IGST" }
+        : { inferredStateCode: params.buyerStateCode ?? null }),
+    };
+
+    // (a) audit_log entry.
+    try {
+      if (params.actorUserId) {
+        // Authenticated path: request-scoped writeAudit (RLS: actor_user_id = auth.uid()).
+        const { writeAudit } = await import("@/lib/authz/audit");
+        await writeAudit(params.actorUserId, "system", {
+          action,
+          companyId: params.companyId,
+          entity: "invoice",
+          entityId: params.invoiceId,
+          after,
+        });
+      } else if (params.db) {
+        // Webhook path: direct service-role insert (bypasses RLS; ruling per Phase 4Ha Task B).
+        await params.db.from("audit_log").insert({
+          actor_user_id: null,
+          actor_type: "system",
+          company_id: params.companyId,
+          action,
+          entity: "invoice",
+          entity_id: params.invoiceId,
+          after,
+        });
+      }
+    } catch {
+      /* non-blocking: audit failure must never fail the invoice */
+    }
+
+    // (b) internal alert email -- ONLY for the unresolved (unknown) case.
+    if (isUnknown) {
+      try {
+        const label = params.invoiceNumber ?? params.invoiceId;
+        await sendNotificationEmail({
+          to: "contact@neonvisuals.in",
+          subject: `Invoice needs place-of-supply review: ${label}`,
+          html:
+            `<p>An invoice was issued with an <strong>unresolved place of supply</strong>. ` +
+            `IGST was applied as the fallback and should be verified.</p>` +
+            `<ul>` +
+            `<li>Invoice: ${label}</li>` +
+            `<li>Company: ${params.companyName ?? params.companyId}</li>` +
+            `<li>Unresolved city: ${params.rawCity ?? "(none provided)"}</li>` +
+            `</ul>` +
+            `<p>Please confirm the buyer's state and correct the CGST/SGST vs IGST head if required.</p>`,
+          template: "invoice_place_of_supply_unresolved",
+        });
+      } catch {
+        /* non-blocking: email failure must never fail the invoice */
+      }
+    }
+  } catch {
+    /* belt-and-braces: nothing from this flagging block may escape into the payment path */
+  }
 }
 
 // ---------------------------------------------------------------------------
@@ -298,6 +449,7 @@ export function numberToWords(amount: number): string {
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
 function mapInvoice(row: any): Invoice {
+  const reg = getDefaultRegistration();
   return {
     id: row.id,
     invoice_number: row.invoice_number ?? null,
@@ -310,10 +462,10 @@ function mapInvoice(row: any): Invoice {
     invoice_date: row.invoice_date,
     due_date: row.due_date,
     paid_date: row.paid_date ?? null,
-    seller_name: row.seller_name ?? "Neon Visuals",
-    seller_address: row.seller_address ?? "Mumbai, Maharashtra, India",
-    seller_gstin: row.seller_gstin ?? null,
-    seller_pan: row.seller_pan ?? null,
+    seller_name: row.seller_name ?? reg.tradeName,
+    seller_address: row.seller_address ?? formatRegisteredAddress(reg),
+    seller_gstin: row.seller_gstin ?? reg.gstin,
+    seller_pan: row.seller_pan ?? reg.pan,
     buyer_name: row.buyer_name,
     buyer_company: row.buyer_company,
     buyer_address: row.buyer_address ?? null,
@@ -430,10 +582,9 @@ export async function createInvoice(
 
   const subtotal = round2(Number(order.grand_total ?? 0));
   const buyerGstin = input.buyerGstin ?? (company?.gstin as string | null) ?? null;
-  const intraState = isIntraStateSupply(
-    buyerGstin,
-    order.delivery_city ?? (company?.city as string | null),
-  );
+  const supplyCity = order.delivery_city ?? (company?.city as string | null);
+  const decision = resolveSupplyDecision(buyerGstin, supplyCity);
+  const intraState = decision.supplyType === "INTRA_STATE";
   const gst = calculateGST(subtotal, intraState);
   const pct = input.paymentPercentage;
   const amountDue = round2((gst.grandTotal * pct) / 100);
@@ -472,7 +623,22 @@ export async function createInvoice(
     .select(INVOICE_SELECT)
     .single();
   if (error) throw new Error(`Create invoice failed: ${error.message}`);
-  return mapInvoice(data);
+  const invoice = mapInvoice(data);
+  // Non-blocking: flag any LOW-confidence place of supply (unknown -> IGST fallback + email;
+  // city_lookup -> inferred, audit-only). Authenticated path: writeAudit via createdBy.
+  if (decision.confidence === "low") {
+    await flagPlaceOfSupply({
+      invoiceId: invoice.id,
+      invoiceNumber: invoice.invoice_number,
+      companyId: order.company_id,
+      companyName: (company?.name as string) ?? order.company_name ?? null,
+      rawCity: supplyCity,
+      buyerStateCode: decision.buyerStateCode,
+      basis: decision.basis,
+      actorUserId: createdBy ?? null,
+    });
+  }
+  return invoice;
 }
 
 export interface InvoiceUpdate {
@@ -818,7 +984,9 @@ export async function createSubscriptionInvoice(
     .maybeSingle();
 
   const buyerGstin = (company?.gstin as string | null) ?? null;
-  const intraState = isIntraStateSupply(buyerGstin, company?.city as string | null);
+  const supplyCity = (company?.city as string | null) ?? null;
+  const decision = resolveSupplyDecision(buyerGstin, supplyCity);
+  const intraState = decision.supplyType === "INTRA_STATE";
   const gst = calculateGSTInclusive(input.amountRupees, intraState);
 
   const today = new Date().toISOString().slice(0, 10);
@@ -837,6 +1005,7 @@ export async function createSubscriptionInvoice(
     },
   ];
 
+  const sellerReg = getDefaultRegistration();
   const payload = {
     company_id: input.companyId,
     order_id: null,
@@ -846,9 +1015,10 @@ export async function createSubscriptionInvoice(
     invoice_date: today,
     due_date: today,
     paid_date: today,
-    seller_name: "Neon Visuals",
-    seller_address: "Mumbai, Maharashtra, India",
-    seller_gstin: SELLER_GSTIN,
+    seller_name: sellerReg.tradeName,
+    seller_address: formatRegisteredAddress(sellerReg),
+    seller_gstin: sellerReg.gstin,
+    seller_pan: sellerReg.pan,
     buyer_name:
       (company?.primary_contact_name as string) ?? (company?.name as string) ?? "Client",
     buyer_company: (company?.name as string) ?? "Client",
@@ -891,7 +1061,25 @@ export async function createSubscriptionInvoice(
     }
     throw new Error(`Create subscription invoice failed: ${error.message}`);
   }
-  return mapInvoice(data);
+  const invoice = mapInvoice(data);
+  // Non-blocking: flag any LOW-confidence place of supply. This runs in the Razorpay webhook
+  // (service-role `db`, no session): the audit is written via a DIRECT service-role insert (Task B),
+  // and an email is sent only for the unknown/IGST-fallback case. Wrapped so it can NEVER fail the
+  // webhook/payment.
+  if (decision.confidence === "low") {
+    await flagPlaceOfSupply({
+      db,
+      invoiceId: invoice.id,
+      invoiceNumber: invoice.invoice_number,
+      companyId: input.companyId,
+      companyName: (company?.name as string) ?? null,
+      rawCity: supplyCity,
+      buyerStateCode: decision.buyerStateCode,
+      basis: decision.basis,
+      actorUserId: null,
+    });
+  }
+  return invoice;
 }
 
 // ---------------------------------------------------------------------------
