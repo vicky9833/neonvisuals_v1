@@ -27,6 +27,11 @@
       "file": "059_order_items_custom_line_fields.sql",
       "describes": "order_items gains source/hsn/gst_rate/uqc columns + order_items_source_check",
       "probe": "SELECT (EXISTS (SELECT 1 FROM information_schema.columns WHERE table_schema='public' AND table_name='order_items' AND column_name='source') AND EXISTS (SELECT 1 FROM information_schema.columns WHERE table_schema='public' AND table_name='order_items' AND column_name='hsn') AND EXISTS (SELECT 1 FROM information_schema.columns WHERE table_schema='public' AND table_name='order_items' AND column_name='gst_rate') AND EXISTS (SELECT 1 FROM information_schema.columns WHERE table_schema='public' AND table_name='order_items' AND column_name='uqc') AND EXISTS (SELECT 1 FROM pg_constraint WHERE conname='order_items_source_check'))"
+    },
+    "060": {
+      "file": "060_pro_price_base_and_invoice_roundoff.sql",
+      "describes": "subscriptions.base_amount (pre-tax base, paise) + invoices.round_off (Section-170 delta, rupees)",
+      "probe": "SELECT (EXISTS (SELECT 1 FROM information_schema.columns WHERE table_schema='public' AND table_name='subscriptions' AND column_name='base_amount') AND EXISTS (SELECT 1 FROM information_schema.columns WHERE table_schema='public' AND table_name='invoices' AND column_name='round_off'))"
     }
   }
 }

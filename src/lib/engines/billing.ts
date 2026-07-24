@@ -28,6 +28,7 @@ import {
   determineSupplyType,
   validateGstin,
   stateCodeFromGstin,
+  roundGrandTotalToRupee,
   type StateCode,
   type SupplyType,
 } from "@/lib/gst";
@@ -110,6 +111,8 @@ export interface Invoice {
   igst_amount: number;
   is_intra_state: boolean;
   total_gst: number;
+  /** Section-170 rounding delta (rupees), shown as its own value on the invoice. Null when absent. */
+  round_off: number | null;
   grand_total: number;
   amount_in_words: string | null;
   amount_due: number;
@@ -480,6 +483,7 @@ function mapInvoice(row: any): Invoice {
     igst_amount: Number(row.igst_amount ?? 0),
     is_intra_state: Boolean(row.is_intra_state),
     total_gst: Number(row.total_gst ?? 0),
+    round_off: row.round_off != null ? Number(row.round_off) : null,
     grand_total: Number(row.grand_total ?? 0),
     amount_in_words: row.amount_in_words ?? null,
     amount_due: Number(row.amount_due ?? 0),
@@ -948,8 +952,18 @@ export async function handleRazorpayWebhook(payload: any): Promise<void> {
 export interface CreateSubscriptionInvoiceInput {
   subscriptionId: string;
   companyId: string;
-  /** All-in price the customer paid, in RUPEES (GST-INCLUSIVE, e.g. 1999). */
+  /**
+   * The all-in amount the customer was actually CHARGED/CAPTURED, in RUPEES (e.g. 2359). The
+   * invoice's grand total MUST equal this.
+   */
   amountRupees: number;
+  /**
+   * The PRE-TAX base amount, in RUPEES (e.g. 1999), snapshot from subscriptions.base_amount. When
+   * present, GST is applied ADDITIVELY on this base (Route B) and the Section-170 round-off is
+   * surfaced. When null (legacy rows) the charged amount is treated as GST-INCLUSIVE, exactly as
+   * before Phase 6.
+   */
+  baseAmountRupees?: number | null;
   razorpayPaymentId?: string | null;
   razorpayOrderId?: string | null;
   periodStart?: string | null;
@@ -957,13 +971,91 @@ export interface CreateSubscriptionInvoiceInput {
 }
 
 /**
+ * GST breakdown for a subscription invoice. Guarantees taxable + tax + round_off == grand_total,
+ * and grand_total == the amount charged. Three treatments:
+ *  - `additive_from_base`  : base present AND base+GST (Section-170 rounded) == charged. GST is
+ *                            additive on the base; round_off carries the rupee-rounding delta.
+ *  - `inclusive_mismatch`  : base present but charged != base+GST (e.g. a Task-4 amount mismatch).
+ *                            Invoice the CHARGED amount as GST-inclusive so grand_total == charged.
+ *                            Logged loudly.
+ *  - `inclusive_legacy`    : no base snapshot (pre-Phase-6 rows) — charged treated as GST-inclusive.
+ */
+function computeSubscriptionGst(
+  baseRupees: number | null,
+  chargedRupees: number,
+  intraState: boolean,
+): {
+  subtotal: number;
+  cgst: number;
+  sgst: number;
+  igst: number;
+  totalGst: number;
+  roundOff: number;
+  grandTotal: number;
+  treatment: "additive_from_base" | "inclusive_mismatch" | "inclusive_legacy";
+} {
+  if (baseRupees != null) {
+    const base = round2(baseRupees);
+    const add = calculateGST(base, intraState, DEFAULT_GST_RATE); // ADDITIVE (Route B)
+    // Finalise the grand total via Section-170 half-up rounding (paise integers) — the SAME rule
+    // the price-derivation and the gst service use. The delta becomes the visible round_off.
+    const beforeRoundPaise = Math.round((base + add.totalGst) * 100);
+    const { grandTotalPaise, roundOffPaise } = roundGrandTotalToRupee(beforeRoundPaise);
+    const derivedGrand = grandTotalPaise / 100;
+    if (Math.abs(derivedGrand - chargedRupees) < 0.005) {
+      return {
+        subtotal: base,
+        cgst: add.cgst,
+        sgst: add.sgst,
+        igst: add.igst,
+        totalGst: add.totalGst,
+        roundOff: round2(roundOffPaise / 100),
+        grandTotal: derivedGrand, // == chargedRupees
+        treatment: "additive_from_base",
+      };
+    }
+    // Base is set but the captured/charged amount is NOT base + GST (Task-4 mismatch path). Invoice
+    // the amount ACTUALLY CHARGED as GST-inclusive so the legal record matches the real transaction.
+    console.error(
+      "[billing] subscription invoice: charged amount != base + GST; invoicing the CHARGED amount as GST-inclusive",
+      { baseRupees: base, chargedRupees, derivedGrand },
+    );
+    const incM = calculateGSTInclusive(chargedRupees, intraState);
+    return {
+      subtotal: incM.base,
+      cgst: incM.cgst,
+      sgst: incM.sgst,
+      igst: incM.igst,
+      totalGst: incM.totalGst,
+      roundOff: 0,
+      grandTotal: incM.grandTotal, // == chargedRupees
+      treatment: "inclusive_mismatch",
+    };
+  }
+  // Legacy row (no base snapshot): treat the charged amount as GST-inclusive, exactly as before.
+  const inc = calculateGSTInclusive(chargedRupees, intraState);
+  return {
+    subtotal: inc.base,
+    cgst: inc.cgst,
+    sgst: inc.sgst,
+    igst: inc.igst,
+    totalGst: inc.totalGst,
+    roundOff: 0,
+    grandTotal: inc.grandTotal, // == chargedRupees
+    treatment: "inclusive_legacy",
+  };
+}
+
+/**
  * Creates the GST subscription invoice for a verified Pro payment. IDEMPOTENT: at most one invoice
  * per subscription (pre-check + the DB partial-unique `invoices_one_per_subscription`), so a
  * re-delivered 8a activation never produces a duplicate — one payment = one invoice.
  *
- * GST-INCLUSIVE: the ₹1,999 is the all-in amount; the base + CGST/SGST (KA buyer) or IGST
- * (other state) are broken out from within it and reconcile to ₹1,999.00 exactly. Runs on the
- * caller-supplied client (the webhook path passes the service-role admin client).
+ * Phase 6 (Route B): the advertised Rs 1,999 is the PRE-TAX base; GST is added on top and the grand
+ * total is finalised by Section-170 rounding, with the round-off shown as its own value. The
+ * invoice grand total ALWAYS equals the amount actually charged/captured. Legacy rows (no base
+ * snapshot) keep the historical GST-inclusive treatment. Runs on the caller-supplied client (the
+ * webhook path passes the service-role admin client).
  */
 export async function createSubscriptionInvoice(
   db: SupabaseClient,
@@ -987,7 +1079,11 @@ export async function createSubscriptionInvoice(
   const supplyCity = (company?.city as string | null) ?? null;
   const decision = resolveSupplyDecision(buyerGstin, supplyCity);
   const intraState = decision.supplyType === "INTRA_STATE";
-  const gst = calculateGSTInclusive(input.amountRupees, intraState);
+
+  // Route B: additive GST on the pre-tax base with a visible Section-170 round-off; grand total
+  // equals the amount actually charged/captured (input.amountRupees).
+  const charged = round2(input.amountRupees);
+  const gst = computeSubscriptionGst(input.baseAmountRupees ?? null, charged, intraState);
 
   const today = new Date().toISOString().slice(0, 10);
   const periodLabel =
@@ -999,8 +1095,8 @@ export async function createSubscriptionInvoice(
       description: `Neon Visuals Pro Subscription - annual${periodLabel}`,
       hsnSac: SAC_CODE,
       quantity: 1,
-      unitPrice: gst.base,
-      total: gst.base,
+      unitPrice: gst.subtotal,
+      total: gst.subtotal,
       gstRate: DEFAULT_GST_RATE,
     },
   ];
@@ -1027,13 +1123,15 @@ export async function createSubscriptionInvoice(
     buyer_email: (company?.primary_contact_email as string) ?? null,
     buyer_phone: (company?.primary_contact_phone as string) ?? null,
     line_items: lineItems,
-    subtotal: gst.base,
+    subtotal: gst.subtotal,
     gst_rate: DEFAULT_GST_RATE,
     cgst_amount: gst.cgst,
     sgst_amount: gst.sgst,
     igst_amount: gst.igst,
     is_intra_state: intraState,
     total_gst: gst.totalGst,
+    // Render-only when non-zero (ruling 2c): legacy/inclusive invoices store NULL and are unchanged.
+    round_off: gst.roundOff !== 0 ? gst.roundOff : null,
     grand_total: gst.grandTotal,
     amount_in_words: numberToWords(gst.grandTotal),
     amount_due: 0,
@@ -1041,7 +1139,10 @@ export async function createSubscriptionInvoice(
     payment_percentage: 100,
     razorpay_payment_id: input.razorpayPaymentId ?? null,
     razorpay_order_id: input.razorpayOrderId ?? null,
-    notes: "Neon Visuals Pro subscription - GST-inclusive.",
+    notes:
+      gst.treatment === "additive_from_base"
+        ? "Neon Visuals Pro subscription - Rs 1,999 + 18% GST."
+        : "Neon Visuals Pro subscription - GST-inclusive.",
   };
 
   const { data, error } = await db

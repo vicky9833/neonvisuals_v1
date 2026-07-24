@@ -95,7 +95,7 @@ export function UpgradeCard({ isPro, canUpgrade }: { isPro: boolean; canUpgrade:
         amount: handle.amount,
         currency: handle.currency,
         name: "Neon Visuals",
-        description: "Neon Visuals Pro — Annual (₹1,999/yr)",
+        description: "Neon Visuals Pro — Annual (₹1,999/yr + 18% GST)",
         order_id: handle.orderId,
         handler: () => {
           toast.success("Payment received. Activating your Pro plan…");
@@ -120,7 +120,8 @@ export function UpgradeCard({ isPro, canUpgrade }: { isPro: boolean; canUpgrade:
             <Sparkles className="size-4" /> You&apos;re on the Free plan
           </p>
           <h2 className="mt-2 font-heading text-xl font-bold text-navy">
-            Upgrade to Pro — ₹1,999<span className="text-sm font-medium text-[#6B7280]">/yr</span>
+            Upgrade to Pro — ₹1,999
+            <span className="text-sm font-medium text-[#6B7280]">/yr + GST</span>
           </h2>
           <ul className="mt-3 space-y-1.5">
             {PRO_FEATURES.map((f) => (
@@ -131,13 +132,16 @@ export function UpgradeCard({ isPro, canUpgrade }: { isPro: boolean; canUpgrade:
           </ul>
         </div>
         {canUpgrade ? (
-          <Button
-            onClick={upgrade}
-            disabled={busy}
-            className="h-11 rounded-lg bg-navy px-6 text-white hover:bg-navy/90"
-          >
-            {busy ? "Starting…" : "Upgrade to Pro"}
-          </Button>
+          <div className="flex flex-col items-end gap-1">
+            <Button
+              onClick={upgrade}
+              disabled={busy}
+              className="h-11 rounded-lg bg-navy px-6 text-white hover:bg-navy/90"
+            >
+              {busy ? "Starting…" : "Upgrade to Pro"}
+            </Button>
+            <p className="text-xs text-[#6B7280]">₹2,359/yr incl. GST</p>
+          </div>
         ) : (
           <p className="max-w-[220px] text-sm text-[#6B7280]">
             Ask an owner, admin, or finance teammate to upgrade your organisation.

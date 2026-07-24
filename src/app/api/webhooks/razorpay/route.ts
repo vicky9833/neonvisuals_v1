@@ -131,10 +131,16 @@ async function dispatch(
     const razorpayOrderId: string =
       orderEntity?.id ?? paymentEntity?.order_id ?? "";
     const razorpayPaymentId: string | null = paymentEntity?.id ?? null;
+    // Phase 6 Task 4: the amount Razorpay actually CAPTURED, in paise, from the (already
+    // signature-verified) payload. Passed to the engine for amount verification; when absent the
+    // engine invoices the expected amount. Field: payload.payment.entity.amount.
+    const capturedAmountPaise: number | null =
+      typeof paymentEntity?.amount === "number" ? paymentEntity.amount : null;
     if (razorpayOrderId) {
       await activateSubscriptionFromWebhook(admin, {
         razorpayOrderId,
         razorpayPaymentId,
+        capturedAmountPaise,
       });
     }
     return;

@@ -47,7 +47,7 @@ Neon Visuals provides a **corporate gifting service** (sourcing, personalising, 
 ## 5. Pricing, payments, and GST
 
 - Prices for gifting are as stated in the applicable quote or order confirmation.
-- The Pro software subscription is offered at **₹1,999 per year per organisation (inclusive of GST)**, billed annually, and covers your organisation's use of Pro features as described at the time of purchase.
+- The Pro software subscription is offered at ₹1,999 per year per organisation, exclusive of GST. Applicable GST is charged in addition at the prevailing rate (currently 18%), making the total payable ₹2,359 per year per organisation, billed annually. This covers your organisation's use of Pro features as described at the time of purchase.
 - Payments are processed securely through our payment partner, **Razorpay**. By making a payment, you also agree to the payment provider's applicable terms.
 - We issue **GST-compliant tax invoices** for payments. All applicable taxes are charged as required by law.
 

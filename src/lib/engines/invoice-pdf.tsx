@@ -270,6 +270,12 @@ function InvoiceDocument({ invoice }: { invoice: Invoice }) {
               <Text>{rs(invoice.igst_amount)}</Text>
             </View>
           )}
+          {invoice.round_off != null && invoice.round_off !== 0 ? (
+            <View style={styles.totalRow}>
+              <Text>Round Off</Text>
+              <Text>{rs(invoice.round_off)}</Text>
+            </View>
+          ) : null}
           <View style={styles.grandRow}>
             <Text style={styles.grandText}>Grand Total</Text>
             <Text style={styles.grandText}>{rs(invoice.grand_total)}</Text>
