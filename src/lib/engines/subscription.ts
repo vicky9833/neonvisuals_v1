@@ -4,6 +4,8 @@ import { createOrder } from "@/lib/services/razorpay";
 import { createSubscriptionInvoice } from "@/lib/engines/billing";
 import { saveInvoicePDF } from "@/lib/engines/invoice-pdf";
 import { notifyPaymentReceived } from "@/lib/engines/notifications";
+import { sendNotificationEmail } from "@/lib/services/email";
+import { roundGrandTotalToRupee } from "@/lib/gst";
 
 /** Canonical plan lifecycle states (companies.plan_status gate source-of-truth, §8c-i). */
 export type PlanStatus = "active" | "past_due" | "lapsed";
@@ -58,9 +60,35 @@ export async function transitionPlanStatus(
  * With TEST keys the order is a test-mode order (no real money moves).
  */
 
-/** Pro plan price. GST in/exclusive treatment is deferred to 8b (invoices). */
-export const PRO_PRICE_RUPEES = 1999;
-export const PRO_PRICE_PAISE = PRO_PRICE_RUPEES * 100; // 199900 paise
+/**
+ * Pro plan price — the model stated plainly: base + GST (Phase 6).
+ *
+ * The advertised price is the PRE-TAX base of Rs 1,999 (199900 paise). GST is charged IN ADDITION
+ * (Route B, explicit additive) at 18%. The CHARGED amount is DERIVED, never hardcoded: base + GST,
+ * with the grand total rounded to the nearest rupee per Section 170 of the CGST Act (half-up), using
+ * the same {@link roundGrandTotalToRupee} the invoice path uses. It evaluates to 235900 paise
+ * (Rs 2,359.00). See {@link deriveChargedPaise}; asserted at 235900 in the tests.
+ *
+ * We reuse the gst service for the legally-critical Section-170 rounding. The additive GST amount
+ * itself is explicit integer arithmetic (single rate, integer base) rather than a computeGst() call,
+ * because computeGst() requires a place-of-supply state + seller registration context that is
+ * inappropriate to bind into a module-level constant — and the CHARGED total is supply-type
+ * invariant anyway (total tax and grand total are identical intra- vs inter-state).
+ */
+export const PRO_PRICE_BASE_PAISE = 199900; // pre-tax base — the advertised Rs 1,999
+export const PRO_GST_RATE_PERCENT = 18;
+
+/** base + GST(base) with the grand total finalised by Section-170 half-up rounding. */
+function deriveChargedPaise(basePaise: number, gstRatePercent: number): number {
+  // Additive GST on an integer base at a single rate, half-up (matches the gst service's per-line
+  // roundHalfUp for non-negative values): floor(x + 0.5).
+  const gstPaise = Math.floor((basePaise * gstRatePercent) / 100 + 0.5); // 199900 * 18% = 35982
+  const { grandTotalPaise } = roundGrandTotalToRupee(basePaise + gstPaise); // 235882 -> 235900 (+18)
+  return grandTotalPaise;
+}
+
+/** CHARGED all-in amount in paise (base + GST, Section-170 rounded). Derived; equals 235900. */
+export const PRO_PRICE_CHARGED_PAISE = deriveChargedPaise(PRO_PRICE_BASE_PAISE, PRO_GST_RATE_PERCENT);
 export const PRO_CURRENCY = "INR";
 export const PRO_INTERVAL = "annual";
 
@@ -94,7 +122,8 @@ export async function createProCheckout(
     .insert({
       company_id: input.companyId,
       plan: "pro",
-      amount: PRO_PRICE_PAISE,
+      amount: PRO_PRICE_CHARGED_PAISE, // CHARGED all-in (base + GST, Section-170 rounded) = 235900
+      base_amount: PRO_PRICE_BASE_PAISE, // pre-tax base snapshot (199900) — never re-derived later
       currency: PRO_CURRENCY,
       interval: PRO_INTERVAL,
       status: "created",
@@ -112,7 +141,7 @@ export async function createProCheckout(
   let order;
   try {
     order = await createOrder({
-      amount: PRO_PRICE_PAISE,
+      amount: PRO_PRICE_CHARGED_PAISE, // charge the all-in Rs 2,359 (base + GST)
       currency: PRO_CURRENCY,
       receipt: `sub_${subscriptionId}`.slice(0, 40),
       notes: { company_id: input.companyId, subscription_id: subscriptionId },
@@ -162,7 +191,17 @@ export interface ActivationResult {
  */
 export async function activateSubscriptionFromWebhook(
   admin: SupabaseClient,
-  input: { razorpayOrderId: string; razorpayPaymentId?: string | null },
+  input: {
+    razorpayOrderId: string;
+    razorpayPaymentId?: string | null;
+    /**
+     * Amount Razorpay ACTUALLY captured, in paise, read from the signature-verified webhook payload
+     * (`payload.payment.entity.amount`). Optional: when absent (e.g. an order-only event), we log
+     * that fact and invoice the EXPECTED stored amount. When present and it differs from expected,
+     * we flag loudly (audit + email) but NEVER block activation, and invoice the CAPTURED amount.
+     */
+    capturedAmountPaise?: number | null;
+  },
 ): Promise<ActivationResult> {
   if (!input.razorpayOrderId) {
     return { activated: false, alreadyActive: false, companyId: null, subscriptionId: null };
@@ -170,7 +209,7 @@ export async function activateSubscriptionFromWebhook(
 
   const { data: sub } = await admin
     .from("subscriptions")
-    .select("id, company_id, status, amount")
+    .select("id, company_id, status, amount, base_amount")
     .eq("razorpay_order_id", input.razorpayOrderId)
     .maybeSingle();
 
@@ -257,11 +296,39 @@ export async function activateSubscriptionFromWebhook(
   // The customer has PAID and Pro is already granted; a failure here must NOT un-grant Pro
   // (the invoice is idempotent + regenerable). Never throws out of activation.
   try {
-    const amountRupees = Number(sub.amount ?? 0) / 100;
+    // AMOUNT VERIFICATION (Phase 6 Task 4). Compare the amount Razorpay actually captured (from the
+    // signature-verified payload) against what we expected to charge. A mismatch NEVER blocks
+    // activation (the customer paid — denying them is worse than the mismatch); it is flagged loudly
+    // (audit_log + alert email) and the invoice reflects the amount ACTUALLY CAPTURED.
+    const expectedPaise = Number(sub.amount ?? 0);
+    const capturedPaise = input.capturedAmountPaise ?? null;
+    if (capturedPaise == null) {
+      // No captured amount on the payload (e.g. order-only event) — log and invoice the expected amount.
+      console.warn(
+        "[subscription] webhook carried no captured amount; invoicing expected amount",
+        { subscriptionId, expectedPaise },
+      );
+    } else if (capturedPaise !== expectedPaise) {
+      // Flag (non-blocking, never throws) — Pro stays granted; invoice will use the captured amount.
+      await flagSubscriptionAmountMismatch(admin, {
+        companyId,
+        subscriptionId,
+        expectedPaise,
+        capturedPaise,
+        razorpayOrderId: input.razorpayOrderId,
+        razorpayPaymentId: input.razorpayPaymentId ?? null,
+      });
+    }
+    // Invoice the CAPTURED amount when known, else the expected amount.
+    const invoicePaise = capturedPaise ?? expectedPaise;
+    const amountRupees = invoicePaise / 100;
+    // Pre-tax base snapshot (paise -> rupees); null for legacy rows -> billing falls back to inclusive.
+    const baseAmountRupees = sub.base_amount != null ? Number(sub.base_amount) / 100 : null;
     const invoice = await createSubscriptionInvoice(admin, {
       subscriptionId,
       companyId,
       amountRupees,
+      baseAmountRupees,
       razorpayPaymentId: input.razorpayPaymentId ?? null,
       razorpayOrderId: input.razorpayOrderId,
       periodStart: now.toISOString(),
@@ -286,4 +353,71 @@ export async function activateSubscriptionFromWebhook(
   }
 
   return { activated: true, alreadyActive: false, companyId, subscriptionId };
+}
+
+/**
+ * Flag a subscription payment whose CAPTURED amount differs from the EXPECTED amount (Phase 6
+ * Task 4). Writes a service-role audit_log row AND sends an internal alert email. Every step is
+ * wrapped so NO throw can escape into the webhook/activation path — the customer has already paid
+ * and Pro is already granted; flagging must never undo that. The invoice separately reflects the
+ * amount actually captured, so the legal record matches the real transaction.
+ */
+async function flagSubscriptionAmountMismatch(
+  admin: SupabaseClient,
+  params: {
+    companyId: string;
+    subscriptionId: string;
+    expectedPaise: number;
+    capturedPaise: number;
+    razorpayOrderId: string;
+    razorpayPaymentId: string | null;
+  },
+): Promise<void> {
+  const expectedRs = (params.expectedPaise / 100).toFixed(2);
+  const capturedRs = (params.capturedPaise / 100).toFixed(2);
+  try {
+    // (a) audit_log — service-role insert (bypasses RLS; migration 018 permits actor_type 'system').
+    try {
+      await admin.from("audit_log").insert({
+        actor_user_id: null,
+        actor_type: "system",
+        company_id: params.companyId,
+        action: "subscription.amount_mismatch",
+        entity: "subscription",
+        entity_id: params.subscriptionId,
+        after: {
+          expected_paise: params.expectedPaise,
+          captured_paise: params.capturedPaise,
+          razorpay_order_id: params.razorpayOrderId,
+          razorpay_payment_id: params.razorpayPaymentId,
+        },
+      });
+    } catch (auditErr) {
+      console.error("[subscription] amount_mismatch audit insert failed (activation unaffected)", auditErr);
+    }
+    // (b) internal alert email.
+    try {
+      await sendNotificationEmail({
+        to: "contact@neonvisuals.in",
+        subject: `Subscription payment amount mismatch: ${params.subscriptionId}`,
+        html:
+          `<p>A Pro subscription payment was captured for an amount that does <strong>not match</strong> ` +
+          `the expected charge. Pro was still activated (the customer paid); the invoice reflects the ` +
+          `amount actually captured. Please reconcile.</p>` +
+          `<ul>` +
+          `<li>Subscription: ${params.subscriptionId}</li>` +
+          `<li>Expected: Rs ${expectedRs}</li>` +
+          `<li>Captured: Rs ${capturedRs}</li>` +
+          `<li>Razorpay order: ${params.razorpayOrderId}</li>` +
+          `<li>Razorpay payment: ${params.razorpayPaymentId ?? "(none)"}</li>` +
+          `</ul>`,
+        template: "subscription_amount_mismatch",
+      });
+    } catch (emailErr) {
+      console.error("[subscription] amount_mismatch alert email failed (activation unaffected)", emailErr);
+    }
+  } catch (err) {
+    // belt-and-braces: nothing from this flag may escape into the activation path.
+    console.error("[subscription] amount_mismatch flag failed (activation unaffected)", err);
+  }
 }

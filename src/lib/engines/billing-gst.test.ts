@@ -26,6 +26,7 @@ import {
   calculateGST,
   calculateGSTInclusive,
   flagPlaceOfSupply,
+  createSubscriptionInvoice,
 } from "./billing";
 import { validateGstin, getDefaultRegistration, formatRegisteredAddress } from "@/lib/gst";
 
@@ -321,5 +322,118 @@ describe("Task C: flag routing for low-confidence place of supply", () => {
     expect(db.inserts[0].row.action).toBe("invoice.place_of_supply_inferred");
     expect((db.inserts[0].row.after as Record<string, unknown>).inferredStateCode).toBe("29");
     expect(h.sendNotificationEmail).not.toHaveBeenCalled();
+  });
+});
+
+// ---------------------------------------------------------------------------
+// PHASE 6: subscription invoice — Route B (additive GST on the base) + Section-170
+// round-off shown as its own value. Reconciliation MUST hold on the page:
+// subtotal + tax + round_off == grand_total, and grand_total == the amount charged.
+// ---------------------------------------------------------------------------
+describe("Phase 6: subscription invoice — additive-from-base + round-off", () => {
+  function fakeInvoiceDb(company: Record<string, unknown>) {
+    const captured: { payload?: Record<string, number | string | boolean | null> } = {};
+    const client = {
+      from(table: string) {
+        if (table === "invoices") {
+          return {
+            // Idempotency pre-check: no existing invoice for this subscription.
+            select: () => ({ eq: () => ({ maybeSingle: async () => ({ data: null }) }) }),
+            insert: (payload: Record<string, number | string | boolean | null>) => {
+              captured.payload = payload;
+              return {
+                select: () => ({
+                  single: async () => ({
+                    data: {
+                      ...payload,
+                      id: "inv-1",
+                      invoice_number: "NV-INV-2026-0001",
+                      orders: null,
+                      created_at: "t",
+                      updated_at: "t",
+                    },
+                    error: null,
+                  }),
+                }),
+              };
+            },
+          };
+        }
+        if (table === "companies") {
+          return { select: () => ({ eq: () => ({ maybeSingle: async () => ({ data: company }) }) }) };
+        }
+        return { insert: async () => ({ error: null }) };
+      },
+    } as unknown as SupabaseClient;
+    return { client, captured };
+  }
+
+  const baseCompany = {
+    name: "Acme Pvt Ltd",
+    city: null,
+    primary_contact_name: "Priya",
+    primary_contact_email: "priya@acme.test",
+    primary_contact_phone: null,
+    address: "1 Test Road",
+  };
+
+  it("Maharashtra buyer (intra-state): CGST 179.91 + SGST 179.91, round-off 0.18, grand 2359", async () => {
+    const { client, captured } = fakeInvoiceDb({ ...baseCompany, gstin: MH_GSTIN });
+    const inv = await createSubscriptionInvoice(client, {
+      subscriptionId: "sub-mh",
+      companyId: "co-mh",
+      amountRupees: 2359, // charged all-in
+      baseAmountRupees: 1999, // pre-tax base snapshot
+    });
+    expect(inv).not.toBeNull();
+    const p = captured.payload!;
+    expect(p.is_intra_state).toBe(true);
+    expect(p.subtotal).toBe(1999); // taxable value
+    expect(p.cgst_amount).toBe(179.91);
+    expect(p.sgst_amount).toBe(179.91);
+    expect(p.igst_amount).toBe(0);
+    expect(p.total_gst).toBe(359.82);
+    expect(p.round_off).toBe(0.18);
+    expect(p.grand_total).toBe(2359);
+    // Reconciliation on the page: taxable + tax + round-off == grand total.
+    expect(Number(((p.subtotal as number) + (p.total_gst as number) + (p.round_off as number)).toFixed(2))).toBe(2359);
+    // Charged (2359) == invoice grand total.
+    expect(p.grand_total).toBe(2359);
+    expect(inv!.round_off).toBe(0.18);
+  });
+
+  it("Karnataka buyer (inter-state): IGST 359.82, round-off 0.18, grand 2359", async () => {
+    const { client, captured } = fakeInvoiceDb({ ...baseCompany, gstin: KA_GSTIN });
+    const inv = await createSubscriptionInvoice(client, {
+      subscriptionId: "sub-ka",
+      companyId: "co-ka",
+      amountRupees: 2359,
+      baseAmountRupees: 1999,
+    });
+    const p = captured.payload!;
+    expect(p.is_intra_state).toBe(false);
+    expect(p.subtotal).toBe(1999);
+    expect(p.igst_amount).toBe(359.82);
+    expect(p.cgst_amount).toBe(0);
+    expect(p.sgst_amount).toBe(0);
+    expect(p.total_gst).toBe(359.82);
+    expect(p.round_off).toBe(0.18);
+    expect(p.grand_total).toBe(2359);
+    expect(Number(((p.subtotal as number) + (p.total_gst as number) + (p.round_off as number)).toFixed(2))).toBe(2359);
+  });
+
+  it("legacy row (no base snapshot): GST-inclusive fallback, round_off NULL, grand == charged", async () => {
+    const { client, captured } = fakeInvoiceDb({ ...baseCompany, gstin: KA_GSTIN });
+    await createSubscriptionInvoice(client, {
+      subscriptionId: "sub-legacy",
+      companyId: "co-legacy",
+      amountRupees: 1999, // legacy: charged treated as GST-inclusive
+      // baseAmountRupees omitted (null)
+    });
+    const p = captured.payload!;
+    expect(p.round_off).toBeNull(); // unchanged legacy behaviour
+    expect(p.grand_total).toBe(1999);
+    // Inclusive: base + tax reconciles to the inclusive total exactly.
+    expect(Number(((p.subtotal as number) + (p.total_gst as number)).toFixed(2))).toBe(1999);
   });
 });

@@ -12,6 +12,7 @@ import {
 } from "@react-pdf/renderer";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { getInvoice, type Invoice, type InvoiceLineItem } from "@/lib/engines/billing";
+import { getDefaultRegistration, stateNameFor, stateCodeFromGstin } from "@/lib/gst";
 
 const NAVY = "#1A1A2E";
 const GOLD = "#C4A35A";
@@ -26,6 +27,23 @@ function rs(n: number): string {
     minimumFractionDigits: 2,
     maximumFractionDigits: 2,
   })}`;
+}
+
+/**
+ * Place-of-supply label DERIVED from the invoice, never a state-name literal (Phase 6b Task 6).
+ *  - Intra-state: the seller's OWN state, by definition of intra-state — sourced from the GST
+ *    registration config, not hardcoded (replaces the previous hardcoded state literal).
+ *  - Inter-state: the buyer's state, ONLY when derivable from a FULLY-valid buyer GSTIN
+ *    (validateGstin checksum, not a 2-char prefix); otherwise the neutral "Inter-state". The
+ *    invoice row carries no place-of-supply state code, so we never invent one.
+ * State names come from src/lib/gst/state-codes.ts via stateNameFor().
+ */
+function placeOfSupplyLabel(invoice: Invoice): string {
+  if (invoice.is_intra_state) {
+    return `${stateNameFor(getDefaultRegistration().stateCode)} (Intra-state)`;
+  }
+  const buyerState = invoice.buyer_gstin ? stateCodeFromGstin(invoice.buyer_gstin) : null;
+  return buyerState ? `${stateNameFor(buyerState)} (Inter-state)` : "Inter-state";
 }
 
 const TYPE_LABEL: Record<string, string> = {
@@ -221,7 +239,7 @@ function InvoiceDocument({ invoice }: { invoice: Invoice }) {
             {invoice.subscription_id ? "Subscription (Pro)" : `Order: ${invoice.order_number ?? "-"}`}
           </Text>
           <Text>Type: {TYPE_LABEL[invoice.invoice_type] ?? invoice.invoice_type}</Text>
-          <Text>Place of Supply: {invoice.is_intra_state ? "Karnataka (Intra-state)" : "Inter-state"}</Text>
+          <Text>Place of Supply: {placeOfSupplyLabel(invoice)}</Text>
         </View>
 
         {/* Line items */}
@@ -270,6 +288,12 @@ function InvoiceDocument({ invoice }: { invoice: Invoice }) {
               <Text>{rs(invoice.igst_amount)}</Text>
             </View>
           )}
+          {invoice.round_off != null && invoice.round_off !== 0 ? (
+            <View style={styles.totalRow}>
+              <Text>Round Off</Text>
+              <Text>{rs(invoice.round_off)}</Text>
+            </View>
+          ) : null}
           <View style={styles.grandRow}>
             <Text style={styles.grandText}>Grand Total</Text>
             <Text style={styles.grandText}>{rs(invoice.grand_total)}</Text>
