@@ -51,3 +51,19 @@ scripts/upload-errors.json
 scripts/image-manifest.json
 
 .env.local
+
+# --- working artifacts: recon reports, smoke/verify harnesses, scratch logs ---
+# These are throwaway per-phase working dirs and generated outputs, never committed.
+# Patterns (not one-off paths) so future recon/verify runs are covered automatically.
+# Read-only reconnaissance report dirs: recon/, recon2b/, recon7c/, recon-perf/, ...
+/recon*/
+# Smoke + verification harness dirs: verify/, verify-auth/, verify8a/, verify10c/, ...
+/verify*/
+# Scratch logs and generated error JSON emitted by scripts/ (e.g. variant-run.log,
+# variant-errors.json). upload-errors.json above is a subset; *-errors.json generalises it.
+scripts/*.log
+scripts/*-errors.json
+# Incidental spec working dir left by the spec orchestrator. NOTE: .kiro/specs/ is
+# intentionally tracked (see catalog-collections-ijk, image-catalog-rebuild), so we do
+# NOT ignore the whole tree — only this stray artifact, so future specs stay committable.
+/.kiro/specs/approval-workflow-budgets/
