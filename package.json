@@ -8,6 +8,7 @@
     "start": "next start",
     "lint": "eslint",
     "test": "vitest run",
+    "check:migrations": "node .github/scripts/check-migrations-applied.mjs",
     "restructure-images": "tsx scripts/restructure-images.ts",
     "upload-images": "tsx scripts/upload-images-v2.ts",
     "generate-catalog": "tsx scripts/generate-catalog.ts",

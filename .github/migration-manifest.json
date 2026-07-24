@@ -1,0 +1,32 @@
+{
+  "$comment": [
+    "Migration drift gate manifest (Phase 0F). This does NOT use the Supabase ledger,",
+    "which cannot be matched to repo filenames (the ledger stores CLI timestamps like",
+    "20260724120132; repo files use NNN_ prefixes). Instead we verify the ACTUAL SCHEMA.",
+    "",
+    "Design: baseline + forward probes.",
+    "  - Every migration <= baseline was verified applied in Phase 0D (2026-07) and is",
+    "    foundational (the live app runs on it daily). We do NOT re-verify those.",
+    "  - Every migration ABOVE the baseline MUST have an entry here (CI enforces this),",
+    "    with either a `probe` (a SQL SELECT returning a single boolean, TRUE when the",
+    "    migration's effect is present in the live DB) or `dataOnly: true` (a data-only",
+    "    migration with no schema artifact to verify).",
+    "",
+    "When you add migration NNN (> baseline): add an entry keyed by its zero-padded number.",
+    "Prefer probing a column/constraint/table/function the migration creates. Keep the SQL",
+    "read-only (information_schema / pg_catalog only)."
+  ],
+  "baseline": 57,
+  "migrations": {
+    "058": {
+      "file": "058_invoices_seller_address_default_mh.sql",
+      "describes": "invoices.seller_address DEFAULT corrected to the Maharashtra address",
+      "probe": "SELECT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_schema='public' AND table_name='invoices' AND column_name='seller_address' AND column_default LIKE '%Andheri East%')"
+    },
+    "059": {
+      "file": "059_order_items_custom_line_fields.sql",
+      "describes": "order_items gains source/hsn/gst_rate/uqc columns + order_items_source_check",
+      "probe": "SELECT (EXISTS (SELECT 1 FROM information_schema.columns WHERE table_schema='public' AND table_name='order_items' AND column_name='source') AND EXISTS (SELECT 1 FROM information_schema.columns WHERE table_schema='public' AND table_name='order_items' AND column_name='hsn') AND EXISTS (SELECT 1 FROM information_schema.columns WHERE table_schema='public' AND table_name='order_items' AND column_name='gst_rate') AND EXISTS (SELECT 1 FROM information_schema.columns WHERE table_schema='public' AND table_name='order_items' AND column_name='uqc') AND EXISTS (SELECT 1 FROM pg_constraint WHERE conname='order_items_source_check'))"
+    }
+  }
+}
