@@ -25,6 +25,43 @@ function roundHalfUp(x: number): number {
   return Math.floor(x + 0.5);
 }
 
+/**
+ * Round a grand total (integer paise) to the nearest rupee per Section 170 of the CGST Act, 2017:
+ * any fraction of a rupee rounds to the nearest rupee, and a tie (exactly 50 paise) rounds UP.
+ *
+ * LIMITATION — NEGATIVE TOTALS ARE NOT SUPPORTED YET.
+ * This uses Math.round(x / 100), which breaks ties toward +Infinity. That is the correct
+ * Section-170 "ties up" behaviour ONLY while grandTotalBeforeRoundingPaise >= 0. For a NEGATIVE
+ * total (which will arise once Credit Notes are introduced) Math.round rounds a -x.50 tie toward
+ * zero, i.e. the WRONG direction for a symmetric away-from-zero / ties-up rule. Credit Note support
+ * MUST revisit this and choose an explicit signed rounding policy. Until then we FAIL LOUD (throw)
+ * rather than emit a silently mis-rounded negative total.
+ *
+ * @returns grandTotalPaise (a multiple of 100) and the signed roundOffPaise ∈ [-49, +50].
+ */
+export function roundGrandTotalToRupee(grandTotalBeforeRoundingPaise: number): {
+  grandTotalPaise: number;
+  roundOffPaise: number;
+} {
+  if (!Number.isFinite(grandTotalBeforeRoundingPaise) || !Number.isInteger(grandTotalBeforeRoundingPaise)) {
+    throw new GstValidationError(
+      "invalid_grand_total",
+      `Grand total must be an integer paise value (got ${grandTotalBeforeRoundingPaise}).`,
+    );
+  }
+  if (grandTotalBeforeRoundingPaise < 0) {
+    throw new GstValidationError(
+      "negative_grand_total",
+      `Grand total is negative (${grandTotalBeforeRoundingPaise} paise). Negative totals (e.g. Credit ` +
+        `Notes) are not supported yet: the half-up round-off is only correct for non-negative totals.`,
+    );
+  }
+  const rupees = Math.round(grandTotalBeforeRoundingPaise / 100); // half-up, ties up (non-negative only)
+  const grandTotalPaise = rupees * 100;
+  const roundOffPaise = grandTotalPaise - grandTotalBeforeRoundingPaise;
+  return { grandTotalPaise, roundOffPaise };
+}
+
 const RATE_SET: ReadonlySet<number> = new Set(ALLOWED_GST_RATES);
 
 // ---------------------------------------------------------------------------
@@ -209,13 +246,10 @@ export function computeGst(params: ComputeGstParams): GstComputation {
   const totalTaxPaise = totalCgstPaise + totalSgstPaise + totalIgstPaise;
   const grandTotalBeforeRoundingPaise = totalTaxableValuePaise + totalTaxPaise;
 
-  // Round the grand total to the nearest rupee per Section 170 of the CGST Act, 2017: any fraction
-  // of a rupee is rounded to the nearest rupee, and a tie (exactly 50 paise) is rounded UP. Since
-  // grandTotalBeforeRoundingPaise is always non-negative, Math.round gives exactly this behaviour
-  // (nearest integer, ties toward +Infinity). Resulting invariant: roundOffPaise ∈ [-49, +50].
-  const rupees = Math.round(grandTotalBeforeRoundingPaise / 100); // half-up, ties up
-  const grandTotalPaise = rupees * 100;
-  const roundOffPaise = grandTotalPaise - grandTotalBeforeRoundingPaise;
+  // Finalise the grand total: Section-170 half-up rounding. This throws a typed error if the total
+  // is ever negative (see roundGrandTotalToRupee) — a defensive guard for future Credit Note work,
+  // since current per-line validation (discount capped at line value) cannot itself produce one.
+  const { grandTotalPaise, roundOffPaise } = roundGrandTotalToRupee(grandTotalBeforeRoundingPaise);
 
   return {
     supplyType,

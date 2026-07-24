@@ -5,6 +5,7 @@ import {
   resolvePlaceOfSupply,
   computeGst,
   amountInWordsIndian,
+  roundGrandTotalToRupee,
 } from "./service";
 import { ALLOWED_GST_RATES, GstValidationError, type GstLineInput } from "./types";
 import { STATE_CODES, type StateCode } from "./state-codes";
@@ -316,6 +317,66 @@ describe("additional coverage", () => {
     expect(sumLineTotals).toBe(c.grandTotalBeforeRoundingPaise);
     // 500 * 199999 taxable ≈ ₹10 lakh taxable + tax → still well within Number.MAX_SAFE_INTEGER.
     expect(Number.isSafeInteger(c.grandTotalBeforeRoundingPaise)).toBe(true);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Negative-total limitation (Task 3): half-up rounding is only correct for
+// grandTotalBeforeRoundingPaise >= 0; negative totals must FAIL LOUD.
+// ---------------------------------------------------------------------------
+
+describe("roundGrandTotalToRupee — non-negative only (Credit Notes must revisit)", () => {
+  it("throws a typed GstValidationError on ANY negative total", () => {
+    for (const neg of [-1, -50, -51, -150, -199950]) {
+      expect(() => roundGrandTotalToRupee(neg)).toThrow(GstValidationError);
+    }
+    // The specific code is exposed for callers to branch on.
+    try {
+      roundGrandTotalToRupee(-50);
+      throw new Error("should have thrown");
+    } catch (e) {
+      expect(e).toBeInstanceOf(GstValidationError);
+      expect((e as GstValidationError).code).toBe("negative_grand_total");
+    }
+  });
+
+  it("rejects non-integer / non-finite totals", () => {
+    expect(() => roundGrandTotalToRupee(100.5)).toThrow(GstValidationError);
+    expect(() => roundGrandTotalToRupee(Number.NaN)).toThrow(GstValidationError);
+    expect(() => roundGrandTotalToRupee(Number.POSITIVE_INFINITY)).toThrow(GstValidationError);
+  });
+
+  it("for non-negative totals rounds half-up (ties up): 0, 49-down, 50-up", () => {
+    expect(roundGrandTotalToRupee(0)).toEqual({ grandTotalPaise: 0, roundOffPaise: 0 });
+    expect(roundGrandTotalToRupee(200000)).toEqual({ grandTotalPaise: 200000, roundOffPaise: 0 });
+    expect(roundGrandTotalToRupee(199949)).toEqual({ grandTotalPaise: 199900, roundOffPaise: -49 });
+    expect(roundGrandTotalToRupee(199950)).toEqual({ grandTotalPaise: 200000, roundOffPaise: 50 });
+  });
+
+  it("property: every non-negative total yields a multiple of 100 and roundOff ∈ [-49, +50]", () => {
+    fc.assert(
+      fc.property(fc.integer({ min: 0, max: 100_000_000_00 }), (total) => {
+        const { grandTotalPaise, roundOffPaise } = roundGrandTotalToRupee(total);
+        expect(grandTotalPaise % 100).toBe(0);
+        expect(roundOffPaise).toBeGreaterThanOrEqual(-49);
+        expect(roundOffPaise).toBeLessThanOrEqual(50);
+        expect(grandTotalPaise).toBe(total + roundOffPaise);
+      }),
+      { numRuns: 500 },
+    );
+  });
+
+  it("guarantee: computeGst never produces a negative pre-rounding total on valid inputs", () => {
+    // Documents WHY the negative-total guard is currently unreachable via the public API: per-line
+    // validation caps discount at the line value, so taxable and tax are always >= 0. The guard in
+    // roundGrandTotalToRupee is therefore purely defensive for future Credit Note construction.
+    fc.assert(
+      fc.property(fc.array(lineArb, { minLength: 1, maxLength: 8 }), fc.constantFrom(...VALID_CODES), (lines, pos) => {
+        const c = computeGst({ placeOfSupplyStateCode: pos, lines });
+        expect(c.grandTotalBeforeRoundingPaise).toBeGreaterThanOrEqual(0);
+      }),
+      { numRuns: 300 },
+    );
   });
 });
 
