@@ -24,6 +24,7 @@ import {
 import { sendPaymentConfirmationEmail, sendNotificationEmail } from "@/lib/services/email";
 import {
   getDefaultRegistration,
+  formatRegisteredAddress,
   determineSupplyType,
   validateGstin,
   stateCodeFromGstin,
@@ -35,11 +36,6 @@ import { cityToStateCode } from "@/lib/gst/city-state";
 export const SAC_CODE = "998396";
 export const DEFAULT_GST_RATE = 18;
 
-/**
- * Neon Visuals' registered seller GSTIN (Maharashtra, state code 27) — sole proprietorship of
- * Vikas Vishwakarma, Mumbai. Used on GST tax invoices.
- */
-export const SELLER_GSTIN = "27BZSPV5411Q1ZA";
 /** Neon Visuals Pro subscription price (₹, GST-INCLUSIVE — the all-in amount the customer pays). */
 export const PRO_SUBSCRIPTION_PRICE_RUPEES = 1999;
 
@@ -289,65 +285,99 @@ export function resolveSupplyDecision(
 }
 
 /**
- * Best-effort, NON-BLOCKING flag for an invoice whose place of supply could not be resolved (IGST
- * was applied as the fallback). Records an audit entry and emails an internal alert. Every step is
- * wrapped so NO throw can escape into the invoice/payment/webhook path.
+ * Best-effort, NON-BLOCKING flag for an invoice whose place of supply is LOW-CONFIDENCE. Two cases:
  *
- * NOTE on the audit: writeAudit uses the request-scoped client, whose audit_log_insert_self RLS
- * policy requires actor_user_id = auth.uid(). It therefore only persists on an authenticated path
- * (an admin creating an order invoice, where actorUserId is present). The Razorpay webhook path
- * has no session, so the audit attempt there is skipped -- the email alert is the signal. writeAudit
- * is imported DYNAMICALLY so this engine stays import-safe from client components (see file header).
+ *   - basis "unknown"     -> place of supply could NOT be resolved; IGST was applied as the fallback.
+ *                            Audited as "invoice.place_of_supply_unresolved" AND an email alert is
+ *                            sent (a wrong tax head is possible; a human must confirm).
+ *   - basis "city_lookup" -> the state was INFERRED from a city string (a guess). Audited as
+ *                            "invoice.place_of_supply_inferred". Audit-only, NO email (otherwise the
+ *                            inbox would flood on every city-based invoice).
+ *
+ * Every step is wrapped so NO throw can escape into the invoice/payment/webhook path.
+ *
+ * Audit routing:
+ *   - Authenticated path (actorUserId present, e.g. an admin creating an order invoice): writeAudit
+ *     on the request-scoped client (its audit_log_insert_self RLS policy requires
+ *     actor_user_id = auth.uid()). writeAudit is imported DYNAMICALLY so this engine stays
+ *     import-safe from client components (see file header).
+ *   - Webhook path (no session, service-role `db` in scope): a DIRECT service_role insert into
+ *     audit_log with actor_user_id NULL (service_role bypasses RLS; migration 018 permits this).
  */
-async function flagUnresolvedPlaceOfSupply(params: {
+export async function flagPlaceOfSupply(params: {
+  db?: SupabaseClient;
   invoiceId: string;
   invoiceNumber?: string | null;
   companyId: string;
   companyName?: string | null;
   rawCity?: string | null;
+  buyerStateCode?: string | null;
+  basis: SupplyBasis;
   actorUserId?: string | null;
 }): Promise<void> {
   try {
-    // (a) audit_log entry (authenticated path only -- see NOTE above).
-    if (params.actorUserId) {
-      try {
+    const isUnknown = params.basis === "unknown";
+    const action = isUnknown
+      ? "invoice.place_of_supply_unresolved"
+      : "invoice.place_of_supply_inferred";
+    const after = {
+      invoiceId: params.invoiceId,
+      companyId: params.companyId,
+      rawCity: params.rawCity ?? null,
+      ...(isUnknown
+        ? { fallback: "IGST" }
+        : { inferredStateCode: params.buyerStateCode ?? null }),
+    };
+
+    // (a) audit_log entry.
+    try {
+      if (params.actorUserId) {
+        // Authenticated path: request-scoped writeAudit (RLS: actor_user_id = auth.uid()).
         const { writeAudit } = await import("@/lib/authz/audit");
         await writeAudit(params.actorUserId, "system", {
-          action: "invoice.place_of_supply_unresolved",
+          action,
           companyId: params.companyId,
           entity: "invoice",
           entityId: params.invoiceId,
-          after: {
-            invoiceId: params.invoiceId,
-            companyId: params.companyId,
-            rawCity: params.rawCity ?? null,
-            fallback: "INTER_STATE_IGST",
-          },
+          after,
         });
-      } catch {
-        /* non-blocking: audit failure must never fail the invoice */
+      } else if (params.db) {
+        // Webhook path: direct service-role insert (bypasses RLS; ruling per Phase 4Ha Task B).
+        await params.db.from("audit_log").insert({
+          actor_user_id: null,
+          actor_type: "system",
+          company_id: params.companyId,
+          action,
+          entity: "invoice",
+          entity_id: params.invoiceId,
+          after,
+        });
       }
+    } catch {
+      /* non-blocking: audit failure must never fail the invoice */
     }
 
-    // (b) internal alert email.
-    try {
-      const label = params.invoiceNumber ?? params.invoiceId;
-      await sendNotificationEmail({
-        to: "contact@neonvisuals.in",
-        subject: `Invoice needs place-of-supply review: ${label}`,
-        html:
-          `<p>An invoice was issued with an <strong>unresolved place of supply</strong>. ` +
-          `IGST was applied as the fallback and should be verified.</p>` +
-          `<ul>` +
-          `<li>Invoice: ${label}</li>` +
-          `<li>Company: ${params.companyName ?? params.companyId}</li>` +
-          `<li>Unresolved city: ${params.rawCity ?? "(none provided)"}</li>` +
-          `</ul>` +
-          `<p>Please confirm the buyer's state and correct the CGST/SGST vs IGST head if required.</p>`,
-        template: "invoice_place_of_supply_unresolved",
-      });
-    } catch {
-      /* non-blocking: email failure must never fail the invoice */
+    // (b) internal alert email -- ONLY for the unresolved (unknown) case.
+    if (isUnknown) {
+      try {
+        const label = params.invoiceNumber ?? params.invoiceId;
+        await sendNotificationEmail({
+          to: "contact@neonvisuals.in",
+          subject: `Invoice needs place-of-supply review: ${label}`,
+          html:
+            `<p>An invoice was issued with an <strong>unresolved place of supply</strong>. ` +
+            `IGST was applied as the fallback and should be verified.</p>` +
+            `<ul>` +
+            `<li>Invoice: ${label}</li>` +
+            `<li>Company: ${params.companyName ?? params.companyId}</li>` +
+            `<li>Unresolved city: ${params.rawCity ?? "(none provided)"}</li>` +
+            `</ul>` +
+            `<p>Please confirm the buyer's state and correct the CGST/SGST vs IGST head if required.</p>`,
+          template: "invoice_place_of_supply_unresolved",
+        });
+      } catch {
+        /* non-blocking: email failure must never fail the invoice */
+      }
     }
   } catch {
     /* belt-and-braces: nothing from this flagging block may escape into the payment path */
@@ -419,6 +449,7 @@ export function numberToWords(amount: number): string {
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
 function mapInvoice(row: any): Invoice {
+  const reg = getDefaultRegistration();
   return {
     id: row.id,
     invoice_number: row.invoice_number ?? null,
@@ -431,10 +462,10 @@ function mapInvoice(row: any): Invoice {
     invoice_date: row.invoice_date,
     due_date: row.due_date,
     paid_date: row.paid_date ?? null,
-    seller_name: row.seller_name ?? "Neon Visuals",
-    seller_address: row.seller_address ?? "Mumbai, Maharashtra, India",
-    seller_gstin: row.seller_gstin ?? null,
-    seller_pan: row.seller_pan ?? null,
+    seller_name: row.seller_name ?? reg.tradeName,
+    seller_address: row.seller_address ?? formatRegisteredAddress(reg),
+    seller_gstin: row.seller_gstin ?? reg.gstin,
+    seller_pan: row.seller_pan ?? reg.pan,
     buyer_name: row.buyer_name,
     buyer_company: row.buyer_company,
     buyer_address: row.buyer_address ?? null,
@@ -593,14 +624,17 @@ export async function createInvoice(
     .single();
   if (error) throw new Error(`Create invoice failed: ${error.message}`);
   const invoice = mapInvoice(data);
-  // Non-blocking: if the place of supply was unresolved (IGST fallback), flag for review.
-  if (decision.basis === "unknown") {
-    await flagUnresolvedPlaceOfSupply({
+  // Non-blocking: flag any LOW-confidence place of supply (unknown -> IGST fallback + email;
+  // city_lookup -> inferred, audit-only). Authenticated path: writeAudit via createdBy.
+  if (decision.confidence === "low") {
+    await flagPlaceOfSupply({
       invoiceId: invoice.id,
       invoiceNumber: invoice.invoice_number,
       companyId: order.company_id,
       companyName: (company?.name as string) ?? order.company_name ?? null,
       rawCity: supplyCity,
+      buyerStateCode: decision.buyerStateCode,
+      basis: decision.basis,
       actorUserId: createdBy ?? null,
     });
   }
@@ -971,6 +1005,7 @@ export async function createSubscriptionInvoice(
     },
   ];
 
+  const sellerReg = getDefaultRegistration();
   const payload = {
     company_id: input.companyId,
     order_id: null,
@@ -980,9 +1015,10 @@ export async function createSubscriptionInvoice(
     invoice_date: today,
     due_date: today,
     paid_date: today,
-    seller_name: "Neon Visuals",
-    seller_address: "Mumbai, Maharashtra, India",
-    seller_gstin: SELLER_GSTIN,
+    seller_name: sellerReg.tradeName,
+    seller_address: formatRegisteredAddress(sellerReg),
+    seller_gstin: sellerReg.gstin,
+    seller_pan: sellerReg.pan,
     buyer_name:
       (company?.primary_contact_name as string) ?? (company?.name as string) ?? "Client",
     buyer_company: (company?.name as string) ?? "Client",
@@ -1026,16 +1062,20 @@ export async function createSubscriptionInvoice(
     throw new Error(`Create subscription invoice failed: ${error.message}`);
   }
   const invoice = mapInvoice(data);
-  // Non-blocking: if the place of supply was unresolved (IGST fallback), flag for review. This runs
-  // in the Razorpay webhook (service-role, no session): the audit is skipped and the email is the
-  // signal (see flagUnresolvedPlaceOfSupply). Wrapped so it can NEVER fail the webhook/payment.
-  if (decision.basis === "unknown") {
-    await flagUnresolvedPlaceOfSupply({
+  // Non-blocking: flag any LOW-confidence place of supply. This runs in the Razorpay webhook
+  // (service-role `db`, no session): the audit is written via a DIRECT service-role insert (Task B),
+  // and an email is sent only for the unknown/IGST-fallback case. Wrapped so it can NEVER fail the
+  // webhook/payment.
+  if (decision.confidence === "low") {
+    await flagPlaceOfSupply({
+      db,
       invoiceId: invoice.id,
       invoiceNumber: invoice.invoice_number,
       companyId: input.companyId,
       companyName: (company?.name as string) ?? null,
       rawCity: supplyCity,
+      buyerStateCode: decision.buyerStateCode,
+      basis: decision.basis,
       actorUserId: null,
     });
   }

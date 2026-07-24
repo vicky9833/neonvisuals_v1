@@ -100,6 +100,20 @@ export function getDefaultRegistration(): GstRegistration {
   return REGISTRATIONS.find((r) => r.isDefault)!;
 }
 
+/**
+ * Single-line full supplier address for a GST tax invoice (Rule 46 CGST Rules: building, street,
+ * locality, city, state, PIN). Built from the registration's addressLines + city + stateName +
+ * pincode + "India". Never hardcoded at a call site.
+ */
+export function formatRegisteredAddress(reg: GstRegistration): string {
+  return [
+    reg.addressLines.join(", "),
+    reg.city,
+    `${reg.stateName} ${reg.pincode}`,
+    "India",
+  ].join(", ");
+}
+
 /** Registration by id, or null. */
 export function getRegistrationById(id: string): GstRegistration | null {
   return REGISTRATIONS.find((r) => r.id === id) ?? null;

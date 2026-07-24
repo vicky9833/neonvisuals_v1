@@ -1,4 +1,5 @@
-import { describe, it, expect, vi } from "vitest";
+import { describe, it, expect, vi, beforeEach } from "vitest";
+import type { SupabaseClient } from "@supabase/supabase-js";
 import { readFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -6,15 +7,27 @@ import { fileURLToPath } from "node:url";
 // billing.ts pulls in @/lib/services/email which begins with `import "server-only"`.
 // That package is not resolvable under the node test runner, so stub it to empty — the
 // same pattern used by src/app/api/money-write-authz.test.ts. We exercise the REAL
-// billing functions (resolveSupplyDecision / calculateGST*), so billing.ts is NOT mocked.
+// billing functions (resolveSupplyDecision / calculateGST* / flagPlaceOfSupply), so
+// billing.ts itself is NOT mocked.
 vi.mock("server-only", () => ({}));
+
+// Spy on the email service so the flag tests can assert email is sent for "unknown" only.
+const h = vi.hoisted(() => ({
+  sendNotificationEmail: vi.fn(async () => ({ success: true })),
+  sendPaymentConfirmationEmail: vi.fn(async () => ({ success: true })),
+}));
+vi.mock("@/lib/services/email", () => ({
+  sendNotificationEmail: h.sendNotificationEmail,
+  sendPaymentConfirmationEmail: h.sendPaymentConfirmationEmail,
+}));
 
 import {
   resolveSupplyDecision,
   calculateGST,
   calculateGSTInclusive,
+  flagPlaceOfSupply,
 } from "./billing";
-import { validateGstin } from "@/lib/gst";
+import { validateGstin, getDefaultRegistration, formatRegisteredAddress } from "@/lib/gst";
 
 // ---------------------------------------------------------------------------
 // Helpers: build genuinely-valid GSTINs (real mod-36 checksum) for a state code,
@@ -201,5 +214,112 @@ describe("billing.ts contains no state-code literal", () => {
     for (const token of ["bengaluru", "bangalore", "mysore", "hubli", "belgaum"]) {
       expect(src.toLowerCase().includes(`"${token}"`)).toBe(false);
     }
+  });
+});
+
+// ---------------------------------------------------------------------------
+// TASK A: seller identity sourced from the registration config (Rule 46).
+// ---------------------------------------------------------------------------
+describe("Task A: seller identity from config", () => {
+  const reg = getDefaultRegistration();
+  const src = readFileSync(join(dirname(fileURLToPath(import.meta.url)), "billing.ts"), "utf8");
+
+  it("formatRegisteredAddress contains the full Rule 46 address parts", () => {
+    const addr = formatRegisteredAddress(reg);
+    for (const part of [
+      "Room No 20",
+      "Jogeshwari Vikhroli Link Road",
+      "Andheri East",
+      "Mumbai",
+      "Maharashtra",
+      "400093",
+    ]) {
+      expect(addr, `address must contain "${part}"`).toContain(part);
+    }
+    expect(addr.endsWith("India")).toBe(true);
+    // Exactly the migration 058 default string (single source of truth).
+    expect(addr).toBe(
+      "Room No 20, Vishwakarma Rahiwashi Sangh, Jogeshwari Vikhroli Link Road, Near SEEPZ Quarters, Andheri East, Mumbai, Maharashtra 400093, India",
+    );
+  });
+
+  it("seller_gstin is sourced from config and equals 27BZSPV5411Q1ZA", () => {
+    expect(reg.gstin).toBe("27BZSPV5411Q1ZA");
+    expect(reg.pan).toBe("BZSPV5411Q");
+  });
+
+  it("no hardcoded seller address / GSTIN string literal remains in billing.ts", () => {
+    expect(src.includes("Mumbai, Maharashtra, India")).toBe(false);
+    expect(src.includes("27BZSPV5411Q1ZA")).toBe(false);
+    // The duplicate constant is removed.
+    expect(/\bSELLER_GSTIN\b/.test(src)).toBe(false);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// TASK C: low-confidence flag routing (inferred vs unresolved).
+// ---------------------------------------------------------------------------
+describe("Task C: flag routing for low-confidence place of supply", () => {
+  interface CapturedInsert {
+    table: string;
+    row: Record<string, unknown>;
+  }
+  function fakeServiceRoleDb() {
+    const inserts: CapturedInsert[] = [];
+    const client = {
+      from: (table: string) => ({
+        insert: (row: Record<string, unknown>) => {
+          inserts.push({ table, row });
+          return Promise.resolve({ error: null });
+        },
+      }),
+    } as unknown as SupabaseClient;
+    return { inserts, client };
+  }
+
+  beforeEach(() => {
+    h.sendNotificationEmail.mockClear();
+  });
+
+  it("both city_lookup and unknown are confidence 'low' (both get flagged)", () => {
+    expect(resolveSupplyDecision(null, "Bengaluru").confidence).toBe("low");
+    expect(resolveSupplyDecision(null, "Bengaluru").basis).toBe("city_lookup");
+    expect(resolveSupplyDecision(null, "Atlantis").confidence).toBe("low");
+    expect(resolveSupplyDecision(null, "Atlantis").basis).toBe("unknown");
+  });
+
+  it("[unknown] service-role audit 'unresolved' (actor null) + email sent", async () => {
+    const db = fakeServiceRoleDb();
+    await flagPlaceOfSupply({
+      db: db.client,
+      invoiceId: "inv-unknown",
+      companyId: "co-1",
+      rawCity: "Atlantis",
+      basis: "unknown",
+    });
+    expect(db.inserts).toHaveLength(1);
+    expect(db.inserts[0].table).toBe("audit_log");
+    expect(db.inserts[0].row.action).toBe("invoice.place_of_supply_unresolved");
+    expect(db.inserts[0].row.actor_user_id).toBeNull();
+    expect(db.inserts[0].row.actor_type).toBe("system");
+    expect(db.inserts[0].row.entity_id).toBe("inv-unknown");
+    expect((db.inserts[0].row.after as Record<string, unknown>).fallback).toBe("IGST");
+    expect(h.sendNotificationEmail).toHaveBeenCalledTimes(1);
+  });
+
+  it("[city_lookup] service-role audit 'inferred' + NO email", async () => {
+    const db = fakeServiceRoleDb();
+    await flagPlaceOfSupply({
+      db: db.client,
+      invoiceId: "inv-inferred",
+      companyId: "co-1",
+      rawCity: "Bengaluru",
+      buyerStateCode: "29",
+      basis: "city_lookup",
+    });
+    expect(db.inserts).toHaveLength(1);
+    expect(db.inserts[0].row.action).toBe("invoice.place_of_supply_inferred");
+    expect((db.inserts[0].row.after as Record<string, unknown>).inferredStateCode).toBe("29");
+    expect(h.sendNotificationEmail).not.toHaveBeenCalled();
   });
 });
