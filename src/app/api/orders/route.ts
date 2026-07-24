@@ -12,6 +12,8 @@ import {
   toClientOrder,
   type OrderStatus,
 } from "@/lib/engines/order";
+import { PricingError } from "@/lib/engines/pricing";
+import { QuoteValidationError } from "@/lib/engines/quote";
 
 export const runtime = "nodejs";
 
@@ -70,6 +72,10 @@ export async function POST(request: Request) {
   } catch (err) {
     const authResponse = apiAuthErrorResponse(err);
     if (authResponse) return authResponse;
+    // Fail-loud pricing errors (e.g. unknown SKU) are client-actionable -> 400 (not 500).
+    if (err instanceof PricingError || err instanceof QuoteValidationError) {
+      return NextResponse.json({ error: err.code, message: err.message }, { status: 400 });
+    }
     console.error("[orders]", err);
     return NextResponse.json(
       { error: "server_error", message: "Could not create the order. Please try again." },

@@ -26,6 +26,7 @@ import {
   type PackagingTierId,
   type PersonalisationLevelId,
 } from "@/lib/engines/pricing";
+import { QuoteValidationError } from "@/lib/engines/quote";
 import { getProductBySku } from "@/lib/catalog";
 
 // ---------------------------------------------------------------------------
@@ -754,6 +755,17 @@ export async function convertQuoteToOrder(
     .maybeSingle();
   if (error) throw new Error(`Convert quote failed: ${error.message}`);
   if (!quote) throw new Error("Quote not found");
+
+  // Phase 5B Task 1 (interim): the order path does not yet carry custom/charge lines (order_items
+  // has no source/hsn/gst columns). Refuse conversion of a quote containing them with a CLEAR
+  // message rather than a 500 or a silent drop. Replaced by Task 2 once orders support custom lines.
+  const rawQuoteLines = (quote.products as Array<{ source?: string }> | null) ?? [];
+  if (rawQuoteLines.some((l) => l.source === "custom" || l.source === "charge")) {
+    throw new QuoteValidationError(
+      "custom_not_supported",
+      "This quote contains custom line items. Order conversion for custom items is not yet supported.",
+    );
+  }
 
   // Resolve the company.
   let resolvedCompanyId = companyId ?? null;
