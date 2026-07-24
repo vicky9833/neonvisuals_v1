@@ -7,11 +7,28 @@ import type { PricingResult } from "@/lib/engines/pricing";
 
 type Tier = "essential" | "standard" | "premium" | "flagship";
 type Level = "name_only" | "name_occasion" | "full_personal";
+type LineSource = "catalogue" | "custom" | "charge";
+
+const GST_RATE_OPTIONS = [0, 0.25, 3, 5, 12, 18, 28] as const;
+const UQC_OPTIONS = ["PCS", "BOX", "SET", "KGS", "NOS", "PKT", "DOZ"] as const;
+
 interface SelItem {
+  /** Stable client-side key (sku is not unique for custom/charge lines). */
+  key: string;
+  source: LineSource;
   sku: string;
   name: string;
   quantity: number;
+  /** Rupees; set for custom/charge lines. */
+  unitPrice?: number;
+  gstRate?: number;
+  hsn?: string;
+  uqc?: string;
+  notes?: string;
 }
+
+let __lineSeq = 0;
+const nextKey = () => `line-${Date.now()}-${(__lineSeq += 1)}`;
 interface FormState {
   clientName: string;
   clientCompany: string;
@@ -35,6 +52,13 @@ interface FormState {
 interface QuoteProductRow {
   sku: string;
   quantity: number;
+  source?: LineSource;
+  name?: string;
+  unitPrice?: number;
+  gstRate?: number;
+  hsn?: string;
+  uqc?: string;
+  notes?: string;
 }
 
 /** A persisted quote row as returned by the quotes API (snake_case fields). */
@@ -87,6 +111,25 @@ export function QuotesAdmin() {
   const [busy, setBusy] = useState(false);
   const [msg, setMsg] = useState<string>("");
 
+  // Custom / charge line entry drafts (staff-only, Phase 5A).
+  const [customOpen, setCustomOpen] = useState(false);
+  const emptyCustom = {
+    name: "",
+    sku: "",
+    quantity: 1,
+    unitPrice: "" as number | "",
+    gstRate: "" as number | "",
+    hsn: "",
+    uqc: "" as (typeof UQC_OPTIONS)[number] | "",
+    notes: "",
+  };
+  const [customDraft, setCustomDraft] = useState(emptyCustom);
+  const [chargeOpen, setChargeOpen] = useState(false);
+  const emptyCharge = { name: "", amount: "" as number | "", gstRate: "" as number | "", hsn: "" };
+  const [chargeDraft, setChargeDraft] = useState(emptyCharge);
+  const [customErr, setCustomErr] = useState("");
+  const [chargeErr, setChargeErr] = useState("");
+
   const set = <K extends keyof FormState>(key: K, value: FormState[K]) =>
     setForm((f) => ({ ...f, [key]: value }));
 
@@ -100,19 +143,109 @@ export function QuotesAdmin() {
 
   function addProduct(sku: string, name: string) {
     setForm((f) =>
-      f.selected.some((s) => s.sku === sku)
+      f.selected.some((s) => s.source === "catalogue" && s.sku === sku)
         ? f
-        : { ...f, selected: [...f.selected, { sku, name, quantity: f.kitCount }] },
+        : {
+            ...f,
+            selected: [
+              ...f.selected,
+              { key: nextKey(), source: "catalogue", sku, name, quantity: f.kitCount },
+            ],
+          },
     );
   }
-  function removeProduct(sku: string) {
-    setForm((f) => ({ ...f, selected: f.selected.filter((s) => s.sku !== sku) }));
+  function addLine(line: Omit<SelItem, "key">) {
+    setForm((f) => ({ ...f, selected: [...f.selected, { key: nextKey(), ...line }] }));
   }
-  function setQty(sku: string, quantity: number) {
+  function removeLine(key: string) {
+    setForm((f) => ({ ...f, selected: f.selected.filter((s) => s.key !== key) }));
+  }
+  function setQty(key: string, quantity: number) {
     setForm((f) => ({
       ...f,
-      selected: f.selected.map((s) => (s.sku === sku ? { ...s, quantity } : s)),
+      selected: f.selected.map((s) => (s.key === key ? { ...s, quantity } : s)),
     }));
+  }
+
+  /** Build the API line payload for one selected item (omit undefined fields). */
+  function toLinePayload(s: SelItem) {
+    const line: Record<string, unknown> = { sku: s.sku, quantity: s.quantity, source: s.source };
+    if (s.source !== "catalogue") {
+      line.name = s.name;
+      line.unitPrice = s.unitPrice;
+    }
+    if (s.gstRate != null) line.gstRate = s.gstRate;
+    if (s.hsn) line.hsn = s.hsn;
+    if (s.uqc) line.uqc = s.uqc;
+    if (s.notes) line.notes = s.notes;
+    return line;
+  }
+
+  /** Client-side validation: which custom/charge lines are incomplete. Returns key -> message. */
+  const lineErrors = useMemo(() => {
+    const errs: Record<string, string> = {};
+    for (const s of form.selected) {
+      if (s.source === "catalogue") continue;
+      const problems: string[] = [];
+      if (!s.name || s.name.trim() === "") problems.push("description");
+      if (s.unitPrice == null || !(s.unitPrice > 0)) problems.push("unit price");
+      if (s.source === "custom" && !(s.quantity > 0)) problems.push("quantity");
+      if (problems.length > 0) errs[s.key] = `Missing/invalid: ${problems.join(", ")}`;
+    }
+    return errs;
+  }, [form.selected]);
+  const hasLineErrors = Object.keys(lineErrors).length > 0;
+
+  function openCustomWith(prefillName: string) {
+    setCustomDraft({ ...emptyCustom, name: prefillName });
+    setCustomErr("");
+    setCustomOpen(true);
+  }
+
+  function commitCustom() {
+    const name = customDraft.name.trim();
+    const unitPrice = Number(customDraft.unitPrice);
+    const quantity = Number(customDraft.quantity);
+    if (!name) return setCustomErr("Description is required.");
+    if (!(unitPrice > 0)) return setCustomErr("Unit price must be greater than 0.");
+    if (!(quantity > 0)) return setCustomErr("Quantity must be greater than 0.");
+    if (customDraft.hsn && !/^\d{4,8}$/.test(customDraft.hsn)) return setCustomErr("HSN must be 4-8 digits.");
+    const n = form.selected.filter((s) => s.source === "custom").length + 1;
+    addLine({
+      source: "custom",
+      sku: customDraft.sku.trim() || `CUSTOM-${n}`,
+      name,
+      quantity,
+      unitPrice,
+      gstRate: customDraft.gstRate === "" ? undefined : Number(customDraft.gstRate),
+      hsn: customDraft.hsn || undefined,
+      uqc: customDraft.uqc || undefined,
+      notes: customDraft.notes || undefined,
+    });
+    setCustomDraft(emptyCustom);
+    setCustomErr("");
+    setCustomOpen(false);
+  }
+
+  function commitCharge() {
+    const name = chargeDraft.name.trim();
+    const amount = Number(chargeDraft.amount);
+    if (!name) return setChargeErr("Description is required.");
+    if (!(amount > 0)) return setChargeErr("Amount must be greater than 0.");
+    if (chargeDraft.hsn && !/^\d{4,8}$/.test(chargeDraft.hsn)) return setChargeErr("HSN must be 4-8 digits.");
+    const n = form.selected.filter((s) => s.source === "charge").length + 1;
+    addLine({
+      source: "charge",
+      sku: `CHARGE-${n}`,
+      name,
+      quantity: 1,
+      unitPrice: amount,
+      gstRate: chargeDraft.gstRate === "" ? undefined : Number(chargeDraft.gstRate),
+      hsn: chargeDraft.hsn || undefined,
+    });
+    setChargeDraft(emptyCharge);
+    setChargeErr("");
+    setChargeOpen(false);
   }
 
   // Live pricing preview (debounced).
@@ -127,7 +260,7 @@ export function QuotesAdmin() {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
-            products: form.selected.map((s) => ({ sku: s.sku, quantity: s.quantity })),
+            products: form.selected.map(toLinePayload),
             kitCount: form.kitCount,
             packagingTier: form.packagingTier,
             rushOrder: form.rushOrder,
@@ -169,7 +302,7 @@ export function QuotesAdmin() {
       clientEmail: form.clientEmail,
       clientPhone: form.clientPhone,
       occasion: form.occasion,
-      products: form.selected.map((s) => ({ sku: s.sku, quantity: s.quantity })),
+      products: form.selected.map(toLinePayload),
       packagingTier: form.packagingTier,
       personalisation: form.personalisation,
       resumeIntelligence: form.resumeIntelligence,
@@ -227,11 +360,24 @@ export function QuotesAdmin() {
       clientEmail: q.client_email ?? "",
       clientPhone: q.client_phone ?? "+91 ",
       occasion: q.occasion ?? OCCASIONS[0].label,
-      selected: (q.products ?? []).map((p: QuoteProductRow) => ({
-        sku: p.sku,
-        name: PRODUCTS.find((x) => x.sku === p.sku)?.name ?? p.sku,
-        quantity: p.quantity,
-      })),
+      selected: (q.products ?? []).map((p: QuoteProductRow) => {
+        const source: LineSource = p.source ?? "catalogue";
+        return {
+          key: nextKey(),
+          source,
+          sku: p.sku,
+          name:
+            source === "catalogue"
+              ? (PRODUCTS.find((x) => x.sku === p.sku)?.name ?? p.sku)
+              : (p.name ?? p.sku),
+          quantity: p.quantity,
+          unitPrice: source === "catalogue" ? undefined : p.unitPrice,
+          gstRate: p.gstRate,
+          hsn: p.hsn,
+          uqc: p.uqc,
+          notes: p.notes,
+        };
+      }),
       kitCount: q.kit_count ?? 25,
       packagingTier: q.packaging_tier ?? "standard",
       personalisation: q.personalisation_level ?? "name_occasion",
@@ -257,7 +403,19 @@ export function QuotesAdmin() {
       clientEmail: q.client_email,
       clientPhone: q.client_phone,
       occasion: q.occasion,
-      products: (q.products ?? []).map((p: QuoteProductRow) => ({ sku: p.sku, quantity: p.quantity })),
+      products: (q.products ?? []).map((p: QuoteProductRow) => {
+        const source: LineSource = p.source ?? "catalogue";
+        const line: Record<string, unknown> = { sku: p.sku, quantity: p.quantity, source };
+        if (source !== "catalogue") {
+          line.name = p.name;
+          line.unitPrice = p.unitPrice;
+        }
+        if (p.gstRate != null) line.gstRate = p.gstRate;
+        if (p.hsn) line.hsn = p.hsn;
+        if (p.uqc) line.uqc = p.uqc;
+        if (p.notes) line.notes = p.notes;
+        return line;
+      }),
       packagingTier: q.packaging_tier,
       personalisation: q.personalisation_level,
       resumeIntelligence: q.resume_intelligence,
@@ -300,7 +458,12 @@ export function QuotesAdmin() {
 
         <section className="rounded-xl border border-[#EDE9E3] bg-white p-5">
           <h2 className="mb-4 text-sm font-bold uppercase tracking-wide text-[#888]">Products</h2>
-          <input className={inputCls} placeholder="Search products to add…" value={search} onChange={(e) => setSearch(e.target.value)} />
+          <div className="flex gap-2">
+            <input className={inputCls} placeholder="Search catalogue products to add…" value={search} onChange={(e) => setSearch(e.target.value)} />
+            <button type="button" onClick={() => openCustomWith("")} className="whitespace-nowrap rounded-lg border border-navy px-3 text-sm font-semibold text-navy">+ Custom item</button>
+            <button type="button" onClick={() => { setChargeDraft(emptyCharge); setChargeErr(""); setChargeOpen(true); }} className="whitespace-nowrap rounded-lg border border-navy px-3 text-sm font-semibold text-navy">+ Charge</button>
+          </div>
+
           {searchResults.length > 0 ? (
             <div className="mt-2 max-h-48 overflow-y-auto rounded-lg border border-[#EDE9E3]">
               {searchResults.map((p) => (
@@ -310,13 +473,80 @@ export function QuotesAdmin() {
                 </button>
               ))}
             </div>
+          ) : search.trim() !== "" ? (
+            <div className="mt-2 flex items-center justify-between gap-3 rounded-lg border border-dashed border-[#EDE9E3] px-3 py-2 text-sm">
+              <span className="text-[#999]">No catalogue match for &quot;{search.trim()}&quot;.</span>
+              <button type="button" onClick={() => openCustomWith(search.trim())} className="whitespace-nowrap font-semibold text-gold">+ Add as custom item</button>
+            </div>
           ) : null}
+
+          {customOpen ? (
+            <div className="mt-3 space-y-2 rounded-lg border border-gold/50 bg-[#FCFAF5] p-3">
+              <div className="text-xs font-bold uppercase tracking-wide text-[#888]">Custom item</div>
+              <div className="grid gap-2 sm:grid-cols-2">
+                <input className={inputCls} placeholder="Description *" value={customDraft.name} onChange={(e) => setCustomDraft((d) => ({ ...d, name: e.target.value }))} />
+                <input className={inputCls} placeholder="Code / SKU (optional)" value={customDraft.sku} onChange={(e) => setCustomDraft((d) => ({ ...d, sku: e.target.value }))} />
+                <input className={inputCls} type="number" min={1} placeholder="Quantity *" value={customDraft.quantity} onChange={(e) => setCustomDraft((d) => ({ ...d, quantity: Math.max(1, Number(e.target.value) || 1) }))} />
+                <input className={inputCls} type="number" min={0} placeholder="Unit price (Rs) *" value={customDraft.unitPrice} onChange={(e) => setCustomDraft((d) => ({ ...d, unitPrice: e.target.value === "" ? "" : Number(e.target.value) }))} />
+                <select className={inputCls} value={customDraft.gstRate} onChange={(e) => setCustomDraft((d) => ({ ...d, gstRate: e.target.value === "" ? "" : Number(e.target.value) }))}>
+                  <option value="">GST % (optional)</option>
+                  {GST_RATE_OPTIONS.map((r) => <option key={r} value={r}>{r}%</option>)}
+                </select>
+                <input className={inputCls} placeholder="HSN (optional, 4-8 digits)" value={customDraft.hsn} onChange={(e) => setCustomDraft((d) => ({ ...d, hsn: e.target.value }))} />
+                <select className={inputCls} value={customDraft.uqc} onChange={(e) => setCustomDraft((d) => ({ ...d, uqc: e.target.value as (typeof UQC_OPTIONS)[number] | "" }))}>
+                  <option value="">UQC (optional)</option>
+                  {UQC_OPTIONS.map((u) => <option key={u} value={u}>{u}</option>)}
+                </select>
+                <input className={inputCls} placeholder="Notes (optional)" value={customDraft.notes} onChange={(e) => setCustomDraft((d) => ({ ...d, notes: e.target.value }))} />
+              </div>
+              {customErr ? <p className="text-xs text-destructive">{customErr}</p> : null}
+              <div className="flex gap-2">
+                <button type="button" onClick={commitCustom} className="rounded-lg bg-navy px-4 py-1.5 text-sm font-semibold text-white">Add item</button>
+                <button type="button" onClick={() => { setCustomOpen(false); setCustomErr(""); }} className="rounded-lg border border-[#EDE9E3] px-4 py-1.5 text-sm">Cancel</button>
+              </div>
+            </div>
+          ) : null}
+
+          {chargeOpen ? (
+            <div className="mt-3 space-y-2 rounded-lg border border-gold/50 bg-[#FCFAF5] p-3">
+              <div className="text-xs font-bold uppercase tracking-wide text-[#888]">Charge (freight / packing / design)</div>
+              <div className="grid gap-2 sm:grid-cols-2">
+                <input className={inputCls} placeholder="Description *" value={chargeDraft.name} onChange={(e) => setChargeDraft((d) => ({ ...d, name: e.target.value }))} />
+                <input className={inputCls} type="number" min={0} placeholder="Amount (Rs) *" value={chargeDraft.amount} onChange={(e) => setChargeDraft((d) => ({ ...d, amount: e.target.value === "" ? "" : Number(e.target.value) }))} />
+                <select className={inputCls} value={chargeDraft.gstRate} onChange={(e) => setChargeDraft((d) => ({ ...d, gstRate: e.target.value === "" ? "" : Number(e.target.value) }))}>
+                  <option value="">GST % (optional)</option>
+                  {GST_RATE_OPTIONS.map((r) => <option key={r} value={r}>{r}%</option>)}
+                </select>
+                <input className={inputCls} placeholder="HSN (optional, 4-8 digits)" value={chargeDraft.hsn} onChange={(e) => setChargeDraft((d) => ({ ...d, hsn: e.target.value }))} />
+              </div>
+              {chargeErr ? <p className="text-xs text-destructive">{chargeErr}</p> : null}
+              <div className="flex gap-2">
+                <button type="button" onClick={commitCharge} className="rounded-lg bg-navy px-4 py-1.5 text-sm font-semibold text-white">Add charge</button>
+                <button type="button" onClick={() => { setChargeOpen(false); setChargeErr(""); }} className="rounded-lg border border-[#EDE9E3] px-4 py-1.5 text-sm">Cancel</button>
+              </div>
+            </div>
+          ) : null}
+
           <ul className="mt-3 space-y-2">
             {form.selected.map((s) => (
-              <li key={s.sku} className="flex items-center gap-2 rounded-lg border border-[#EDE9E3] px-3 py-2 text-sm">
-                <span className="flex-1">{s.name} <span className="text-[#999]">({s.sku})</span></span>
-                <input type="number" min={1} value={s.quantity} onChange={(e) => setQty(s.sku, Math.max(1, Number(e.target.value) || 1))} className="h-8 w-20 rounded border border-[#EDE9E3] px-2 text-sm" />
-                <button type="button" onClick={() => removeProduct(s.sku)} className="text-destructive">✕</button>
+              <li key={s.key} className="rounded-lg border border-[#EDE9E3] px-3 py-2 text-sm">
+                <div className="flex items-center gap-2">
+                  <span className="flex-1">
+                    <SourceBadge source={s.source} />
+                    {s.name} <span className="text-[#999]">({s.sku || "-"})</span>
+                    {s.source !== "catalogue" ? (
+                      <span className="text-[#999]"> · Rs {Math.round(s.unitPrice ?? 0).toLocaleString("en-IN")}{s.source === "custom" ? "/unit" : ""}</span>
+                    ) : null}
+                    {s.gstRate != null ? <span className="text-[#bbb]"> · GST {s.gstRate}%</span> : null}
+                  </span>
+                  {s.source !== "charge" ? (
+                    <input type="number" min={1} value={s.quantity} onChange={(e) => setQty(s.key, Math.max(1, Number(e.target.value) || 1))} className="h-8 w-20 rounded border border-[#EDE9E3] px-2 text-sm" />
+                  ) : (
+                    <span className="w-20 text-center text-xs text-[#999]">qty 1</span>
+                  )}
+                  <button type="button" onClick={() => removeLine(s.key)} className="text-destructive">✕</button>
+                </div>
+                {lineErrors[s.key] ? <p className="mt-1 text-xs text-destructive">{lineErrors[s.key]}</p> : null}
               </li>
             ))}
             {form.selected.length === 0 ? <li className="text-sm text-[#999]">No products added.</li> : null}
@@ -359,10 +589,11 @@ export function QuotesAdmin() {
         </section>
 
         <div className="flex flex-wrap gap-3">
-          <button type="button" disabled={busy || form.selected.length === 0} onClick={saveDraft} className="rounded-lg bg-navy px-5 py-2.5 text-sm font-semibold text-white disabled:opacity-40">Save as Draft</button>
-          <button type="button" disabled={busy || form.selected.length === 0} onClick={generatePdf} className="rounded-lg border border-navy px-5 py-2.5 text-sm font-semibold text-navy disabled:opacity-40">Generate PDF</button>
-          <button type="button" disabled={busy || form.selected.length === 0} onClick={() => send("wa")} className="rounded-lg border border-navy px-5 py-2.5 text-sm font-semibold text-navy disabled:opacity-40">Send via WhatsApp</button>
-          <button type="button" disabled={busy || form.selected.length === 0} onClick={() => send("email")} className="rounded-lg border border-navy px-5 py-2.5 text-sm font-semibold text-navy disabled:opacity-40">Send via Email</button>
+          <button type="button" disabled={busy || form.selected.length === 0 || hasLineErrors} onClick={saveDraft} className="rounded-lg bg-navy px-5 py-2.5 text-sm font-semibold text-white disabled:opacity-40">Save as Draft</button>
+          <button type="button" disabled={busy || form.selected.length === 0 || hasLineErrors} onClick={generatePdf} className="rounded-lg border border-navy px-5 py-2.5 text-sm font-semibold text-navy disabled:opacity-40">Generate PDF</button>
+          <button type="button" disabled={busy || form.selected.length === 0 || hasLineErrors} onClick={() => send("wa")} className="rounded-lg border border-navy px-5 py-2.5 text-sm font-semibold text-navy disabled:opacity-40">Send via WhatsApp</button>
+          <button type="button" disabled={busy || form.selected.length === 0 || hasLineErrors} onClick={() => send("email")} className="rounded-lg border border-navy px-5 py-2.5 text-sm font-semibold text-navy disabled:opacity-40">Send via Email</button>
+          {hasLineErrors ? <span className="self-center text-sm text-destructive">Fix the highlighted custom lines before saving.</span> : null}
           {msg ? <span className="self-center text-sm text-[#666]">{msg}</span> : null}
         </div>
 
@@ -416,6 +647,16 @@ export function QuotesAdmin() {
         )}
       </aside>
     </div>
+  );
+}
+
+function SourceBadge({ source }: { source: LineSource }) {
+  if (source === "catalogue") return null;
+  const label = source === "custom" ? "CUSTOM" : "CHARGE";
+  return (
+    <span className="mr-2 rounded bg-gold/15 px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wide text-gold">
+      {label}
+    </span>
   );
 }
 

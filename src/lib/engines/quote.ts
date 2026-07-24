@@ -12,9 +12,12 @@
  */
 import {
   calculatePricing,
+  ALLOWED_LINE_GST_RATES,
   type PackagingTierId,
   type PersonalisationLevelId,
   type PricingResult,
+  type PricingProductInput,
+  type QuoteLineSource,
 } from "@/lib/engines/pricing";
 
 export type QuoteStatus =
@@ -33,7 +36,9 @@ export interface QuoteInput {
   clientEmail: string;
   clientPhone: string;
   occasion: string;
-  products: Array<{ sku: string; quantity: number }>;
+  /** Catalogue, custom, and charge lines (see PricingProductInput). Back-compat: a bare
+   *  { sku, quantity } is a catalogue line. */
+  products: PricingProductInput[];
   packagingTier: PackagingTierId;
   personalisation: PersonalisationLevelId;
   resumeIntelligence: boolean;
@@ -49,11 +54,114 @@ export interface QuoteInput {
   discountReason?: string;
 }
 
+/** Units of quantity permitted on a line (GST UQC codes we support). */
+export const ALLOWED_UQC = ["PCS", "BOX", "SET", "KGS", "NOS", "PKT", "DOZ"] as const;
+export type Uqc = (typeof ALLOWED_UQC)[number];
+
+/**
+ * A product line as stored on a quote (JSONB `quotes.products`). Extended ADDITIVELY in Phase 5A:
+ * every new field is optional, so all pre-5A rows (which have only sku/quantity/unitPrice/lineTotal)
+ * still parse — a line with no `source` is a catalogue line.
+ */
 export interface QuoteProductLine {
   sku: string;
-  quantity: number;
+  /** Absent = catalogue (back-compat). */
+  source?: QuoteLineSource;
+  /** REQUIRED for custom/charge lines; derived from the catalogue otherwise. */
+  name?: string;
   unitPrice: number;
+  quantity: number;
   lineTotal: number;
+  /** 4–8 digit HSN/SAC when supplied. */
+  hsn?: string;
+  /** One of ALLOWED_LINE_GST_RATES when supplied. */
+  gstRate?: number;
+  /** One of ALLOWED_UQC when supplied. */
+  uqc?: string;
+  notes?: string;
+}
+
+/** Typed validation failure for a stored/inbound quote line. */
+export class QuoteValidationError extends Error {
+  readonly code: string;
+  constructor(code: string, message: string) {
+    super(message);
+    this.name = "QuoteValidationError";
+    this.code = code;
+  }
+}
+
+const GST_RATE_SET: ReadonlySet<number> = new Set(ALLOWED_LINE_GST_RATES);
+const UQC_SET: ReadonlySet<string> = new Set(ALLOWED_UQC);
+
+/**
+ * Parse/validate a single stored-or-inbound quote line, tolerating BOTH the old shape
+ * ({ sku, quantity, unitPrice, lineTotal }) and the new extended shape. A line with no new fields
+ * normalises to a catalogue line (`source: "catalogue"`). Throws QuoteValidationError on a
+ * structurally invalid line (custom/charge without name or a positive unitPrice, bad gstRate/hsn/uqc).
+ */
+export function parseQuoteProductLine(raw: unknown): QuoteProductLine {
+  if (raw == null || typeof raw !== "object") {
+    throw new QuoteValidationError("invalid_line", "Quote line must be an object.");
+  }
+  const r = raw as Record<string, unknown>;
+
+  const sku = typeof r.sku === "string" ? r.sku : "";
+  const quantity = Number(r.quantity ?? 0);
+  const unitPrice = Number(r.unitPrice ?? 0);
+  const lineTotal = Number(r.lineTotal ?? (Number.isFinite(unitPrice) && Number.isFinite(quantity) ? unitPrice * quantity : 0));
+
+  const source: QuoteLineSource =
+    r.source === "custom" || r.source === "charge" ? r.source : "catalogue";
+
+  if (source === "catalogue" && sku === "") {
+    throw new QuoteValidationError("missing_sku", "A catalogue line requires a sku.");
+  }
+
+  const line: QuoteProductLine = { sku, source, unitPrice, quantity, lineTotal };
+
+  if (source === "custom" || source === "charge") {
+    const name = typeof r.name === "string" ? r.name.trim() : "";
+    if (name === "") {
+      throw new QuoteValidationError("missing_name", `A ${source} line requires a name/description.`);
+    }
+    if (!Number.isFinite(unitPrice) || unitPrice <= 0) {
+      throw new QuoteValidationError("invalid_unit_price", `A ${source} line requires a positive unit price.`);
+    }
+    line.name = name;
+  } else if (typeof r.name === "string" && r.name.trim() !== "") {
+    line.name = r.name.trim();
+  }
+
+  const effectiveQty = source === "charge" ? 1 : quantity;
+  if (!Number.isFinite(effectiveQty) || effectiveQty <= 0) {
+    throw new QuoteValidationError("invalid_quantity", `Line "${line.name ?? sku}" requires a positive quantity.`);
+  }
+
+  if (r.hsn != null && r.hsn !== "") {
+    const hsn = String(r.hsn);
+    if (!/^\d{4,8}$/.test(hsn)) {
+      throw new QuoteValidationError("invalid_hsn", `HSN "${hsn}" must be 4–8 digits.`);
+    }
+    line.hsn = hsn;
+  }
+  if (r.gstRate != null) {
+    const gstRate = Number(r.gstRate);
+    if (!GST_RATE_SET.has(gstRate)) {
+      throw new QuoteValidationError("invalid_gst_rate", `gstRate ${String(r.gstRate)} is not one of ${ALLOWED_LINE_GST_RATES.join(", ")}.`);
+    }
+    line.gstRate = gstRate;
+  }
+  if (r.uqc != null && r.uqc !== "") {
+    const uqc = String(r.uqc);
+    if (!UQC_SET.has(uqc)) {
+      throw new QuoteValidationError("invalid_uqc", `uqc "${uqc}" is not one of ${ALLOWED_UQC.join(", ")}.`);
+    }
+    line.uqc = uqc;
+  }
+  if (typeof r.notes === "string" && r.notes !== "") line.notes = r.notes;
+
+  return line;
 }
 
 export interface Quote {
@@ -133,12 +241,26 @@ function buildInsertPayload(input: QuoteInput, pricing: PricingResult) {
   const finalTotal = pricing.grandTotal - discountAmount;
   const perKit = Math.round(finalTotal / Math.max(1, input.kitCount));
 
-  const products: QuoteProductLine[] = pricing.lineItems.map((li) => ({
-    sku: li.sku,
-    quantity: li.quantity,
-    unitPrice: li.unitPrice,
-    lineTotal: li.lineTotal,
-  }));
+  const products: QuoteProductLine[] = pricing.lineItems.map((li) => {
+    // Catalogue lines keep the pre-5A shape ({sku,quantity,unitPrice,lineTotal}) for back-compat;
+    // custom/charge lines additionally persist source + name (+ any tax metadata) so they can be
+    // reconstructed on load/duplicate without a catalogue lookup.
+    const line: QuoteProductLine = {
+      sku: li.sku,
+      quantity: li.quantity,
+      unitPrice: li.unitPrice,
+      lineTotal: li.lineTotal,
+    };
+    if (li.source !== "catalogue") {
+      line.source = li.source;
+      line.name = li.productName;
+    }
+    if (li.hsn != null) line.hsn = li.hsn;
+    if (li.gstRate != null) line.gstRate = li.gstRate;
+    if (li.uqc != null) line.uqc = li.uqc;
+    if (li.notes != null) line.notes = li.notes;
+    return line;
+  });
 
   return {
     payload: {
@@ -265,7 +387,21 @@ function quoteToInput(quote: Quote): QuoteInput {
     clientEmail: quote.client_email,
     clientPhone: quote.client_phone,
     occasion: quote.occasion,
-    products: quote.products.map((p) => ({ sku: p.sku, quantity: p.quantity })),
+    products: quote.products.map((p) => {
+      const src: QuoteLineSource = p.source ?? "catalogue";
+      const line: PricingProductInput = { sku: p.sku, quantity: p.quantity, source: src };
+      // Custom/charge lines carry their own price + name (no catalogue lookup); catalogue lines are
+      // re-priced from the DB on duplicate/update, so we do NOT freeze their unitPrice here.
+      if (src !== "catalogue") {
+        line.name = p.name;
+        line.unitPrice = p.unitPrice;
+      }
+      if (p.hsn != null) line.hsn = p.hsn;
+      if (p.gstRate != null) line.gstRate = p.gstRate;
+      if (p.uqc != null) line.uqc = p.uqc;
+      if (p.notes != null) line.notes = p.notes;
+      return line;
+    }),
     packagingTier: quote.packaging_tier as PackagingTierId,
     personalisation: quote.personalisation_level as PersonalisationLevelId,
     resumeIntelligence: quote.resume_intelligence,

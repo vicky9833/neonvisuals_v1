@@ -37,6 +37,30 @@ function rs(n: number): string {
   return `Rs. ${Math.round(n).toLocaleString("en-IN")}`;
 }
 
+/** A rendered line-item row for the quote PDF table. */
+export interface QuotePdfLineRow {
+  sku: string;
+  name: string;
+  unitPrice: number;
+  quantity: number;
+  lineTotal: number;
+}
+
+/**
+ * The exact rows the quote PDF's line-item table renders, sourced from the stored
+ * `pricing.lineItems`. Custom/charge lines carry their typed name + price here (never a raw SKU at
+ * Rs. 0), because the pricing engine records productName/unitPrice for every line.
+ */
+export function quotePdfLineRows(quote: Quote): QuotePdfLineRow[] {
+  return (quote.pricing?.lineItems ?? []).map((li) => ({
+    sku: li.sku,
+    name: li.productName,
+    unitPrice: li.unitPrice,
+    quantity: li.quantity,
+    lineTotal: li.lineTotal,
+  }));
+}
+
 const s = StyleSheet.create({
   page: { paddingHorizontal: 40, paddingVertical: 36, fontSize: 9, color: BODY, fontFamily: "Helvetica" },
   headerRow: { flexDirection: "row", justifyContent: "space-between", alignItems: "flex-start" },
@@ -131,14 +155,14 @@ function QuoteDocument({ quote }: { quote: Quote }) {
           <Text style={s.cQty}>Qty</Text>
           <Text style={s.cTotal}>Line Total</Text>
         </View>
-        {p.lineItems?.map((li, i) => (
-          <View key={li.sku} style={[s.tr, i % 2 === 1 ? { backgroundColor: ALT } : {}]}>
+        {quotePdfLineRows(quote).map((row, i) => (
+          <View key={`${i}-${row.sku}`} style={[s.tr, i % 2 === 1 ? { backgroundColor: ALT } : {}]}>
             <Text style={s.cNum}>{i + 1}</Text>
-            <Text style={s.cSku}>{li.sku}</Text>
-            <Text style={s.cName}>{li.productName}</Text>
-            <Text style={s.cUnit}>{rs(li.unitPrice)}</Text>
-            <Text style={s.cQty}>{li.quantity}</Text>
-            <Text style={s.cTotal}>{rs(li.lineTotal)}</Text>
+            <Text style={s.cSku}>{row.sku}</Text>
+            <Text style={s.cName}>{row.name}</Text>
+            <Text style={s.cUnit}>{rs(row.unitPrice)}</Text>
+            <Text style={s.cQty}>{row.quantity}</Text>
+            <Text style={s.cTotal}>{rs(row.lineTotal)}</Text>
           </View>
         ))}
 
@@ -181,7 +205,7 @@ function QuoteDocument({ quote }: { quote: Quote }) {
           <Text style={s.terms}>3. Lead time: 7-14 working days from advance payment and name list receipt.</Text>
           <Text style={s.terms}>4. Personalisation requires verified name list in CSV/Excel format.</Text>
           <Text style={s.terms}>5. 100% QC with photo documentation before dispatch.</Text>
-          <Text style={s.terms}>6. Prices inclusive of GST. Shipping additional for pan-India delivery.</Text>
+          <Text style={s.terms}>6. Prices are exclusive of GST. Applicable GST will be charged on the tax invoice as per prevailing rates. Shipping additional for pan-India delivery.</Text>
         </View>
 
         {/* Footer */}
